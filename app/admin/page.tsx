@@ -33,6 +33,32 @@ export default function AdminDashboard() {
     fetchActivities()
   }, [])
 
+  // Auto-refresh dashboard data every 30 seconds when page is visible
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      if (!document.hidden) {
+        fetchDashboardStats()
+        fetchActivities()
+      }
+    }, 30000)
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Page became visible, refresh immediately
+        fetchDashboardStats()
+        fetchActivities()
+      }
+    }
+
+    // Listen for tab visibility changes
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [])
+
   const fetchDashboardStats = async () => {
     try {
       const response = await fetch('/api/dashboard/stats')

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import SendRequestsPreviewModal from './send-requests-preview-modal'
 
 interface Musician {
@@ -73,6 +73,12 @@ export default function RequestStatusCard({ need, projectId, onRequestsSent }: R
   const [expanded, setExpanded] = useState(false)
   const [updating, setUpdating] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
+  const [lastRefreshed, setLastRefreshed] = useState(new Date())
+
+  // Update lastRefreshed when need data changes
+  useEffect(() => {
+    setLastRefreshed(new Date())
+  }, [need])
 
   const getTimeWaiting = (sentAt: string) => {
     const sent = new Date(sentAt)

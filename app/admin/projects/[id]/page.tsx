@@ -105,6 +105,8 @@ export default function ProjectDetailPage({
   const [showGlobalSendPreview, setShowGlobalSendPreview] = useState(false)
   const [sendingRequests, setSendingRequests] = useState(false)
   const [collapseAllGroups, setCollapseAllGroups] = useState<boolean | undefined>(undefined)
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
+  const [isUpdating, setIsUpdating] = useState(false)
 
   useEffect(() => {
     params.then(p => {
@@ -119,19 +121,70 @@ export default function ProjectDetailPage({
     }
   }, [paramsId])
 
+  // Auto-refresh project data every 30 seconds when page is visible
+  useEffect(() => {
+    if (!paramsId) return
+
+    let intervalId: NodeJS.Timeout
+
+    const startPolling = () => {
+      // Initial fetch
+      fetchProject()
+      
+      // Set up polling interval (30 seconds)
+      intervalId = setInterval(() => {
+        if (!document.hidden) {
+          fetchProject()
+        }
+      }, 30000)
+    }
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Page became visible, refresh immediately
+        fetchProject()
+      }
+    }
+
+    // Start polling
+    startPolling()
+
+    // Listen for tab visibility changes
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    // Cleanup
+    return () => {
+      clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [paramsId])
+
+  // Update the relative time display every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      // Force re-render to update relative time
+      setLastUpdated(prev => new Date(prev))
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [])
+
 
   const fetchProject = async () => {
     if (!paramsId) return
     
+    setIsUpdating(true)
     try {
       const response = await fetch(`/api/projects/${paramsId}`)
       if (!response.ok) throw new Error('Failed to fetch project')
       const data = await response.json()
       setProject(data)
+      setLastUpdated(new Date())
     } catch (error) {
       console.error('Error fetching project:', error)
     } finally {
       setLoading(false)
+      setTimeout(() => setIsUpdating(false), 500) // Brief animation
     }
   }
   
@@ -342,6 +395,19 @@ export default function ProjectDetailPage({
     })
   }
 
+  const formatLastUpdated = (date: Date) => {
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffSecs = Math.floor(diffMs / 1000)
+    const diffMins = Math.floor(diffMs / 60000)
+    
+    if (diffSecs < 5) return 'Just nu'
+    if (diffSecs < 60) return `${diffSecs} sekunder sedan`
+    if (diffMins < 60) return `${diffMins} minut${diffMins === 1 ? '' : 'er'} sedan`
+    
+    return date.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
+  }
+
   const getProjectStatus = (startDate: string) => {
     const projectDate = new Date(startDate)
     const today = new Date()
@@ -415,6 +481,16 @@ export default function ProjectDetailPage({
               <span>•</span>
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status.color}`}>
                 {status.label}
+              </span>
+              <span>•</span>
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                Uppdateras automatiskt
+                {isUpdating && (
+                  <svg className="animate-spin h-3 w-3 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                )}
               </span>
             </div>
           </div>
@@ -685,8 +761,24 @@ export default function ProjectDetailPage({
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">Musikerbehov & Förfrågningar</h3>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Musikerbehov & Förfrågningar</h3>
+                  <p className={`text-xs text-gray-500 mt-0.5 transition-opacity duration-300 ${isUpdating ? 'opacity-50' : 'opacity-100'}`}>
+                    {isUpdating ? '🔄 Uppdaterar...' : `Uppdaterad ${formatLastUpdated(lastUpdated)}`}
+                  </p>
+                </div>
                 <div className="flex items-center space-x-2">
+                  {/* Manual refresh button */}
+                  <button
+                    onClick={() => fetchProject()}
+                    disabled={isUpdating}
+                    className="h-10 w-10 text-sm border border-gray-300 rounded-md bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium flex items-center justify-center"
+                    title="Uppdatera nu"
+                  >
+                    <svg className={`w-4 h-4 ${isUpdating ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  </button>
                   {/* Filter */}
                   <select
                     value={statusFilter}
