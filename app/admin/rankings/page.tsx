@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
@@ -30,7 +30,7 @@ interface RankingList {
   }
 }
 
-export default function RankingsPage() {
+function RankingsContent() {
   const searchParams = useSearchParams()
   const [instruments, setInstruments] = useState<Instrument[]>([])
   const [loading, setLoading] = useState(true)
@@ -294,5 +294,17 @@ export default function RankingsPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function RankingsPage() {
+  return (
+    <Suspense fallback={
+      <div className="text-center py-12">
+        <p className="text-sm text-gray-500">Laddar rankningar...</p>
+      </div>
+    }>
+      <RankingsContent />
+    </Suspense>
   )
 }
