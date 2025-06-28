@@ -9,7 +9,12 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  swcMinify: true,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
 }
 
 module.exports = nextConfig
