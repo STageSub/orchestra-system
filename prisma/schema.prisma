@@ -1,0 +1,221 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Musician {
+  id             Int                     @id @default(autoincrement())
+  musicianId     String                  @unique @default(cuid())
+  firstName      String
+  lastName       String
+  email          String                  @unique
+  phone          String?
+  localResidence Boolean                 @default(false)
+  isActive       Boolean                 @default(true)
+  isArchived     Boolean                 @default(false)
+  archivedAt     DateTime?
+  restoredAt     DateTime?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  qualifications MusicianQualification[]
+  rankings       Ranking[]
+  requests       Request[]
+}
+
+model Instrument {
+  id           Int        @id @default(autoincrement())
+  instrumentId String     @unique @default(cuid())
+  name         String     @unique
+  displayOrder Int        @default(999)
+  positions    Position[]
+}
+
+model Position {
+  id             Int                     @id @default(autoincrement())
+  positionId     String                  @unique @default(cuid())
+  instrumentId   Int
+  name           String
+  hierarchyLevel Int
+  qualifications MusicianQualification[]
+  instrument     Instrument              @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  projectNeeds   ProjectNeed[]
+  rankingLists   RankingList[]
+
+  @@unique([instrumentId, name])
+}
+
+model MusicianQualification {
+  musicianId Int
+  positionId Int
+  musician   Musician @relation(fields: [musicianId], references: [id])
+  position   Position @relation(fields: [positionId], references: [id])
+
+  @@id([musicianId, positionId])
+}
+
+model RankingList {
+  id            Int           @id @default(autoincrement())
+  rankingListId String        @unique @default(cuid())
+  positionId    Int
+  listType      String
+  description   String?
+  version       Int           @default(1)
+  projectNeeds  ProjectNeed[]
+  rankings      Ranking[]
+  position      Position      @relation(fields: [positionId], references: [id], onDelete: Cascade)
+
+  @@unique([positionId, listType])
+}
+
+model Ranking {
+  id          Int         @id @default(autoincrement())
+  rankingId   String      @unique @default(cuid())
+  listId      Int
+  musicianId  Int
+  rank        Int
+  rankingList RankingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  musician    Musician    @relation(fields: [musicianId], references: [id])
+
+  @@unique([listId, musicianId])
+  @@unique([listId, rank])
+}
+
+model Project {
+  id                Int           @id @default(autoincrement())
+  projectId         String        @unique @default(cuid())
+  name              String
+  startDate         DateTime
+  weekNumber        Int
+  rehearsalSchedule String?
+  concertInfo       String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  notes             String?
+  projectFiles      ProjectFile[]
+  projectNeeds      ProjectNeed[]
+}
+
+model ProjectNeed {
+  id               Int           @id @default(autoincrement())
+  projectNeedId    String        @unique @default(cuid())
+  projectId        Int
+  positionId       Int
+  quantity         Int           @default(1)
+  rankingListId    Int
+  requestStrategy  String
+  maxRecipients    Int?
+  responseTimeHours Int          @default(24)
+  status           String        @default("active") // active, paused, completed, archived
+  archivedAt       DateTime?
+  projectFiles     ProjectFile[]
+  position         Position      @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  project          Project       @relation(fields: [projectId], references: [id])
+  rankingList      RankingList   @relation(fields: [rankingListId], references: [id], onDelete: Cascade)
+  requests         Request[]
+}
+
+model Request {
+  id                Int                @id @default(autoincrement())
+  requestId         String             @unique @default(cuid())
+  projectNeedId     Int
+  musicianId        Int
+  status            String             @default("pending")
+  sentAt            DateTime           @default(now())
+  reminderSentAt    DateTime?
+  respondedAt       DateTime?
+  response          String?
+  confirmationSent  Boolean            @default(false)
+  communicationLogs CommunicationLog[]
+  musician          Musician           @relation(fields: [musicianId], references: [id])
+  projectNeed       ProjectNeed        @relation(fields: [projectNeedId], references: [id], onDelete: Cascade)
+  requestTokens     RequestToken[]
+}
+
+model RequestToken {
+  token     String    @id @default(cuid())
+  requestId Int
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  usedAt    DateTime?
+  request   Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+}
+
+model EmailTemplate {
+  id              Int      @id @default(autoincrement())
+  emailTemplateId String   @unique @default(cuid())
+  type            String   @unique
+  subject         String
+  body            String
+  variables       Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model CommunicationLog {
+  id                 Int      @id @default(autoincrement())
+  communicationLogId String   @unique @default(cuid())
+  requestId          Int
+  type               String
+  timestamp          DateTime @default(now())
+  emailContent       String?
+  request            Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+}
+
+model ProjectFile {
+  id            Int          @id @default(autoincrement())
+  projectFileId String       @unique @default(cuid())
+  projectId     Int
+  fileName      String
+  fileUrl       String
+  fileType      String
+  uploadedAt    DateTime     @default(now())
+  projectNeedId Int?
+  sendTiming    String       @default("on_request")
+  project       Project      @relation(fields: [projectId], references: [id])
+  projectNeed   ProjectNeed? @relation(fields: [projectNeedId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  auditLogId String   @unique @default(cuid())
+  userId     String?
+  action     String
+  entityType String
+  entityId   Int
+  oldValues  Json?
+  newValues  Json?
+  timestamp  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([timestamp])
+}
+
+model IdSequence {
+  id         Int      @id @default(autoincrement())
+  entityType String   @unique
+  lastNumber Int      @default(0)
+  updatedAt  DateTime @updatedAt
+}
+
+model DeletedIds {
+  id         Int      @id @default(autoincrement())
+  entityType String
+  deletedId  String
+  deletedAt  DateTime @default(now())
+
+  @@unique([entityType, deletedId])
+  @@index([entityType])
+}
+
+model Settings {
+  id                 Int      @id @default(autoincrement())
+  key                String   @unique
+  value              String
+  description        String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}

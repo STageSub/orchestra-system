@@ -1,0 +1,108 @@
+<svg width="300" height="200" viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#D4AF37;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#B8941F;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Orchestra members -->
+  <g class="orchestra-members">
+    <!-- Left side musicians -->
+    <path d="M 60 90 Q 60 80 70 80 Q 80 80 80 90 L 80 110 Q 80 120 70 120 Q 60 120 60 110 Z" 
+          fill="none" stroke="url(#goldGradient)" stroke-width="2" opacity="0" class="musician musician-1"/>
+    <path d="M 85 90 Q 85 80 95 80 Q 105 80 105 90 L 105 110 Q 105 120 95 120 Q 85 120 85 110 Z" 
+          fill="none" stroke="url(#goldGradient)" stroke-width="2" opacity="0" class="musician musician-2"/>
+    <path d="M 110 90 Q 110 80 120 80 Q 130 80 130 90 L 130 110 Q 130 120 120 120 Q 110 120 110 110 Z" 
+          fill="none" stroke="url(#goldGradient)" stroke-width="2" opacity="0" class="musician musician-3"/>
+    
+    <!-- Right side musicians -->
+    <path d="M 170 90 Q 170 80 180 80 Q 190 80 190 90 L 190 110 Q 190 120 180 120 Q 170 120 170 110 Z" 
+          fill="none" stroke="url(#goldGradient)" stroke-width="2" opacity="0" class="musician musician-4"/>
+    <path d="M 195 90 Q 195 80 205 80 Q 215 80 215 90 L 215 110 Q 215 120 205 120 Q 195 120 195 110 Z" 
+          fill="none" stroke="url(#goldGradient)" stroke-width="2" opacity="0" class="musician musician-5"/>
+    <path d="M 220 90 Q 220 80 230 80 Q 240 80 240 90 L 240 110 Q 240 120 230 120 Q 220 120 220 110 Z" 
+          fill="none" stroke="url(#goldGradient)" stroke-width="2" opacity="0" class="musician musician-6"/>
+  </g>
+  
+  <!-- Conductor -->
+  <g class="conductor" opacity="0">
+    <path d="M 150 50 Q 150 40 155 40 Q 160 40 160 50 L 160 80" 
+          fill="none" stroke="url(#goldGradient)" stroke-width="2.5"/>
+    <!-- Conductor's arm with baton -->
+    <path d="M 155 60 L 170 45 L 175 40" 
+          fill="none" stroke="url(#goldGradient)" stroke-width="2" class="baton"/>
+    <!-- Other arm -->
+    <path d="M 155 60 L 140 50" 
+          fill="none" stroke="url(#goldGradient)" stroke-width="2"/>
+  </g>
+  
+  <!-- Stage line -->
+  <path d="M 40 130 Q 150 135 260 130" 
+        fill="none" stroke="url(#goldGradient)" stroke-width="1.5" opacity="0" class="stage-line"/>
+  
+  <!-- StageSub text -->
+  <text x="150" y="170" font-family="Georgia, serif" font-size="42" font-weight="400" 
+        text-anchor="middle" fill="url(#goldGradient)" opacity="0" class="brand-text">
+    StageSub
+  </text>
+  
+  <style>
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes conductorWave {
+      0%, 100% {
+        transform: rotate(0deg);
+      }
+      25% {
+        transform: rotate(-10deg);
+      }
+      75% {
+        transform: rotate(10deg);
+      }
+    }
+    
+    @keyframes musicianPulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.7;
+      }
+    }
+    
+    .conductor {
+      animation: fadeInUp 0.8s ease-out 0.2s forwards;
+    }
+    
+    .baton {
+      transform-origin: 155px 60px;
+      animation: conductorWave 3s ease-in-out infinite;
+      animation-delay: 1.5s;
+    }
+    
+    .musician-1 { animation: fadeInUp 0.8s ease-out 0.4s forwards, musicianPulse 2s ease-in-out infinite 1.5s; }
+    .musician-2 { animation: fadeInUp 0.8s ease-out 0.5s forwards, musicianPulse 2s ease-in-out infinite 1.7s; }
+    .musician-3 { animation: fadeInUp 0.8s ease-out 0.6s forwards, musicianPulse 2s ease-in-out infinite 1.9s; }
+    .musician-4 { animation: fadeInUp 0.8s ease-out 0.7s forwards, musicianPulse 2s ease-in-out infinite 2.1s; }
+    .musician-5 { animation: fadeInUp 0.8s ease-out 0.8s forwards, musicianPulse 2s ease-in-out infinite 2.3s; }
+    .musician-6 { animation: fadeInUp 0.8s ease-out 0.9s forwards, musicianPulse 2s ease-in-out infinite 2.5s; }
+    
+    .stage-line {
+      animation: fadeInUp 0.8s ease-out 1s forwards;
+    }
+    
+    .brand-text {
+      animation: fadeInUp 0.8s ease-out 1.2s forwards;
+    }
+  </style>
+</svg>

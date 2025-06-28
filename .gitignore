@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# credentials
+CREDENTIALS.md
+
+/app/generated/prisma
+
+# Uploaded files
+public/uploads/projects/*
+!public/uploads/projects/.gitkeep
