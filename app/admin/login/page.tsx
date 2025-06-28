@@ -24,8 +24,10 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (response.ok) {
-        router.push('/admin')
-        router.refresh()
+        // Add small delay to ensure cookie is set
+        await new Promise(resolve => setTimeout(resolve, 100))
+        // Navigate to admin - this will trigger a full page reload
+        window.location.href = '/admin'
       } else {
         setError(data.error || 'Fel lösenord')
       }

@@ -61,13 +61,22 @@ export async function POST(request: NextRequest) {
     // Create JWT token
     const token = await createToken()
     
-    // Set cookie
-    await setAuthCookie(token)
-    
     // Reset login attempts on successful login
     loginAttempts.delete(ip)
     
-    return NextResponse.json({ success: true })
+    // Create response with cookie
+    const response = NextResponse.json({ success: true })
+    
+    // Set cookie directly in the response
+    response.cookies.set('orchestra-admin-session', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24, // 24 hours
+      path: '/'
+    })
+    
+    return response
   } catch (error) {
     console.error('Login error:', error)
     return NextResponse.json(
