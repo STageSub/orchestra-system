@@ -48,3 +48,7 @@ CREDENTIALS.md
 # Uploaded files
 public/uploads/projects/*
 !public/uploads/projects/.gitkeep
+
+# migration files
+exports/
+test-db.js
