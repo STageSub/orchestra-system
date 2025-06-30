@@ -74,3 +74,21 @@ Efter 7 timmars felsökning upptäcktes att:
 - Verifiera på produktion att allt fungerar
 - Ta bort debug-loggning när stabilt
 - Dokumentera email-systemet ordentligt
+
+## 🐛 Bugfix: Arkiverade instrument visas i behov
+
+### Problem
+Arkiverade instrument visades fortfarande när man skulle lägga till nya behov till ett projekt.
+
+### Orsak
+API endpoint `/api/instruments` filtrerade inte bort arkiverade instrument.
+
+### Lösning
+1. Uppdaterade `/api/instruments/route.ts` för att filtrera bort arkiverade instrument som standard
+2. Lade till `includeArchived` query parameter för att visa arkiverade när det behövs
+3. Uppdaterade admin-sidan att skicka `includeArchived=true` när arkiverade ska visas
+4. Tog bort dubbel filtrering i frontend
+
+### Resultat
+✅ Arkiverade instrument visas inte längre i AddProjectNeedModal
+✅ Admin-sidan kan fortfarande visa/dölja arkiverade instrument

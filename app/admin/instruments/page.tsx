@@ -117,11 +117,12 @@ export default function InstrumentsPage() {
 
   useEffect(() => {
     fetchInstruments()
-  }, [])
+  }, [showArchived])
 
   const fetchInstruments = async () => {
     try {
-      const response = await fetch('/api/instruments')
+      const url = showArchived ? '/api/instruments?includeArchived=true' : '/api/instruments'
+      const response = await fetch(url)
       if (!response.ok) {
         console.error('Failed to fetch instruments:', response.status)
         setInstruments([])
@@ -289,7 +290,6 @@ export default function InstrumentsPage() {
         ) : (
           <div className="space-y-4">
             {instruments
-              .filter(instrument => showArchived || !instrument.isArchived)
               .map((instrument) => {
               const totalMusicians = instrument.totalUniqueMusicians || 0
               const isExpanded = expandedInstruments.has(instrument.id)
