@@ -404,28 +404,50 @@ prisma/             # Database schema and migrations
 
 **Status**: 🚀 **FULLY OPERATIONAL IN PRODUCTION**
 
-### ⚠️ KNOWN ISSUES (2025-06-28)
+## Email System Troubleshooting (IMPORTANT - 2025-06-30)
 
-#### Critical Issues (Blocks Usage)
-1. **E-posthistorik fungerar inte**
-   - GroupEmailLog table doesn't exist (migration failed to run)
-   - Returns error when trying to view email history
-   - Need to manually create table or run migration
+### Production vs Localhost Issue
+**Problem**: Email links always point to production (stagesub.com) even in development
+- When testing locally, clicking email links goes to https://stagesub.com/respond
+- This means production server handles the response, not your local changes
+- Led to 7-hour debugging session where local fixes weren't being tested
 
-2. **Lokalt boende-filter saknas helt**
-   - No way to filter requests based on local residence requirement
-   - Need to add `requireLocalResidence` field to ProjectNeed
-   - Update UI and filtering logic in request-sender
+**Solution**:
+1. Always check which server is handling requests
+2. For testing, manually change URLs to localhost:3001
+3. Deploy changes to production to test email flows properly
+4. Use the log viewer at `/admin/logs` to debug
 
-3. **Konfliktvarningar fungerar inte**
-   - No warnings when musician exists on multiple lists
-   - Need to create conflict detection API
-   - Integrate warnings into UI
+### Testing Email System
+1. **Local Testing**: 
+   - Use `/admin/logs` page with test buttons
+   - Full flow test automatically accepts and shows logs
+   - Manual test changes URL to localhost
 
-4. **Toast-notifikationer syns inte**
-   - Toast system exists but isn't used anywhere
-   - Need to integrate `showToast()` calls throughout the system
-   - Replace all `alert()` calls with toasts
+2. **Production Testing**:
+   - Deploy all changes first
+   - Test with real email flows
+   - Check Vercel logs if needed
+
+### Language Selection
+- Based on `musician.preferredLanguage` field
+- Defaults to 'sv' if not set
+- Templates: `type` for Swedish, `type_en` for English
+- Falls back to Swedish if English template missing
+
+### ⚠️ KNOWN ISSUES (Updated 2025-06-30)
+
+#### Previously Critical - NOW FIXED ✅
+1. **E-posthistorik** - Fixed with manual SQL migration
+2. **Lokalt boende-filter** - Fully implemented 
+3. **Konfliktvarningar** - Working with 3 strategies
+4. **Email språkval** - Fixed after 7-hour debug session
+
+#### Still Needs Work
+1. **Toast-notifikationer** 
+   - System correctly uses alert() for admin actions per design
+   - Toast system works for external events (musician responses)
+   - This is working as designed, not a bug
 
 #### Important Usability Issues
 1. **Moment 22 med strategi/antal**

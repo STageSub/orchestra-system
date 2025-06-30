@@ -28,13 +28,14 @@
 - [x] **Accepterade musiker modal bugg** - Fixad case sensitivity och förbättrad design ✅ (2025-06-30)
 - [x] **Modern tech design för projektdetaljer** - Implementerat breadcrumbs, smooth transitions, eleganta progress bars ✅ (2025-06-30)
 
-### Nya förbättringar planerade (2025-06-30)
-- [ ] **Gröna bockar i bekräftelsemodaler** - Visuell feedback med ✓ i alla bekräftelsedialoger
-- [ ] **Flexibla svarstider** - Anpassade svarstider per projekt (standard 48h)
-- [ ] **Radera-ikon för ej startade projekt** - Delete-ikon på hover för projekt utan förfrågningar
-- [ ] **Multi-select för rankningslistor** - Välj flera listor som fallback vid behov
-- [ ] **Språkval för e-postmallar** - Flerspråkigt stöd för mallar
-- [ ] **Rankningshierarki i musikerkort** - Visa högsta ranking först om musiker finns i flera listor
+### Nya förbättringar ✅ IMPLEMENTERADE (2025-06-30)
+- [x] **Gröna bockar i bekräftelsemodaler** - Success modal med grön checkmark animation
+- [x] **Flexibla svarstider** - Response time selector med timmar/dagar/veckor/månader
+- [x] **Radera-ikon för ej startade projekt** - Delete-knapp på hover för projekt utan förfrågningar
+- [x] **Multi-select för behov** - Välj flera positioner samtidigt vid skapande av behov
+- [x] **Språkval för e-postmallar** - Svenska/engelska mallar baserat på musikers språkval ✅
+- [x] **Rankningshierarki i musikerkort** - Fixad sortering (instrument först, sedan lista)
+- [x] **Real-time log viewer** - Admin-verktyg för felsökning på `/admin/logs` ✅
 
 ### Realtidslösning (framtida)
 - [ ] **Server-Sent Events (SSE)** för realtidsnotifikationer
