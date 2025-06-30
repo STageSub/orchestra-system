@@ -2,6 +2,12 @@ import { Resend } from 'resend'
 import { prisma } from '@/lib/prisma'
 import { readFile } from 'fs/promises'
 import path from 'path'
+import { getLogStorage } from '@/lib/log-storage'
+
+// Initialize log storage for email module
+if (process.env.NODE_ENV === 'development') {
+  getLogStorage()
+}
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -107,23 +113,40 @@ export async function sendTemplatedEmail(
   type: string,
   to: string,
   variables: TemplateVariables,
-  attachments?: Array<{ filename: string; content: string }>
+  attachments?: Array<{ filename: string; content: string }>,
+  language: 'sv' | 'en' = 'sv'
 ) {
-  console.log('\n=== SEND TEMPLATED EMAIL ===')
-  console.log('Template type:', type)
-  console.log('Recipient:', to)
-  console.log('Variables provided:', Object.keys(variables).join(', '))
+  console.error('\n=== SEND TEMPLATED EMAIL ===')
+  console.error('Template type:', type)
+  console.error('Language parameter:', language)
+  console.error('Language type:', typeof language)
+  console.error('Recipient:', to)
+  console.error('Variables provided:', Object.keys(variables).join(', '))
+  
+  // Select template based on language
+  const templateType = language === 'en' ? `${type}_en` : type
+  console.error('Language check: language === "en"?', language === 'en')
+  console.error('Looking for template:', templateType)
   
   const template = await prisma.emailTemplate.findUnique({
-    where: { type }
+    where: { type: templateType }
   })
 
   if (!template) {
-    console.error('Template not found:', type)
-    throw new Error(`Email template '${type}' not found`)
+    console.error('Template not found:', templateType)
+    console.log('Falling back to Swedish template:', type)
+    // Fallback to Swedish template if English not found
+    const fallbackTemplate = await prisma.emailTemplate.findUnique({
+      where: { type: type }
+    })
+    if (fallbackTemplate) {
+      console.log('Using fallback Swedish template')
+      return sendTemplatedEmail(type, to, variables, attachments, 'sv')
+    }
+    throw new Error(`Email template '${templateType}' not found`)
   }
   
-  console.log('Template found:', template.name)
+  console.log('Template found:', templateType, '- Subject:', template.subject)
 
   // Replace variables in template
   let subject = template.subject
@@ -169,6 +192,32 @@ interface RequestWithRelations {
   id: number
   musicianId: number
   projectNeedId: number
+  musician?: {
+    id: number
+    firstName: string
+    lastName: string
+    email: string
+    preferredLanguage?: string | null
+  }
+  projectNeed?: {
+    id: number
+    project: {
+      id: number
+      name: string
+      startDate: Date
+      weekNumber: number
+      rehearsalSchedule?: string | null
+      concertInfo?: string | null
+    }
+    position: {
+      id: number
+      name: string
+      instrument: {
+        id: number
+        name: string
+      }
+    }
+  }
 }
 
 async function getProjectFilesForEmail(
@@ -203,11 +252,11 @@ async function getProjectFilesForEmail(
         const base64Content = fileBuffer.toString('base64')
         
         attachments.push({
-          filename: file.fileName,
+          filename: file.originalFileName || file.fileName, // Use original filename with extension if available
           content: base64Content
         })
         
-        console.log(`Prepared attachment: ${file.fileName}`)
+        console.log(`Prepared attachment: ${file.originalFileName || file.fileName}`)
       } catch (error) {
         console.error(`Failed to read file ${file.fileName}:`, error)
         // Continue with other files even if one fails
@@ -227,6 +276,12 @@ export async function sendRequestEmail(
 ) {
   console.log('\n=== SEND REQUEST EMAIL - START ===')
   console.log('Request ID:', request.id)
+  
+  // Check if we're in test mode with mocked email
+  if (global.sendRequestEmail && process.env.NODE_ENV === 'test') {
+    console.log('Using mocked email function')
+    return global.sendRequestEmail(request, token)
+  }
   console.log('Token:', token.substring(0, 20) + '...')
   
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
@@ -264,6 +319,8 @@ export async function sendRequestEmail(
     throw new Error('Missing data for email')
   }
 
+  const language = (musician.preferredLanguage || 'sv') as 'sv' | 'en'
+
   const variables: TemplateVariables = {
     musician_name: `${musician.firstName} ${musician.lastName}`,
     firstName: musician.firstName,
@@ -274,8 +331,8 @@ export async function sendRequestEmail(
     positionName: projectNeed.position.name,
     instrument_name: projectNeed.position.instrument.name,
     instrumentName: projectNeed.position.instrument.name,
-    start_date: new Date(projectNeed.project.startDate).toLocaleDateString('sv-SE'),
-    startDate: new Date(projectNeed.project.startDate).toLocaleDateString('sv-SE'),
+    start_date: new Date(projectNeed.project.startDate).toLocaleDateString(language === 'en' ? 'en-US' : 'sv-SE'),
+    startDate: new Date(projectNeed.project.startDate).toLocaleDateString(language === 'en' ? 'en-US' : 'sv-SE'),
     weekNumber: projectNeed.project.weekNumber,
     rehearsal_schedule: projectNeed.project.rehearsalSchedule || 'Se bifogad information',
     rehearsalSchedule: projectNeed.project.rehearsalSchedule || 'Se bifogad information',
@@ -298,7 +355,7 @@ export async function sendRequestEmail(
     'on_request'
   )
   
-  await sendTemplatedEmail('request', musician.email, variables, attachments)
+  await sendTemplatedEmail('request', musician.email, variables, attachments, language)
   console.log('✅ Request email sent successfully')
 
   // Log the communication
@@ -313,6 +370,10 @@ export async function sendRequestEmail(
 }
 
 export async function sendReminderEmail(request: RequestWithRelations, token: string) {
+  // Check if we're in test mode with mocked email
+  if (global.sendReminderEmail && process.env.NODE_ENV === 'test') {
+    return global.sendReminderEmail(request, token)
+  }
   const musician = await prisma.musician.findUnique({
     where: { id: request.musicianId }
   })
@@ -348,7 +409,8 @@ export async function sendReminderEmail(request: RequestWithRelations, token: st
     responseUrl
   }
 
-  await sendTemplatedEmail('reminder', musician.email, variables)
+  const language = (musician.preferredLanguage || 'sv') as 'sv' | 'en'
+  await sendTemplatedEmail('reminder', musician.email, variables, undefined, language)
 
   // Update reminder sent timestamp
   await prisma.request.update({
@@ -367,39 +429,66 @@ export async function sendReminderEmail(request: RequestWithRelations, token: st
 }
 
 export async function sendConfirmationEmail(request: RequestWithRelations) {
-  console.log('\n=== SEND CONFIRMATION EMAIL - START ===')
-  console.log('Called with request:', {
+  // Force log storage initialization
+  const logStorage = getLogStorage()
+  
+  console.error('\n\n🔴🔴🔴 SEND CONFIRMATION EMAIL - START 🔴🔴🔴')
+  console.error('Log storage active:', !!logStorage)
+  console.error('Called with request:', {
     id: request.id,
     musicianId: request.musicianId,
     projectNeedId: request.projectNeedId
   })
-  console.log('Caller stack trace:', new Error().stack?.split('\n').slice(2, 5).join('\n'))
+  console.error('Caller stack trace:', new Error().stack?.split('\n').slice(2, 5).join('\n'))
+  
+  // Check if we're in test mode with mocked email
+  if (global.sendConfirmationEmail && process.env.NODE_ENV === 'test') {
+    console.log('Using mocked confirmation email function')
+    return global.sendConfirmationEmail(request)
+  }
   
   try {
-    console.log('Fetching musician data...')
-    const musician = await prisma.musician.findUnique({
-      where: { id: request.musicianId }
-    })
-    console.log('Musician found:', musician ? `${musician.firstName} ${musician.lastName} (${musician.email})` : 'NOT FOUND')
+    // First try to use data from the request object if available
+    let musician = request.musician
+    let projectNeed = request.projectNeed
+    
+    // If data is not included, fetch from database
+    if (!musician) {
+      console.log('Musician not in request, fetching from database...')
+      musician = await prisma.musician.findUnique({
+        where: { id: request.musicianId }
+      })
+    }
+    console.log('Musician:', musician ? `${musician.firstName} ${musician.lastName} (${musician.email}) - Language: ${musician.preferredLanguage}` : 'NOT FOUND')
 
-    console.log('Fetching project need data...')
-    const projectNeed = await prisma.projectNeed.findUnique({
-      where: { id: request.projectNeedId },
-      include: {
-        project: true,
-        position: {
-          include: {
-            instrument: true
+    if (!projectNeed) {
+      console.log('Project need not in request, fetching from database...')
+      projectNeed = await prisma.projectNeed.findUnique({
+        where: { id: request.projectNeedId },
+        include: {
+          project: true,
+          position: {
+            include: {
+              instrument: true
+            }
           }
         }
-      }
-    })
-    console.log('Project need found:', projectNeed ? projectNeed.project.name : 'NOT FOUND')
+      })
+    }
+    console.log('Project need:', projectNeed ? projectNeed.project.name : 'NOT FOUND')
 
     if (!musician || !projectNeed) {
       console.error('Missing data for confirmation email:', { musicianId: request.musicianId, projectNeedId: request.projectNeedId })
       throw new Error('Missing data for confirmation email')
     }
+
+  const language = (musician.preferredLanguage || 'sv') as 'sv' | 'en'
+  console.error('=== LANGUAGE SELECTION DEBUG ===')
+  console.error('Musician preferredLanguage:', musician.preferredLanguage)
+  console.error('Type of preferredLanguage:', typeof musician.preferredLanguage)
+  console.error('Selected language for email:', language)
+  console.error('Language === "en"?', language === 'en')
+  console.error('===============================')
 
   // Get files to attach with the confirmation
   const attachments = await getProjectFilesForEmail(
@@ -418,40 +507,53 @@ export async function sendConfirmationEmail(request: RequestWithRelations) {
     positionName: projectNeed.position.name,
     instrument_name: projectNeed.position.instrument.name,
     instrumentName: projectNeed.position.instrument.name,
-    start_date: new Date(projectNeed.project.startDate).toLocaleDateString('sv-SE'),
-    startDate: new Date(projectNeed.project.startDate).toLocaleDateString('sv-SE'),
+    start_date: new Date(projectNeed.project.startDate).toLocaleDateString(language === 'en' ? 'en-US' : 'sv-SE'),
+    startDate: new Date(projectNeed.project.startDate).toLocaleDateString(language === 'en' ? 'en-US' : 'sv-SE'),
     weekNumber: projectNeed.project.weekNumber,
     rehearsal_schedule: projectNeed.project.rehearsalSchedule || 'Information kommer senare',
     rehearsalSchedule: projectNeed.project.rehearsalSchedule || 'Information kommer senare',
     concert_info: projectNeed.project.concertInfo || 'Information kommer senare',
     concertInfo: projectNeed.project.concertInfo || 'Information kommer senare',
     attachmentNote: attachments.length > 0 
-      ? 'Se bifogade filer för noter och ytterligare information.' 
-      : 'Noter och annan information kommer att skickas separat.'
+      ? language === 'en'
+        ? 'See attached files for sheet music and additional information.'
+        : 'Se bifogade filer för noter och ytterligare information.' 
+      : language === 'en' 
+        ? 'Sheet music and other information will be sent separately.'
+        : 'Noter och annan information kommer att skickas separat.'
   }
 
-  console.log('Sending confirmation email with variables:', variables)
-  await sendTemplatedEmail('confirmation', musician.email, variables, attachments)
-  console.log('✅ Confirmation email sent successfully')
+  console.error('Sending confirmation email with variables:', variables)
+  console.error('About to call sendTemplatedEmail with:')
+  console.error('- type: confirmation')
+  console.error('- to:', musician.email)
+  console.error('- attachments:', attachments.length)
+  console.error('- language:', language)
+  await sendTemplatedEmail('confirmation', musician.email, variables, attachments, language)
+  console.error('✅ Confirmation email sent successfully')
 
-  // Update confirmation sent flag
-  console.log('Updating confirmation sent flag...')
-  await prisma.request.update({
-    where: { id: request.id },
-    data: { confirmationSent: true }
-  })
-  console.log('Confirmation flag updated')
+  // Update confirmation sent flag (skip for test requests)
+  if (request.id !== 999) {
+    console.log('Updating confirmation sent flag...')
+    await prisma.request.update({
+      where: { id: request.id },
+      data: { confirmationSent: true }
+    })
+    console.log('Confirmation flag updated')
 
-  // Log the communication
-  console.log('Creating communication log...')
-  await prisma.communicationLog.create({
-    data: {
-      requestId: request.id,
-      type: 'confirmation_sent',
-      timestamp: new Date()
-    }
-  })
-  console.log('Communication log created')
+    // Log the communication
+    console.log('Creating communication log...')
+    await prisma.communicationLog.create({
+      data: {
+        requestId: request.id,
+        type: 'confirmation_sent',
+        timestamp: new Date()
+      }
+    })
+    console.log('Communication log created')
+  } else {
+    console.log('Skipping database updates for test request (ID 999)')
+  }
   console.log('=== SEND CONFIRMATION EMAIL - END ===\n')
   } catch (error) {
     console.error('❌ Error in sendConfirmationEmail:')
@@ -464,21 +566,34 @@ export async function sendConfirmationEmail(request: RequestWithRelations) {
 }
 
 export async function sendPositionFilledEmail(request: RequestWithRelations) {
-  const musician = await prisma.musician.findUnique({
-    where: { id: request.musicianId }
-  })
+  // Check if we're in test mode with mocked email
+  if (global.sendPositionFilledEmail && process.env.NODE_ENV === 'test') {
+    return global.sendPositionFilledEmail(request)
+  }
+  // First try to use data from the request object if available
+  let musician = request.musician
+  let projectNeed = request.projectNeed
+  
+  // If data is not included, fetch from database
+  if (!musician) {
+    musician = await prisma.musician.findUnique({
+      where: { id: request.musicianId }
+    })
+  }
 
-  const projectNeed = await prisma.projectNeed.findUnique({
-    where: { id: request.projectNeedId },
-    include: {
-      project: true,
-      position: {
-        include: {
-          instrument: true
+  if (!projectNeed) {
+    projectNeed = await prisma.projectNeed.findUnique({
+      where: { id: request.projectNeedId },
+      include: {
+        project: true,
+        position: {
+          include: {
+            instrument: true
+          }
         }
       }
-    }
-  })
+    })
+  }
 
   if (!musician || !projectNeed) {
     throw new Error('Missing data for position filled email')
@@ -494,7 +609,8 @@ export async function sendPositionFilledEmail(request: RequestWithRelations) {
     positionName: projectNeed.position.name
   }
 
-  await sendTemplatedEmail('position_filled', musician.email, variables)
+  const language = (musician.preferredLanguage || 'sv') as 'sv' | 'en'
+  await sendTemplatedEmail('position_filled', musician.email, variables, undefined, language)
 
   // Log the communication
   await prisma.communicationLog.create({

@@ -4,6 +4,9 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
 import { cn } from '@/lib/utils'
+import { ToastContainer } from '@/components/toast'
+import EventListener from '@/components/event-listener'
+import { LogInitializer } from '@/components/log-initializer'
 
 const navigation = [
   { name: 'Översikt', href: '/admin' },
@@ -35,6 +38,7 @@ export default function AdminLayout({
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [])
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -91,6 +95,13 @@ export default function AdminLayout({
                         className="block px-4 py-2 text-sm text-green-600 hover:bg-green-50"
                       >
                         📧 Test E-post
+                      </Link>
+                      <Link
+                        href="/admin/logs"
+                        onClick={() => setShowSettings(false)}
+                        className="block px-4 py-2 text-sm text-purple-600 hover:bg-purple-50"
+                      >
+                        🔥 Logs (Dev)
                       </Link>
                     </div>
                   </div>
@@ -156,6 +167,9 @@ export default function AdminLayout({
           </div>
         </main>
       </div>
+      <ToastContainer />
+      <EventListener />
+      <LogInitializer />
     </div>
   )
 }

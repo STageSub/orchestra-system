@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendConfirmationEmail, sendPositionFilledEmail } from '@/lib/email'
+import { ensureLogStorage } from '@/lib/server-init'
+
+// Initialize log storage for this API route
+ensureLogStorage()
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
@@ -90,12 +94,19 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  console.log('=== RESPOND API - POST START ===')
+  // Force log storage initialization
+  const logStorage = ensureLogStorage()
+  
+  console.error('\n\n🔥🔥🔥 RESPOND API - POST START 🔥🔥🔥')
+  console.error('Time:', new Date().toISOString())
+  console.error('URL:', request.url)
+  console.error('Headers:', Object.fromEntries(request.headers.entries()))
+  console.error('Log storage initialized:', !!logStorage)
   
   try {
     const body = await request.json()
-    console.log('=== RESPOND API - Request Body ===')
-    console.log('Full body:', JSON.stringify(body, null, 2))
+    console.error('=== RESPOND API - Request Body ===')
+    console.error('Full body:', JSON.stringify(body, null, 2))
     
     const { token, response } = body
     console.log('Token:', token ? `${token.substring(0, 20)}...` : 'MISSING')
@@ -262,11 +273,27 @@ export async function POST(request: NextRequest) {
 
             // Send position filled emails to pending requests
             for (const req of pendingRequests) {
-              await sendPositionFilledEmail({
-                id: req.id,
-                musicianId: req.musicianId,
-                projectNeedId: req.projectNeedId
+              // Fetch full request data with relations for email language support
+              const fullRequest = await tx.request.findUnique({
+                where: { id: req.id },
+                include: {
+                  musician: true,
+                  projectNeed: {
+                    include: {
+                      project: true,
+                      position: {
+                        include: {
+                          instrument: true
+                        }
+                      }
+                    }
+                  }
+                }
               })
+              
+              if (fullRequest) {
+                await sendPositionFilledEmail(fullRequest)
+              }
             }
           }
         }
@@ -295,7 +322,7 @@ export async function POST(request: NextRequest) {
       console.log('=== RESPOND API - Post-Transaction Declined Handling ===')
       try {
         console.log('Importing handleDeclinedRequest...')
-        const { handleDeclinedRequest } = await import('@/lib/request-strategies')
+        const { handleDeclinedRequest } = await import('@/lib/request-handlers')
         console.log('Calling handleDeclinedRequest outside transaction...')
         await handleDeclinedRequest(result.request.id)
         console.log('✅ Successfully handled declined request post-transaction')
@@ -308,15 +335,25 @@ export async function POST(request: NextRequest) {
         console.log('⚠️ Decline was recorded, but follow-up failed')
       }
     } else if (response === 'accepted') {
-      console.log('=== RESPOND API - Post-Transaction Accepted Handling ===')
+      console.error('\n🔥🔥🔥 RESPOND API - Post-Transaction Accepted Handling 🔥🔥🔥')
       try {
-        console.log('Sending confirmation email for ACCEPTED response...')
-        await sendConfirmationEmail({
-          id: result.request.id,
-          musicianId: result.request.musicianId,
-          projectNeedId: result.request.projectNeedId
-        })
-        console.log('✅ Confirmation email sent successfully post-transaction')
+        console.error('Sending confirmation email for ACCEPTED response...')
+        console.error('Request object being sent to sendConfirmationEmail:')
+        console.error('- Request ID:', result.request.id)
+        console.error('- Has musician?', !!result.request.musician)
+        if (result.request.musician) {
+          console.error('- Musician name:', result.request.musician.firstName, result.request.musician.lastName)
+          console.error('- Musician email:', result.request.musician.email)
+          console.error('- Musician preferredLanguage:', result.request.musician.preferredLanguage)
+          console.error('- Type of preferredLanguage:', typeof result.request.musician.preferredLanguage)
+        }
+        console.error('- Has projectNeed?', !!result.request.projectNeed)
+        if (result.request.projectNeed) {
+          console.error('- Project name:', result.request.projectNeed.project?.name)
+        }
+        console.error('🔥 CALLING sendConfirmationEmail NOW...')
+        await sendConfirmationEmail(result.request)
+        console.error('✅🔥 Confirmation email sent successfully post-transaction 🔥✅')
       } catch (emailError) {
         // Log error but don't fail the response - the acceptance is still recorded
         console.error('❌ Error sending confirmation email (non-fatal):')
