@@ -2,9 +2,13 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateUniqueId } from '@/lib/id-generator'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url)
+    const includeArchived = searchParams.get('includeArchived') === 'true'
+    
     const instruments = await prisma.instrument.findMany({
+      where: includeArchived ? {} : { isArchived: false },
       orderBy: { displayOrder: 'asc' },
       include: {
         positions: {
