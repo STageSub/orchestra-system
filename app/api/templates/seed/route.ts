@@ -141,18 +141,27 @@ Orchestra Administration`,
 
 export async function POST() {
   try {
-    // Check if templates already exist
-    const existingCount = await prisma.emailTemplate.count()
+    // Get existing templates
+    const existingTemplates = await prisma.emailTemplate.findMany({
+      select: { type: true }
+    })
     
-    if (existingCount > 0) {
-      return NextResponse.json(
-        { error: 'Email templates already exist' },
-        { status: 400 }
-      )
+    const existingTypes = new Set(existingTemplates.map(t => t.type))
+    
+    // Only create missing templates
+    const templatesToCreate = defaultTemplates.filter(
+      template => !existingTypes.has(template.type)
+    )
+    
+    if (templatesToCreate.length === 0) {
+      return NextResponse.json({
+        success: true,
+        message: 'All templates already exist'
+      })
     }
 
-    // Create templates
-    for (const template of defaultTemplates) {
+    // Create missing templates
+    for (const template of templatesToCreate) {
       const templateId = await generateUniqueId('template')
       
       await prisma.emailTemplate.create({
@@ -168,7 +177,8 @@ export async function POST() {
 
     return NextResponse.json({
       success: true,
-      message: `${defaultTemplates.length} email templates created`
+      message: `${templatesToCreate.length} missing email templates created`,
+      created: templatesToCreate.map(t => t.type)
     })
   } catch (error) {
     console.error('Error seeding templates:', error)
