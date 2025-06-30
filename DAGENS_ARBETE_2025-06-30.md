@@ -92,3 +92,37 @@ API endpoint `/api/instruments` filtrerade inte bort arkiverade instrument.
 ### Resultat
 ✅ Arkiverade instrument visas inte längre i AddProjectNeedModal
 ✅ Admin-sidan kan fortfarande visa/dölja arkiverade instrument
+
+## ✨ Email Template Gruppering
+
+### Implementation
+Implementerade gruppering av email-mallar efter bastyp för bättre skalbarhet och översikt.
+
+### Förändringar
+1. **Ny UI för email-mallar**
+   - Mallar grupperas efter typ (Förfrågan, Påminnelse, etc.)
+   - Varje grupp visar tillgängliga språkvarianter
+   - Expanderbara sektioner för bättre översikt
+   - Visuella indikatorer för vilka språk som finns/saknas
+
+2. **Utility-bibliotek**
+   - Skapade `/lib/email-template-utils.ts`
+   - Centraliserad hantering av språk och malltyper
+   - Lätt att lägga till nya språk (no, da, fi)
+   - Konsekvent färgkodning och ikoner
+
+3. **Förbättrad seed-funktion**
+   - Skapar endast saknade mallar
+   - Returnerar lista över skapade mallar
+   - Fungerar för alla språkvarianter
+
+4. **Dokumentation**
+   - Skapade `/docs/EMAIL_TEMPLATE_SYSTEM.md`
+   - Komplett guide för mallsystemet
+   - Instruktioner för att lägga till nya språk
+
+### Fördelar
+- **Skalbart**: Lätt att lägga till nya språk
+- **Översiktligt**: Tydlig gruppering och status
+- **Konsekvent**: Samma struktur för alla malltyper
+- **Framtidssäkert**: Förberedd för fler funktioner
