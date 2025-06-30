@@ -126,3 +126,49 @@ Implementerade gruppering av email-mallar efter bastyp för bättre skalbarhet o
 - **Översiktligt**: Tydlig gruppering och status
 - **Konsekvent**: Samma struktur för alla malltyper
 - **Framtidssäkert**: Förberedd för fler funktioner
+
+## 🚀 Planering för Tenant Template System
+
+### Bakgrund
+När vi börjar med SaaS-transformationen (Fas 7) behöver varje ny kund (tenant) få en standarduppsättning av:
+- Instrument med positioner
+- Email-mallar på rätt språk
+- Systeminställningar baserat på tier
+
+### Lösning: Tenant Templates
+Skapa fördefinierade templates för varje prenumerationsnivå:
+
+1. **Small Ensemble Template** ($79/mån)
+   - Grundläggande instrument
+   - Svenska email-mallar
+   - Begränsningar: 50 musiker, 5 projekt
+
+2. **Medium Ensemble Template** ($499/mån)
+   - Alla standardinstrument
+   - Svenska + engelska mallar
+   - Begränsningar: 200 musiker, 20 projekt
+
+3. **Institution Template** ($1,500/mån)
+   - Alla instrument + specialinstrument
+   - Alla tillgängliga språk
+   - Obegränsad användning
+
+### Implementation
+- Ny tabell: TenantTemplate
+- Superadmin UI för att hantera templates
+- Automatisk applicering vid ny kundregistrering
+- Möjlighet att anpassa efter installation
+
+## 📅 Sammanfattning av dagen
+
+### Genomfört:
+1. ✅ Email språkfix efter 7 timmars felsökning
+2. ✅ Real-time log viewer för debugging
+3. ✅ Arkiverade instrument visas inte vid nya behov
+4. ✅ Email template gruppering för skalbarhet
+5. ✅ Dokumentation av alla system
+
+### Fortsättning imorgon:
+- Implementera tenant template system
+- Påbörja SaaS-transformation (Vecka 1)
+- Fokus: Databas & autentisering
