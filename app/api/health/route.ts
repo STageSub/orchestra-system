@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { checkDatabaseHealth, getConnectionStats } from '@/lib/db-health'
 
 export async function GET() {
   try {
-    // Test database connection
-    await prisma.$queryRaw`SELECT 1`
+    // Basic health check
+    const healthResult = await checkDatabaseHealth()
+    
+    // Get connection pool stats
+    const connectionStats = await getConnectionStats()
     
     // Check environment variables
     const envCheck = {
@@ -20,13 +24,39 @@ export async function GET() {
       .filter(([_, value]) => !value)
       .map(([key]) => key)
     
+    // Get basic stats
+    const stats = await Promise.allSettled([
+      prisma.musician.count(),
+      prisma.project.count(),
+      prisma.request.count({ where: { status: 'pending' } })
+    ])
+    
+    const [musicianCount, projectCount, pendingRequests] = stats.map((result, index) => {
+      if (result.status === 'fulfilled') {
+        return result.value
+      }
+      console.error(`Failed to get stat ${index}:`, result.reason)
+      return -1
+    })
+    
     return NextResponse.json({
-      status: 'ok',
-      database: 'connected',
+      status: healthResult.status === 'healthy' ? 'ok' : 'degraded',
+      database: {
+        status: healthResult.status,
+        latency: `${healthResult.latency}ms`,
+        connectionPool: connectionStats,
+        error: healthResult.error
+      },
       environment: {
         NODE_ENV: process.env.NODE_ENV,
         hasAllEnvVars: missingEnvVars.length === 0,
-        missingEnvVars: missingEnvVars.length > 0 ? missingEnvVars : undefined
+        missingEnvVars: missingEnvVars.length > 0 ? missingEnvVars : undefined,
+        provider: 'supabase'
+      },
+      stats: {
+        musicians: musicianCount,
+        projects: projectCount,
+        pendingRequests: pendingRequests
       },
       timestamp: new Date().toISOString()
     })
@@ -34,8 +64,14 @@ export async function GET() {
     console.error('Health check failed:', error)
     return NextResponse.json({
       status: 'error',
-      database: 'disconnected',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      database: {
+        status: 'disconnected',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      },
+      environment: {
+        NODE_ENV: process.env.NODE_ENV,
+        provider: 'supabase'
+      },
       timestamp: new Date().toISOString()
     }, { status: 500 })
   }

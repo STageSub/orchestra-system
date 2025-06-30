@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { sendRequests } from '@/lib/request-strategies'
+import { getRecipientsForNeed, getRecipientsForProject } from '@/lib/recipient-selection'
 
 export async function POST(
   request: NextRequest,
@@ -13,91 +12,40 @@ export async function POST(
   const { projectNeedId } = body
 
   try {
-    // Get project with all needs
-    const project = await prisma.project.findUnique({
-      where: { id: parseInt(id) },
-      include: {
-        projectNeeds: {
-          include: {
-            position: {
-              include: {
-                instrument: true
-              }
-            },
-            requests: {
-              where: {
-                status: {
-                  in: ['pending', 'accepted']
-                }
-              }
-            }
-          }
-        }
-      }
-    })
-
-    if (!project) {
-      return NextResponse.json(
-        { error: 'Projekt hittades inte' },
-        { status: 404 }
-      )
-    }
-
     let totalSent = 0
     const results = []
 
-    // Process each need that requires requests
-    for (const need of project.projectNeeds) {
-      // Skip if specific need requested and this isn't it
-      if (projectNeedId && need.id !== projectNeedId) continue
-      
-      // Skip paused needs
-      if (need.status === 'paused') continue
+    if (projectNeedId) {
+      // Send for specific need
+      const result = await getRecipientsForNeed(projectNeedId, {
+        dryRun: false,
+        includeDetails: false
+      })
 
-      // Calculate how many are already accepted or pending
-      const acceptedCount = need.requests.filter(r => r.status === 'accepted').length
-      const pendingCount = need.requests.filter(r => r.status === 'pending').length
-      const totalActive = acceptedCount + pendingCount
-
-      // Skip if already fully staffed
-      if (totalActive >= need.quantity) continue
-
-      try {
-        // Send requests for this need
-        await sendRequests({
-          projectNeedId: need.id,
-          strategy: need.requestStrategy as 'sequential' | 'parallel' | 'first_come',
-          quantity: need.quantity,
-          maxRecipients: need.maxRecipients || undefined,
-          rankingListId: need.rankingListId || undefined
-        })
-
-        // Count how many new requests were created
-        const newRequests = await prisma.request.count({
-          where: {
-            projectNeedId: need.id,
-            status: 'pending',
-            sentAt: {
-              gte: new Date(Date.now() - 60000) // Created in the last minute
-            }
-          }
-        })
-
-        totalSent += newRequests
+      totalSent = result.totalToSend
+      if (result.needs.length > 0) {
+        const need = result.needs[0]
         results.push({
-          needId: need.id,
-          position: `${need.position.name} - ${need.position.instrument.name}`,
-          sent: newRequests
-        })
-      } catch (error) {
-        console.error(`Failed to send requests for need ${need.id}:`, error)
-        results.push({
-          needId: need.id,
-          position: `${need.position.name} - ${need.position.instrument.name}`,
-          sent: 0,
-          error: 'Failed to send requests'
+          needId: need.needId,
+          position: need.position,
+          sent: need.musiciansToContact.length
         })
       }
+    } else {
+      // Send for all needs in project
+      const result = await getRecipientsForProject(parseInt(id), {
+        dryRun: false,
+        includeDetails: false
+      })
+
+      totalSent = result.totalToSend
+      result.needs.forEach(need => {
+        results.push({
+          needId: need.needId,
+          position: need.position,
+          sent: need.musiciansToContact.length
+        })
+      })
     }
 
     return NextResponse.json({

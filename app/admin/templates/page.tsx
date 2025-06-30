@@ -15,10 +15,14 @@ interface EmailTemplate {
 }
 
 const templateTypeLabels: Record<string, string> = {
-  request: 'Förfrågan',
-  reminder: 'Påminnelse',
-  confirmation: 'Bekräftelse',
-  position_filled: 'Position fylld'
+  request: 'Förfrågan (SV)',
+  reminder: 'Påminnelse (SV)',
+  confirmation: 'Bekräftelse (SV)',
+  position_filled: 'Position fylld (SV)',
+  request_en: 'Request (EN)',
+  reminder_en: 'Reminder (EN)',
+  confirmation_en: 'Confirmation (EN)',
+  position_filled_en: 'Position filled (EN)'
 }
 
 export default function EmailTemplatesPage() {
@@ -67,7 +71,9 @@ export default function EmailTemplatesPage() {
   }
 
   const getTypeColor = (type: string) => {
-    switch (type) {
+    // Remove language suffix for color determination
+    const baseType = type.replace(/_en$/, '')
+    switch (baseType) {
       case 'request':
         return 'bg-blue-100 text-blue-800'
       case 'reminder':

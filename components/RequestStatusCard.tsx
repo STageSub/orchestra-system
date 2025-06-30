@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import SendRequestsPreviewModal from './send-requests-preview-modal'
+import { formatHoursToReadable } from '@/lib/utils'
 
 interface Musician {
   id: number
@@ -85,12 +86,7 @@ export default function RequestStatusCard({ need, projectId, onRequestsSent }: R
     const now = new Date()
     const hoursWaiting = Math.floor((now.getTime() - sent.getTime()) / (1000 * 60 * 60))
     
-    if (hoursWaiting < 24) {
-      return `${hoursWaiting} timmar`
-    } else {
-      const days = Math.floor(hoursWaiting / 24)
-      return `${days} dag${days > 1 ? 'ar' : ''}`
-    }
+    return formatHoursToReadable(hoursWaiting)
   }
 
   const getWaitingIndicator = (sentAt: string, responseTimeHours: number | null) => {

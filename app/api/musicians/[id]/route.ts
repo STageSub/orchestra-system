@@ -32,8 +32,8 @@ export async function GET(
             }
           },
           orderBy: [
-            { rankingList: { position: { instrument: { name: 'asc' } } } },
-            { rankingList: { position: { name: 'asc' } } },
+            { rankingList: { position: { instrument: { displayOrder: { sort: 'asc', nulls: 'last' } } } } },
+            { rankingList: { position: { hierarchyLevel: 'asc' } } },
             { rankingList: { listType: 'asc' } }
           ]
         }
@@ -64,7 +64,39 @@ export async function PUT(
   const { id } = await params
   try {
     const body = await request.json()
-    const { firstName, lastName, email, phone, localResidence, qualificationIds, isActive } = body
+    const { firstName, lastName, email, phone, preferredLanguage, localResidence, notes, qualificationIds, isActive, isArchived } = body
+
+    // Check for duplicate email (excluding current musician)
+    const emailExists = await prisma.musician.findFirst({
+      where: { 
+        email,
+        NOT: { id: parseInt(id) }
+      }
+    })
+    
+    if (emailExists) {
+      return NextResponse.json(
+        { error: `E-postadressen används redan av ${emailExists.firstName} ${emailExists.lastName} (${emailExists.musicianId})` },
+        { status: 400 }
+      )
+    }
+    
+    // Check for duplicate phone if provided (excluding current musician)
+    if (phone) {
+      const phoneExists = await prisma.musician.findFirst({
+        where: { 
+          phone,
+          NOT: { id: parseInt(id) }
+        }
+      })
+      
+      if (phoneExists) {
+        return NextResponse.json(
+          { error: `Telefonnumret används redan av ${phoneExists.firstName} ${phoneExists.lastName} (${phoneExists.musicianId})` },
+          { status: 400 }
+        )
+      }
+    }
 
     // Update musician and qualifications in transaction
     const musician = await prisma.$transaction(async (tx) => {
@@ -76,8 +108,11 @@ export async function PUT(
           lastName,
           email,
           phone: phone || null,
+          preferredLanguage: preferredLanguage || 'sv',
           localResidence: localResidence || false,
-          isActive: isActive !== undefined ? isActive : true
+          notes: notes || null,
+          isActive: isActive !== undefined ? isActive : true,
+          isArchived: isArchived !== undefined ? isArchived : undefined
         }
       })
 
@@ -126,8 +161,8 @@ export async function PUT(
             }
           },
           orderBy: [
-            { rankingList: { position: { instrument: { name: 'asc' } } } },
-            { rankingList: { position: { name: 'asc' } } },
+            { rankingList: { position: { instrument: { displayOrder: { sort: 'asc', nulls: 'last' } } } } },
+            { rankingList: { position: { hierarchyLevel: 'asc' } } },
             { rankingList: { listType: 'asc' } }
           ]
         }

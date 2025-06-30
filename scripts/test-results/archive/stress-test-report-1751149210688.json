@@ -1,0 +1,455 @@
+{
+  "startTime": "2025-06-28T22:20:06.903Z",
+  "categories": {
+    "Data Integrity": {
+      "passed": 5,
+      "failed": 0,
+      "tests": [
+        {
+          "name": "verifyMusicianCounts",
+          "passed": true,
+          "details": {
+            "total": 149,
+            "active": 128,
+            "inactive": 9,
+            "archived": 12,
+            "substitutes": 11,
+            "expected": {
+              "total": 151,
+              "active": 143,
+              "inactive": 8,
+              "archived": 15
+            }
+          },
+          "duration": 520
+        },
+        {
+          "name": "verifyInstruments",
+          "passed": true,
+          "details": {
+            "count": 17,
+            "names": [
+              "Violin",
+              "Viola",
+              "Cello",
+              "Kontrabas",
+              "Flöjt",
+              "Oboe",
+              "Klarinett",
+              "Fagott",
+              "Horn",
+              "Trumpet",
+              "Trombon",
+              "Tuba",
+              "Pukor",
+              "Slagverk",
+              "Harpa",
+              "Piano",
+              "Sång"
+            ],
+            "hasSang": true
+          },
+          "duration": 100
+        },
+        {
+          "name": "verifyPositions",
+          "passed": true,
+          "details": {
+            "total": 42,
+            "voicePositions": [
+              "Sopran",
+              "Alt",
+              "Tenor",
+              "Bas"
+            ],
+            "withoutRankingLists": 0
+          },
+          "duration": 165
+        },
+        {
+          "name": "verifyRankingLists",
+          "passed": true,
+          "details": {
+            "total": 126,
+            "byType": {
+              "A": 42,
+              "C": 42,
+              "B": 42
+            }
+          },
+          "duration": 190
+        },
+        {
+          "name": "verifyIdFormats",
+          "passed": true,
+          "details": {
+            "samples": [
+              "MUS132",
+              "INST017",
+              "POS039"
+            ]
+          },
+          "duration": 186
+        }
+      ]
+    },
+    "Request Strategies": {
+      "passed": 2,
+      "failed": 1,
+      "tests": [
+        {
+          "name": "testSequentialStrategy",
+          "passed": false,
+          "details": {
+            "position": "Sopran",
+            "needed": 3,
+            "sent": 3,
+            "accepted": 3
+          },
+          "duration": 256
+        },
+        {
+          "name": "testParallelStrategy",
+          "passed": true,
+          "details": {
+            "position": "Tutti violin 1",
+            "needed": 8,
+            "totalSent": 14,
+            "accepted": 8,
+            "finalActive": 6
+          },
+          "duration": 261
+        },
+        {
+          "name": "testFirstComeStrategy",
+          "passed": true,
+          "details": {
+            "position": "Alt",
+            "needed": 2,
+            "maxRecipients": 4,
+            "sent": 4,
+            "accepted": 2,
+            "positionFilledEmails": 1
+          },
+          "duration": 256
+        }
+      ]
+    },
+    "Email Flows": {
+      "passed": 4,
+      "failed": 0,
+      "tests": [
+        {
+          "name": "testCompleteEmailFlow",
+          "passed": true,
+          "details": {
+            "musician": "Kristina Lundberg",
+            "emailsSent": 3,
+            "hasToken": true,
+            "hasAttachment": true
+          },
+          "duration": 104
+        },
+        {
+          "name": "testDeclineFlow",
+          "passed": true,
+          "details": {
+            "musician": "Karin Engström",
+            "scenario": "declined",
+            "confirmationsSent": 0
+          },
+          "duration": 101
+        },
+        {
+          "name": "testTimeoutHandling",
+          "passed": true,
+          "details": {
+            "sentAt": "2025-06-26T21:20:09.147Z",
+            "responseTimeHours": 48,
+            "hoursElapsed": 49,
+            "isTimedOut": true
+          },
+          "duration": 0
+        },
+        {
+          "name": "testFileAttachments",
+          "passed": true,
+          "details": {
+            "onRequestFiles": 1,
+            "onAcceptFiles": 1,
+            "totalFiles": 2
+          },
+          "duration": 0
+        }
+      ]
+    },
+    "Business Rules": {
+      "passed": 3,
+      "failed": 1,
+      "tests": [
+        {
+          "name": "testOneRequestPerMusicianPerProject",
+          "passed": true,
+          "details": {
+            "musician": "Maja Jansson",
+            "positionsRequesting": [
+              "Tutti violin 1",
+              "Tutti violin 2"
+            ],
+            "requestsSent": 1
+          },
+          "duration": 106
+        },
+        {
+          "name": "testArchivedExclusion",
+          "passed": false,
+          "details": {
+            "archivedCount": 5,
+            "activeCount": 5,
+            "archivedRequests": 1
+          },
+          "duration": 207
+        },
+        {
+          "name": "testInactiveHandling",
+          "passed": true,
+          "details": {
+            "inactiveCount": 3,
+            "examples": [
+              "Ebba Månsson",
+              "Peter Hansson"
+            ],
+            "note": "Inactive musicians can receive requests but show red badge in UI"
+          },
+          "duration": 104
+        },
+        {
+          "name": "testLocalResidenceFilter",
+          "passed": true,
+          "details": {
+            "localMusicians": 43,
+            "totalActive": 128,
+            "percentage": "33.6%",
+            "filterWorking": true
+          },
+          "duration": 210
+        }
+      ]
+    },
+    "Performance": {
+      "passed": 2,
+      "failed": 0,
+      "tests": [
+        {
+          "name": "testLargeScaleRequests",
+          "passed": true,
+          "details": {
+            "totalRequests": 1000,
+            "duration": "0ms",
+            "requestsPerSecond": null,
+            "batchSize": 100
+          },
+          "duration": 0
+        },
+        {
+          "name": "testDatabaseQueryPerformance",
+          "passed": true,
+          "details": {
+            "complexQueryResults": 34,
+            "aggregationResults": 3,
+            "totalDuration": "399ms"
+          },
+          "duration": 399
+        }
+      ]
+    },
+    "Scenarios": {
+      "passed": 3,
+      "failed": 0,
+      "tests": [
+        {
+          "name": "testOperaProduction",
+          "passed": true,
+          "details": {
+            "voiceTypes": [
+              "Alt",
+              "Sopran",
+              "Bas",
+              "Tenor"
+            ],
+            "orchestraPositions": 4,
+            "totalMusiciansNeeded": 37,
+            "scenario": "Opera: La Bohème"
+          },
+          "duration": 212
+        },
+        {
+          "name": "testEmergencySubstitution",
+          "passed": true,
+          "details": {
+            "position": "Förste konsertmästare",
+            "scenario": "Emergency - Concert tonight",
+            "responseTimeHours": 2,
+            "contactedMusicians": 5,
+            "strategy": "first_come (emergency)"
+          },
+          "duration": 190
+        },
+        {
+          "name": "testFestivalPlanning",
+          "passed": true,
+          "details": {
+            "projects": 4,
+            "totalMusiciansNeeded": 220,
+            "uniqueMusicians": 100,
+            "conflicts": 120,
+            "scenario": "Music Festival Week"
+          },
+          "duration": 0
+        }
+      ]
+    }
+  },
+  "totalTests": 21,
+  "passed": 19,
+  "failed": 2,
+  "warnings": 1,
+  "performance": {
+    "Data Integrity:verifyMusicianCounts": {
+      "duration": 520,
+      "marks": []
+    },
+    "Data Integrity:verifyInstruments": {
+      "duration": 100,
+      "marks": []
+    },
+    "Data Integrity:verifyPositions": {
+      "duration": 165,
+      "marks": []
+    },
+    "Data Integrity:verifyRankingLists": {
+      "duration": 190,
+      "marks": []
+    },
+    "Data Integrity:verifyIdFormats": {
+      "duration": 186,
+      "marks": []
+    },
+    "Request Strategies:testSequentialStrategy": {
+      "duration": 256,
+      "marks": []
+    },
+    "Request Strategies:testParallelStrategy": {
+      "duration": 261,
+      "marks": []
+    },
+    "Request Strategies:testFirstComeStrategy": {
+      "duration": 256,
+      "marks": []
+    },
+    "Email Flows:testCompleteEmailFlow": {
+      "duration": 104,
+      "marks": []
+    },
+    "Email Flows:testDeclineFlow": {
+      "duration": 101,
+      "marks": []
+    },
+    "Email Flows:testTimeoutHandling": {
+      "duration": 0,
+      "marks": []
+    },
+    "Email Flows:testFileAttachments": {
+      "duration": 0,
+      "marks": []
+    },
+    "Business Rules:testOneRequestPerMusicianPerProject": {
+      "duration": 106,
+      "marks": []
+    },
+    "Business Rules:testArchivedExclusion": {
+      "duration": 207,
+      "marks": []
+    },
+    "Business Rules:testInactiveHandling": {
+      "duration": 104,
+      "marks": []
+    },
+    "Business Rules:testLocalResidenceFilter": {
+      "duration": 210,
+      "marks": []
+    },
+    "large-scale-requests": {
+      "duration": 0,
+      "marks": [
+        {
+          "label": "start",
+          "time": 0
+        },
+        {
+          "label": "500 requests sent",
+          "time": 0
+        },
+        {
+          "label": "1000 requests sent",
+          "time": 0
+        },
+        {
+          "label": "complete",
+          "time": 0
+        }
+      ]
+    },
+    "Performance:testLargeScaleRequests": {
+      "duration": 0,
+      "marks": []
+    },
+    "db-queries": {
+      "duration": 399,
+      "marks": [
+        {
+          "label": "complex-query-start",
+          "time": 0
+        },
+        {
+          "label": "complex-query-end",
+          "time": 304
+        },
+        {
+          "label": "aggregation-start",
+          "time": 304
+        },
+        {
+          "label": "aggregation-end",
+          "time": 399
+        }
+      ]
+    },
+    "Performance:testDatabaseQueryPerformance": {
+      "duration": 399,
+      "marks": []
+    },
+    "Scenarios:testOperaProduction": {
+      "duration": 212,
+      "marks": []
+    },
+    "Scenarios:testEmergencySubstitution": {
+      "duration": 190,
+      "marks": []
+    },
+    "Scenarios:testFestivalPlanning": {
+      "duration": 0,
+      "marks": []
+    }
+  },
+  "errors": [
+    {
+      "category": "Request Strategies",
+      "test": "testSequentialStrategy"
+    },
+    {
+      "category": "Business Rules",
+      "test": "testArchivedExclusion"
+    }
+  ]
+}

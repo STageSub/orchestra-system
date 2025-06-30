@@ -21,43 +21,60 @@ export async function GET() {
       instruments.map(async (instrument) => {
         const positionsWithCounts = await Promise.all(
           instrument.positions.map(async (position) => {
-            const uniqueMusicians = await prisma.musicianQualification.groupBy({
-              by: ['musicianId'],
-              where: { positionId: position.id }
+            // Count only active musicians
+            const activeMusicians = await prisma.musician.findMany({
+              where: {
+                isActive: true,
+                isArchived: false,
+                qualifications: {
+                  some: { positionId: position.id }
+                }
+              },
+              select: { id: true }
             })
             
             return {
               ...position,
               _count: {
-                qualifications: uniqueMusicians.length
+                qualifications: activeMusicians.length
               }
             }
           })
         )
         
-        // Get total unique musicians for the instrument
-        const allQualifications = await prisma.musicianQualification.findMany({
+        // Get total unique active musicians for the instrument
+        const activeMusiciansForInstrument = await prisma.musician.findMany({
           where: {
-            position: {
-              instrumentId: instrument.id
+            isActive: true,
+            isArchived: false,
+            qualifications: {
+              some: {
+                position: {
+                  instrumentId: instrument.id
+                }
+              }
             }
           },
-          distinct: ['musicianId']
+          select: { id: true }
         })
         
         return {
           ...instrument,
           positions: positionsWithCounts,
-          totalUniqueMusicians: allQualifications.length
+          totalUniqueMusicians: activeMusiciansForInstrument.length
         }
       })
     )
     
     return NextResponse.json(instrumentsWithCounts)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching instruments:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch instruments' },
+      { 
+        error: 'Failed to fetch instruments',
+        details: error.message,
+        code: error.code
+      },
       { status: 500 }
     )
   }

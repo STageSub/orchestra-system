@@ -51,6 +51,7 @@ export async function PUT(request: Request) {
 function getSettingDescription(key: string): string {
   const descriptions: Record<string, string> = {
     reminder_percentage: 'Procent av svarstiden som ska gå innan påminnelse skickas',
+    ranking_conflict_strategy: 'Strategi för hantering av musiker som finns på flera rankningslistor'
   }
   return descriptions[key] || ''
 }

@@ -1,6 +1,19 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Tooltip from './tooltip'
+import RankingListTooltip from './ranking-list-tooltip'
+
+interface MusicianInfo {
+  id: number
+  name: string
+  email: string
+  rank: number
+  isExcluded?: boolean
+  excludeReason?: 'already_contacted' | 'has_pending' | 'has_accepted' | 'has_declined' | 'timed_out' | 'no_local_residence' | 'inactive' | 'will_receive_request'
+  existingPosition?: string
+  existingStatus?: string
+}
 
 interface PreviewData {
   need: {
@@ -17,19 +30,12 @@ interface PreviewData {
     explanation: string
   }
   preview: {
-    musiciansToContact: Array<{
-      id: number
-      name: string
-      email: string
-      rank: number
-    }>
-    nextInQueue: Array<{
-      id: number
-      name: string
-      email: string
-      rank: number
-    }>
+    musiciansToContact: MusicianInfo[]
+    nextInQueue: MusicianInfo[]
+    allMusiciansWithStatus: MusicianInfo[]
     totalAvailable: number
+    listType?: string
+    rankingListId?: number
   }
   canSend: boolean
 }
@@ -87,8 +93,29 @@ export default function SendRequestsPreviewModal({
     }
   }
 
+  const getExcludeReasonText = (reason: string | undefined, existingPosition?: string) => {
+    switch (reason) {
+      case 'has_pending':
+        return existingPosition ? `Väntar svar - ${existingPosition}` : 'Väntar svar'
+      case 'has_accepted':
+        return existingPosition ? `Redan accepterat - ${existingPosition}` : 'Redan accepterat'
+      case 'has_declined':
+        return 'Tackade nej'
+      case 'timed_out':
+        return 'Svarstid utgått'
+      case 'no_local_residence':
+        return 'Saknar lokalt boende'
+      case 'inactive':
+        return 'Inaktiv musiker'
+      case 'will_receive_request':
+        return existingPosition ? `Får förfrågan - ${existingPosition}` : 'Får förfrågan'
+      default:
+        return ''
+    }
+  }
+
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 overflow-y-auto h-full w-full z-50">
       <div className="relative top-20 mx-auto border w-11/12 max-w-2xl shadow-lg rounded-md bg-white flex flex-col" style={{ maxHeight: 'calc(100vh - 10rem)' }}>
         {/* Fixed Header */}
         <div className="flex items-center justify-between p-5 border-b border-gray-200">
@@ -128,22 +155,125 @@ export default function SendRequestsPreviewModal({
               </div>
             </div>
 
-            {/* Strategy explanation */}
-            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-              <div className="flex items-start">
-                <svg className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div>
-                  <p className="text-sm font-medium text-blue-900">
-                    {getStrategyLabel(previewData.strategy.type)} strategi
-                  </p>
-                  <p className="text-sm text-blue-700 mt-1">
-                    {previewData.strategy.explanation}
-                  </p>
+            {/* Compact strategy info */}
+            <div className="flex items-center text-sm text-gray-600 bg-gray-50 rounded-lg px-4 py-2">
+              <Tooltip
+                content={
+                  previewData.preview.rankingListId ? (
+                    <RankingListTooltip
+                      rankingListId={previewData.preview.rankingListId}
+                      listType={previewData.preview.listType || ''}
+                      positionName={previewData.need.position.split(' - ')[1] || ''}
+                    />
+                  ) : (
+                    <div className="text-xs">
+                      Rankningslista {previewData.preview.listType}
+                    </div>
+                  )
+                }
+                delay={700}
+              >
+                <span className="font-medium cursor-help border-b border-dashed border-gray-400">
+                  Lista {previewData.preview.listType}
+                </span>
+              </Tooltip>
+              <span className="mx-1">•</span>
+              <Tooltip
+                content={
+                  <div className="text-xs">
+                    {previewData.strategy.type === 'sequential' && 'En musiker i taget, nästa vid nej'}
+                    {previewData.strategy.type === 'parallel' && 'Flera samtidigt för att fylla behoven'}
+                    {previewData.strategy.type === 'first_come' && 'Alla får förfrågan, först till kvarn'}
+                  </div>
+                }
+                delay={300}
+              >
+                <span className="font-medium cursor-help border-b border-dashed border-gray-400">
+                  {getStrategyLabel(previewData.strategy.type)}
+                </span>
+              </Tooltip>
+            </div>
+
+            {/* All musicians with status */}
+            {previewData.preview.allMusiciansWithStatus && previewData.preview.allMusiciansWithStatus.length > 0 && (
+              <div>
+                <h4 className="font-medium text-gray-900 mb-3">
+                  Alla musiker på rankningslistan (Lista {previewData.preview.listType}):
+                </h4>
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 max-h-64 overflow-y-auto">
+                  <div className="space-y-1">
+                    {previewData.preview.allMusiciansWithStatus.map((musician) => {
+                      const willContact = previewData.preview.musiciansToContact.some(m => m.id === musician.id)
+                      
+                      return (
+                        <div key={musician.id} className={`flex items-center justify-between text-sm p-2 rounded ${
+                          musician.isExcluded ? 'bg-gray-100 text-gray-500' : 
+                          willContact ? 'bg-green-50 text-green-900' : ''
+                        }`}>
+                          <div className="flex items-center">
+                            <span className="text-gray-500 mr-2 w-6 text-right">{musician.rank}.</span>
+                            
+                            {/* Status icon */}
+                            {musician.isExcluded ? (
+                              <>
+                                {musician.excludeReason === 'has_accepted' && (
+                                  <span className="text-green-600 mr-2" title="Redan accepterat">✓</span>
+                                )}
+                                {musician.excludeReason === 'has_pending' && (
+                                  <span className="text-yellow-500 mr-2" title="Väntar på svar">⏱</span>
+                                )}
+                                {(musician.excludeReason === 'has_declined' || musician.excludeReason === 'timed_out') && (
+                                  <span className="text-red-500 mr-2" title="Tackade nej">✗</span>
+                                )}
+                                {musician.excludeReason === 'inactive' && (
+                                  <span className="text-gray-400 mr-2" title="Inaktiv">○</span>
+                                )}
+                                {musician.excludeReason === 'no_local_residence' && (
+                                  <span className="text-orange-500 mr-2" title="Saknar lokalt boende">⚠</span>
+                                )}
+                                {musician.excludeReason === 'will_receive_request' && (
+                                  <span className="text-blue-500 mr-2" title="Får förfrågan">➔</span>
+                                )}
+                              </>
+                            ) : willContact ? (
+                              <span className="text-green-600 mr-2" title="Kommer få förfrågan">→</span>
+                            ) : (
+                              <span className="mr-4"></span>
+                            )}
+                            
+                            <span className={`font-medium ${musician.isExcluded ? 'line-through' : ''}`}>
+                              {musician.name}
+                            </span>
+                            
+                            {musician.isExcluded && musician.excludeReason && (
+                              <span className="ml-2 text-xs text-gray-500">
+                                ({getExcludeReasonText(musician.excludeReason, musician.existingPosition)})
+                              </span>
+                            )}
+                          </div>
+                          
+                          {!musician.isExcluded && willContact && (
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                              Får förfrågan
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                  
+                  {/* Legend */}
+                  <div className="mt-4 pt-3 border-t border-gray-300 text-xs text-gray-600">
+                    <div className="flex items-center space-x-4">
+                      <span className="flex items-center"><span className="text-green-600 mr-1">✓</span> Accepterat</span>
+                      <span className="flex items-center"><span className="text-yellow-500 mr-1">⏱</span> Väntar svar</span>
+                      <span className="flex items-center"><span className="text-red-500 mr-1">✗</span> Tackat nej</span>
+                      <span className="flex items-center"><span className="text-green-600 mr-1">→</span> Får förfrågan</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Musicians to contact */}
             {previewData.preview.musiciansToContact.length > 0 ? (

@@ -2,6 +2,19 @@
 
 import { useState, useEffect } from 'react'
 import Tooltip from './tooltip'
+import ConflictWarning from './conflict-warning'
+import RankingListTooltip from './ranking-list-tooltip'
+
+interface MusicianInfo {
+  id: number
+  name: string
+  email: string
+  rank: number
+  isExcluded?: boolean
+  excludeReason?: 'already_contacted' | 'has_pending' | 'has_accepted' | 'has_declined' | 'timed_out' | 'no_local_residence' | 'inactive' | 'will_receive_request'
+  existingPosition?: string
+  existingStatus?: string
+}
 
 interface NeedPreview {
   needId: number
@@ -14,18 +27,11 @@ interface NeedPreview {
   }
   strategy: string
   maxRecipients?: number | null
-  musiciansToContact: Array<{
-    id: number
-    name: string
-    email: string
-    rank: number
-  }>
-  nextInQueue?: Array<{
-    id: number
-    name: string
-    email: string
-    rank: number
-  }>
+  listType?: string
+  rankingListId?: number
+  musiciansToContact: MusicianInfo[]
+  nextInQueue?: MusicianInfo[]
+  allMusiciansWithStatus?: MusicianInfo[]
   totalAvailable?: number
 }
 
@@ -55,10 +61,13 @@ export default function SendAllRequestsPreviewModal({
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [previewData, setPreviewData] = useState<PreviewData | null>(null)
+  const [conflictStrategy, setConflictStrategy] = useState('simple')
+  const [expandedNeeds, setExpandedNeeds] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     if (isOpen) {
       fetchPreview()
+      fetchSettings()
     }
   }, [isOpen])
 
@@ -79,6 +88,31 @@ export default function SendAllRequestsPreviewModal({
     }
   }
 
+  const fetchSettings = async () => {
+    try {
+      const response = await fetch('/api/settings')
+      if (response.ok) {
+        const settings = await response.json()
+        const strategySetting = settings.find((s: any) => s.key === 'ranking_conflict_strategy')
+        if (strategySetting) {
+          setConflictStrategy(strategySetting.value)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching settings:', error)
+    }
+  }
+
+  const toggleNeedExpansion = (needId: number) => {
+    const newExpanded = new Set(expandedNeeds)
+    if (newExpanded.has(needId)) {
+      newExpanded.delete(needId)
+    } else {
+      newExpanded.add(needId)
+    }
+    setExpandedNeeds(newExpanded)
+  }
+
   if (!isOpen) return null
 
   const getStrategyLabel = (type: string) => {
@@ -90,8 +124,29 @@ export default function SendAllRequestsPreviewModal({
     }
   }
 
+  const getExcludeReasonText = (reason: string | undefined, existingPosition?: string) => {
+    switch (reason) {
+      case 'has_pending':
+        return existingPosition ? `Väntar svar - ${existingPosition}` : 'Väntar svar'
+      case 'has_accepted':
+        return existingPosition ? `Redan accepterat - ${existingPosition}` : 'Redan accepterat'
+      case 'has_declined':
+        return 'Tackade nej'
+      case 'timed_out':
+        return 'Svarstid utgått'
+      case 'no_local_residence':
+        return 'Saknar lokalt boende'
+      case 'inactive':
+        return 'Inaktiv musiker'
+      case 'will_receive_request':
+        return existingPosition ? `Får förfrågan - ${existingPosition}` : 'Får förfrågan'
+      default:
+        return ''
+    }
+  }
+
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 overflow-y-auto h-full w-full z-50">
       <div className="relative top-20 mx-auto border w-11/12 max-w-4xl shadow-lg rounded-md bg-white flex flex-col" style={{ maxHeight: 'calc(100vh - 10rem)' }}>
         {/* Fixed Header */}
         <div className="flex items-center justify-between p-5 border-b border-gray-200">
@@ -123,6 +178,29 @@ export default function SendAllRequestsPreviewModal({
                 </p>
               </div>
 
+              {/* Conflict warning */}
+              <ConflictWarning projectId={projectId} />
+
+              {/* Conflict strategy info */}
+              {conflictStrategy === 'smart' && (
+                <div className="bg-green-50 rounded-lg p-4 border border-green-200 mb-4">
+                  <div className="flex items-start">
+                    <svg className="h-5 w-5 text-green-400 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-medium text-green-900">
+                        Smart position-matchning aktiv
+                      </h4>
+                      <p className="text-xs text-green-800 mt-1">
+                        Systemet kommer automatiskt att prioritera musiker för de positioner där de rankas högst. 
+                        Musiker som passar bättre för andra positioner kommer att sparas för dessa.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
             {/* Needs breakdown */}
             {previewData.needsPreviews.length > 0 ? (
               <div className="space-y-3">
@@ -134,7 +212,41 @@ export default function SendAllRequestsPreviewModal({
                         <div>
                           <h4 className="font-medium text-gray-900">{need.position}</h4>
                           <div className="flex items-center space-x-2 mt-1 text-xs text-gray-600">
-                            <span>{getStrategyLabel(need.strategy)}</span>
+                            <Tooltip
+                              content={
+                                need.rankingListId ? (
+                                  <RankingListTooltip
+                                    rankingListId={need.rankingListId}
+                                    listType={need.listType || ''}
+                                    positionName={need.position.split(' - ')[1] || ''}
+                                  />
+                                ) : (
+                                  <div className="text-xs">
+                                    Rankningslista {need.listType}
+                                  </div>
+                                )
+                              }
+                              delay={700}
+                            >
+                              <span className="cursor-help border-b border-dashed border-gray-400">
+                                Lista {need.listType}
+                              </span>
+                            </Tooltip>
+                            <span>•</span>
+                            <Tooltip
+                              content={
+                                <div className="text-xs">
+                                  {need.strategy === 'sequential' && 'En musiker i taget, nästa vid nej'}
+                                  {need.strategy === 'parallel' && 'Flera samtidigt för att fylla behoven'}
+                                  {need.strategy === 'first_come' && 'Alla får förfrågan, först till kvarn'}
+                                </div>
+                              }
+                              delay={300}
+                            >
+                              <span className="cursor-help border-b border-dashed border-gray-400">
+                                {getStrategyLabel(need.strategy)}
+                              </span>
+                            </Tooltip>
                             {need.strategy === 'first_come' && (
                               <>
                                 <span>•</span>
@@ -181,6 +293,80 @@ export default function SendAllRequestsPreviewModal({
                         ))}
                       </div>
                     </div>
+
+                    {/* Expandable section for all musicians */}
+                    {need.allMusiciansWithStatus && need.allMusiciansWithStatus.length > 0 && (
+                      <div className="px-4 pb-3">
+                        <button
+                          onClick={() => toggleNeedExpansion(need.needId)}
+                          className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
+                        >
+                          <svg 
+                            className={`w-3 h-3 mr-1 transform transition-transform ${expandedNeeds.has(need.needId) ? 'rotate-180' : ''}`} 
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                          {expandedNeeds.has(need.needId) ? 'Dölj' : 'Visa'} alla musiker på listan
+                        </button>
+                        
+                        {expandedNeeds.has(need.needId) && (
+                          <div className="mt-2 bg-gray-50 rounded-lg p-3 max-h-48 overflow-y-auto">
+                            <div className="space-y-1 text-xs">
+                              {need.allMusiciansWithStatus.map((musician) => {
+                                const willContact = need.musiciansToContact.some(m => m.id === musician.id)
+                                
+                                return (
+                                  <div key={musician.id} className={`flex items-center ${musician.isExcluded ? 'text-gray-400' : ''}`}>
+                                    <span className="w-6 text-right mr-2">{musician.rank}.</span>
+                                    
+                                    {/* Status icon */}
+                                    {musician.isExcluded ? (
+                                      <>
+                                        {musician.excludeReason === 'has_accepted' && (
+                                          <span className="text-green-600 mr-1" title="Redan accepterat">✓</span>
+                                        )}
+                                        {musician.excludeReason === 'has_pending' && (
+                                          <span className="text-yellow-500 mr-1" title="Väntar på svar">⏱</span>
+                                        )}
+                                        {(musician.excludeReason === 'has_declined' || musician.excludeReason === 'timed_out') && (
+                                          <span className="text-red-500 mr-1" title="Tackade nej">✗</span>
+                                        )}
+                                        {musician.excludeReason === 'inactive' && (
+                                          <span className="text-gray-400 mr-1" title="Inaktiv">○</span>
+                                        )}
+                                        {musician.excludeReason === 'no_local_residence' && (
+                                          <span className="text-orange-500 mr-1" title="Saknar lokalt boende">⚠</span>
+                                        )}
+                                        {musician.excludeReason === 'will_receive_request' && (
+                                          <span className="text-blue-500 mr-1" title="Får förfrågan">➔</span>
+                                        )}
+                                      </>
+                                    ) : willContact ? (
+                                      <span className="text-green-600 mr-1" title="Kommer få förfrågan">→</span>
+                                    ) : (
+                                      <span className="mr-3"></span>
+                                    )}
+                                    
+                                    <span className={`${musician.isExcluded ? 'line-through' : ''}`}>
+                                      {musician.name}
+                                    </span>
+                                    
+                                    {musician.isExcluded && musician.excludeReason && (
+                                      <span className="ml-2 text-gray-500">
+                                        ({getExcludeReasonText(musician.excludeReason, musician.existingPosition)})
+                                      </span>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Next in Queue */}
                     {need.nextInQueue && need.nextInQueue.length > 0 && (

@@ -98,6 +98,7 @@ interface Instrument {
   instrumentId: string
   name: string
   displayOrder: number | null
+  isArchived: boolean
   positions: Position[]
   totalUniqueMusicians?: number
   _count?: {
@@ -111,10 +112,8 @@ export default function InstrumentsPage() {
   const [expandedInstruments, setExpandedInstruments] = useState<Set<number>>(new Set())
   const [addingPosition, setAddingPosition] = useState<number | null>(null)
   const [newPositionName, setNewPositionName] = useState('')
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [deleteInstrumentId, setDeleteInstrumentId] = useState<number | null>(null)
-  const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [showReorderModal, setShowReorderModal] = useState(false)
+  const [showArchived, setShowArchived] = useState(false)
 
   useEffect(() => {
     fetchInstruments()
@@ -222,28 +221,6 @@ export default function InstrumentsPage() {
     }
   }
 
-  const handleDeleteInstrument = async () => {
-    if (!deleteInstrumentId || deleteConfirmText !== 'RADERA') return
-    
-    try {
-      const response = await fetch(`/api/instruments/${deleteInstrumentId}`, {
-        method: 'DELETE'
-      })
-      
-      if (response.ok) {
-        setShowDeleteModal(false)
-        setDeleteInstrumentId(null)
-        setDeleteConfirmText('')
-        fetchInstruments()
-      } else {
-        const error = await response.json()
-        alert(error.error || 'Kunde inte ta bort instrumentet')
-      }
-    } catch (error) {
-      console.error('Error deleting instrument:', error)
-      alert('Ett fel uppstod vid borttagning')
-    }
-  }
 
   if (loading) {
     return (
@@ -279,9 +256,20 @@ export default function InstrumentsPage() {
             </Link>
           </div>
         </div>
-        <p className="text-sm text-gray-600">
-          Hantera orkesterns instrument och deras tjänster. Klicka på ett instrument för att se detaljer.
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-600">
+            Hantera orkesterns instrument och deras tjänster. Klicka på ett instrument för att se detaljer.
+          </p>
+          <label className="flex items-center text-sm text-gray-600">
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(e) => setShowArchived(e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-2"
+            />
+            Visa arkiverade instrument
+          </label>
+        </div>
       </div>
 
       <div className="grid gap-4">
@@ -300,12 +288,16 @@ export default function InstrumentsPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {instruments.map((instrument) => {
+            {instruments
+              .filter(instrument => showArchived || !instrument.isArchived)
+              .map((instrument) => {
               const totalMusicians = instrument.totalUniqueMusicians || 0
               const isExpanded = expandedInstruments.has(instrument.id)
               
               return (
-                <div key={instrument.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden transition-all duration-200 hover:shadow-md">
+                <div key={instrument.id} className={`rounded-lg shadow-sm border overflow-hidden transition-all duration-200 hover:shadow-md ${
+                  instrument.isArchived ? 'bg-gray-50 border-gray-300' : 'bg-white border-gray-200'
+                }`}>
                   <div className="p-6">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center flex-1">
@@ -323,9 +315,16 @@ export default function InstrumentsPage() {
                           </svg>
                         </button>
                         <div>
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            {instrument.name}
-                          </h3>
+                          <div className="flex items-center space-x-2">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              {instrument.name}
+                            </h3>
+                            {instrument.isArchived && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                Arkiverad
+                              </span>
+                            )}
+                          </div>
                           <div className="mt-1 flex items-center space-x-4 text-sm text-gray-500">
                             <span className="flex items-center">
                               <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -342,7 +341,7 @@ export default function InstrumentsPage() {
                           </div>
                         </div>
                       </div>
-                      <div className="grid grid-cols-[auto,auto] gap-2">
+                      <div>
                         <Link
                           href={`/admin/instruments/${instrument.id}`}
                           className="inline-flex items-center p-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
@@ -352,22 +351,6 @@ export default function InstrumentsPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
                         </Link>
-                        {totalMusicians === 0 ? (
-                          <button
-                            onClick={() => {
-                              setDeleteInstrumentId(instrument.id)
-                              setShowDeleteModal(true)
-                            }}
-                            className="inline-flex items-center p-2 border border-red-300 rounded-md text-sm font-medium text-red-700 bg-white hover:bg-red-50 transition-colors"
-                            title="Ta bort instrument"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        ) : (
-                          <div></div>
-                        )}
                       </div>
                     </div>
                     
@@ -465,57 +448,6 @@ export default function InstrumentsPage() {
         )}
       </div>
 
-      {/* Delete Instrument Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <div className="flex items-center mb-4">
-                <svg className="w-12 h-12 text-red-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900">Ta bort instrument</h3>
-                  <p className="text-sm text-gray-500 mt-1">Denna åtgärd kan inte ångras</p>
-                </div>
-              </div>
-              
-              <p className="text-sm text-gray-600 mb-4">
-                För att bekräfta borttagning av instrumentet, skriv <span className="font-semibold">RADERA</span> i fältet nedan:
-              </p>
-              
-              <input
-                type="text"
-                value={deleteConfirmText}
-                onChange={(e) => setDeleteConfirmText(e.target.value)}
-                placeholder="Skriv RADERA här"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 placeholder:text-gray-400"
-                autoFocus
-              />
-              
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  onClick={() => {
-                    setShowDeleteModal(false)
-                    setDeleteInstrumentId(null)
-                    setDeleteConfirmText('')
-                  }}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  Avbryt
-                </button>
-                <button
-                  onClick={handleDeleteInstrument}
-                  disabled={deleteConfirmText !== 'RADERA'}
-                  className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                >
-                  Ta bort instrument
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Reorder Instruments Modal */}
       {showReorderModal && (

@@ -25,6 +25,12 @@ interface Musician {
 
 export default function MusiciansPage() {
   const [musicians, setMusicians] = useState<Musician[]>([])
+  const [totalStats, setTotalStats] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+    localResidence: 0
+  })
   const [instruments, setInstruments] = useState<{ id: number; name: string }[]>([])
   const [positions, setPositions] = useState<{ id: number; name: string; instrumentId: number }[]>([])
   const [loading, setLoading] = useState(true)
@@ -39,6 +45,7 @@ export default function MusiciansPage() {
     fetchMusicians()
     fetchInstruments()
     fetchPositions()
+    fetchTotalStats()
   }, [])
 
   const fetchMusicians = async () => {
@@ -107,6 +114,27 @@ export default function MusiciansPage() {
     } catch (error) {
       console.error('Failed to fetch positions:', error)
       setPositions([])
+    }
+  }
+
+  const fetchTotalStats = async () => {
+    try {
+      const response = await fetch('/api/musicians')
+      if (!response.ok) {
+        console.error('Failed to fetch total stats:', response.status)
+        return
+      }
+      const data = await response.json()
+      if (Array.isArray(data)) {
+        setTotalStats({
+          total: data.length,
+          active: data.filter(m => m.isActive && !m.isArchived).length,
+          inactive: data.filter(m => !m.isActive && !m.isArchived).length,
+          localResidence: data.filter(m => m.localResidence).length
+        })
+      }
+    } catch (error) {
+      console.error('Failed to fetch total stats:', error)
     }
   }
 
@@ -199,7 +227,7 @@ export default function MusiciansPage() {
               </div>
               <div className="ml-3">
                 <p className="text-sm font-medium text-gray-500">Totalt</p>
-                <p className="text-2xl font-semibold text-gray-900">{musicians.length}</p>
+                <p className="text-2xl font-semibold text-gray-900">{totalStats.total}</p>
               </div>
             </div>
           </div>
@@ -214,7 +242,7 @@ export default function MusiciansPage() {
               <div className="ml-3">
                 <p className="text-sm font-medium text-gray-500">Aktiva</p>
                 <p className="text-2xl font-semibold text-gray-900">
-                  {musicians.filter(m => m.isActive && !m.isArchived).length}
+                  {totalStats.active}
                 </p>
               </div>
             </div>
@@ -230,7 +258,7 @@ export default function MusiciansPage() {
               <div className="ml-3">
                 <p className="text-sm font-medium text-gray-500">Inaktiva</p>
                 <p className="text-2xl font-semibold text-gray-900">
-                  {musicians.filter(m => !m.isActive && !m.isArchived).length}
+                  {totalStats.inactive}
                 </p>
               </div>
             </div>
@@ -246,7 +274,7 @@ export default function MusiciansPage() {
               <div className="ml-3">
                 <p className="text-sm font-medium text-gray-500">Lokalt boende</p>
                 <p className="text-2xl font-semibold text-gray-900">
-                  {musicians.filter(m => m.localResidence).length}
+                  {totalStats.localResidence}
                 </p>
               </div>
             </div>

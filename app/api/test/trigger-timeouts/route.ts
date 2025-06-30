@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { handleTimeouts } from '@/lib/request-strategies'
+import { handleTimeouts } from '@/lib/request-handlers'
 
 export async function POST() {
   if (process.env.NODE_ENV !== 'development') {

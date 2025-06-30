@@ -13,6 +13,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [reminderPercentage, setReminderPercentage] = useState('75')
+  const [conflictStrategy, setConflictStrategy] = useState('simple')
 
   useEffect(() => {
     fetchSettings()
@@ -26,6 +27,11 @@ export default function SettingsPage() {
         const reminderSetting = data.find((s: Setting) => s.key === 'reminder_percentage')
         if (reminderSetting) {
           setReminderPercentage(reminderSetting.value)
+        }
+        
+        const conflictSetting = data.find((s: Setting) => s.key === 'ranking_conflict_strategy')
+        if (conflictSetting) {
+          setConflictStrategy(conflictSetting.value)
         }
       }
     } catch (error) {
@@ -42,7 +48,8 @@ export default function SettingsPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          reminder_percentage: reminderPercentage
+          reminder_percentage: reminderPercentage,
+          ranking_conflict_strategy: conflictStrategy
         })
       })
 
@@ -105,6 +112,52 @@ export default function SettingsPage() {
                 T.ex. om svarstiden är 48 timmar och påminnelse är satt till 75%, 
                 skickas påminnelsen efter 36 timmar.
               </p>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-gray-200">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Rankningslistor - Konflikthantering
+            </h3>
+            
+            <div className="max-w-md">
+              <label className="block text-sm font-medium text-gray-700">
+                Hur ska systemet hantera musiker som finns på flera listor?
+              </label>
+              <select
+                value={conflictStrategy}
+                onChange={(e) => setConflictStrategy(e.target.value)}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              >
+                <option value="simple">Enkel (standard)</option>
+                <option value="detailed">Detaljerad förhandsvisning</option>
+                <option value="smart">Smart position-matchning</option>
+              </select>
+              
+              <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                <p className="text-xs text-gray-600">
+                  {conflictStrategy === 'simple' && (
+                    <>
+                      <strong>Enkel:</strong> Visar endast varning. Först till kvarn-principen gäller. 
+                      Systemet skickar förfrågningar i den ordning de processas. Om en musiker får en förfrågan 
+                      för en position, hoppas de automatiskt över för andra positioner.
+                    </>
+                  )}
+                  {conflictStrategy === 'detailed' && (
+                    <>
+                      <strong>Detaljerad förhandsvisning:</strong> Visar potentiella konflikter och 
+                      realtidsinformation när förfrågningar skickas. Som "Enkel" men med utökad information 
+                      om potentiella konflikter och realtidsuppdateringar.
+                    </>
+                  )}
+                  {conflictStrategy === 'smart' && (
+                    <>
+                      <strong>Smart position-matchning:</strong> Prioriterar automatiskt den position där 
+                      musikern rankas högst. Om lika ranking, prioritera hierarkiskt högre position.
+                    </>
+                  )}
+                </p>
+              </div>
             </div>
           </div>
 

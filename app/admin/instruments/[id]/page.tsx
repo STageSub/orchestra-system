@@ -16,6 +16,7 @@ interface Instrument {
   instrumentId: string
   name: string
   displayOrder: number | null
+  isArchived: boolean
   positions: Position[]
 }
 
@@ -29,6 +30,7 @@ export default function EditInstrumentPage({
   const [instrument, setInstrument] = useState<Instrument | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [archiving, setArchiving] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     displayOrder: ''
@@ -129,6 +131,66 @@ export default function EditInstrumentPage({
     }
   }
 
+  const handleArchive = async () => {
+    if (!confirm('Är du säker på att du vill arkivera detta instrument?')) return
+
+    setArchiving(true)
+    try {
+      const response = await fetch(`/api/instruments/${paramsId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          displayOrder: formData.displayOrder ? parseInt(formData.displayOrder) : null,
+          isArchived: true
+        })
+      })
+
+      if (response.ok) {
+        alert('Instrumentet har arkiverats')
+        fetchInstrument()
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Kunde inte arkivera instrumentet')
+      }
+    } catch (error) {
+      console.error('Error archiving instrument:', error)
+      alert('Ett fel uppstod vid arkivering')
+    } finally {
+      setArchiving(false)
+    }
+  }
+
+  const handleRestore = async () => {
+    if (!confirm('Vill du återställa detta instrument från arkivet?')) return
+
+    setArchiving(true)
+    try {
+      const response = await fetch(`/api/instruments/${paramsId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          displayOrder: formData.displayOrder ? parseInt(formData.displayOrder) : null,
+          isArchived: false
+        })
+      })
+
+      if (response.ok) {
+        alert('Instrumentet har återställts')
+        fetchInstrument()
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Kunde inte återställa instrumentet')
+      }
+    } catch (error) {
+      console.error('Error restoring instrument:', error)
+      alert('Ett fel uppstod vid återställning')
+    } finally {
+      setArchiving(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -160,8 +222,34 @@ export default function EditInstrumentPage({
         >
           ← Tillbaka till instrument
         </Link>
-        <h2 className="mt-2 text-2xl font-bold text-gray-900">Redigera instrument</h2>
+        <div className="mt-2 flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-900">Redigera instrument</h2>
+          {instrument?.isArchived && (
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+              Arkiverad
+            </span>
+          )}
+        </div>
       </div>
+
+      {instrument?.isArchived && (
+        <div className="mb-6 bg-red-50 border-l-4 border-red-400 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">Instrumentet är arkiverat</h3>
+              <p className="mt-1 text-sm text-red-700">
+                Detta instrument är inte tillgängligt för nya projekt eller förfrågningar. 
+                Klicka på "Återställ" för att göra instrumentet aktivt igen.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="bg-white rounded-lg shadow p-6">
@@ -182,34 +270,45 @@ export default function EditInstrumentPage({
               />
             </div>
 
-            <div>
-              <label htmlFor="displayOrder" className="block text-sm font-medium text-gray-700">
-                Visningsordning
-              </label>
-              <input
-                type="number"
-                id="displayOrder"
-                value={formData.displayOrder}
-                onChange={(e) => setFormData({ ...formData, displayOrder: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-              />
-            </div>
           </div>
 
-          <div className="mt-6 flex justify-end space-x-3">
-            <Link
-              href="/admin/instruments"
-              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-            >
-              Avbryt
-            </Link>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300"
-            >
-              {saving ? 'Sparar...' : 'Spara ändringar'}
-            </button>
+          <div className="mt-6 flex justify-between">
+            <div>
+              {instrument?.isArchived ? (
+                <button
+                  type="button"
+                  onClick={handleRestore}
+                  disabled={archiving}
+                  className="px-4 py-2 border border-green-300 rounded-md shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  {archiving ? 'Återställer...' : 'Återställ'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleArchive}
+                  disabled={archiving}
+                  className="px-4 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  {archiving ? 'Arkiverar...' : 'Arkivera instrument'}
+                </button>
+              )}
+            </div>
+            <div className="flex space-x-3">
+              <Link
+                href="/admin/instruments"
+                className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Avbryt
+              </Link>
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300"
+              >
+                {saving ? 'Sparar...' : 'Spara ändringar'}
+              </button>
+            </div>
           </div>
         </div>
       </form>

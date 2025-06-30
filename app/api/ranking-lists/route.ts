@@ -29,6 +29,52 @@ export async function GET(request: Request) {
       ]
     })
     
+    // Enhance ranking lists with available musician count
+    const enhancedLists = await Promise.all(
+      rankingLists.map(async (list) => {
+        // Get musicians in this ranking list who are active
+        const musiciansInList = await prisma.musician.findMany({
+          where: {
+            isActive: true,
+            isArchived: false,
+            rankings: {
+              some: { listId: list.id }
+            }
+          },
+          select: { id: true }
+        })
+        
+        let availableMusiciansCount = musiciansInList.length
+        
+        // If projectId is provided, exclude musicians who already have requests in this project
+        if (projectId) {
+          const musiciansWithRequests = await prisma.request.findMany({
+            where: {
+              projectNeed: {
+                projectId: parseInt(projectId)
+              },
+              musicianId: {
+                in: musiciansInList.map(m => m.id)
+              }
+            },
+            select: {
+              musicianId: true
+            },
+            distinct: ['musicianId']
+          })
+          
+          const excludedMusicianIds = new Set(musiciansWithRequests.map(r => r.musicianId))
+          availableMusiciansCount = musiciansInList.filter(m => !excludedMusicianIds.has(m.id)).length
+        }
+        
+        return {
+          ...list,
+          availableMusiciansCount,
+          totalActiveMusicians: musiciansInList.length
+        }
+      })
+    )
+    
     // If projectId is provided, filter out already used ranking lists
     if (projectId) {
       const projectNeeds = await prisma.projectNeed.findMany({
@@ -37,10 +83,12 @@ export async function GET(request: Request) {
       })
       
       const usedRankingListIds = new Set(projectNeeds.map(need => need.rankingListId))
-      rankingLists = rankingLists.map(list => ({
+      rankingLists = enhancedLists.map(list => ({
         ...list,
         isUsedInProject: usedRankingListIds.has(list.id)
       }))
+    } else {
+      rankingLists = enhancedLists
     }
     
     return NextResponse.json(rankingLists)

@@ -71,6 +71,8 @@ export async function POST(
         projectFileId,
         projectId,
         fileName,
+        originalFileName: originalFileName || fileName, // Save original filename with extension
+        mimeType: mimeType || 'application/octet-stream',
         fileUrl,
         fileType,
         projectNeedId: projectNeedId ? parseInt(projectNeedId) : null,

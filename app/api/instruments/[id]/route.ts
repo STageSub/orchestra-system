@@ -41,13 +41,14 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
-    const { name, displayOrder } = body
+    const { name, displayOrder, isArchived } = body
 
     const instrument = await prisma.instrument.update({
       where: { id: parseInt(id) },
       data: {
         name,
-        displayOrder
+        displayOrder,
+        ...(isArchived !== undefined && { isArchived })
       }
     })
 

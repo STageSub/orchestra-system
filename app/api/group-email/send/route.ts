@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendEmail } from '@/lib/email'
+import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
-    const { recipients, subject, message } = await request.json()
+    const { recipients, subject, message, metadata } = await request.json()
 
     // Validate input
     if (!recipients || recipients.length === 0) {
@@ -73,14 +74,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // TODO: Log the group email activity when CommunicationLog table is added
-    // For now, just log to console
-    console.log('Group email sent:', {
-      subject,
-      recipientCount: recipients.length,
-      success: successCount,
-      failed: failureCount
-    })
+    // Log the group email activity
+    try {
+      await prisma.groupEmailLog.create({
+        data: {
+          projectId: metadata?.projectId ? parseInt(metadata.projectId) : null,
+          subject,
+          message,
+          recipients,
+          sentCount: successCount,
+          failedCount: failureCount,
+          filters: metadata?.filters || null
+        }
+      })
+    } catch (logError) {
+      console.error('Failed to log group email:', logError)
+      // Don't fail the request if logging fails
+    }
 
     // Return response
     if (failureCount === 0) {

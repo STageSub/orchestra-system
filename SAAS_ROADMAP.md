@@ -43,37 +43,36 @@ Musiker (extern)
 └── Uppdatera sin profil
 ```
 
-## Prismodell
+## Prismodell (UPPDATERAD 2025-06-28)
 
-### 🎵 Solo (Gratis)
-- Max 25 musiker
-- Max 2 aktiva projekt
-- Max 5 instrument
+### 🎵 Small Ensemble ($79/månad)
+- Max 50 musiker
+- Max 5 aktiva projekt
+- Max 10 instrument
 - Grundläggande support
-- StageSub branding
-
-### 🎼 Ensemble (499 kr/månad)
-- Max 100 musiker
-- Max 10 aktiva projekt
-- Obegränsat med instrument
-- E-postsupport
 - Egen subdomain
+- 30 dagars gratis trial
 
-### 🎭 Professional (999 kr/månad)
-- Max 500 musiker
-- Max 50 aktiva projekt
-- Alla funktioner
-- Prioriterad support
-- Anpassad branding
-- API-åtkomst
+### 🎼 Medium Ensemble ($499/månad)
+- Max 200 musiker
+- Max 20 aktiva projekt
+- Obegränsat med instrument
+- E-postsupport (24h svar)
+- Egen subdomain
+- Logo i header
+- 30 dagars gratis trial
 
-### 🏛️ Enterprise (Offert)
+### 🏛️ Institution ($1,500/månad)
 - Obegränsad användning
-- Egen databas (option)
-- SLA-avtal
-- Dedikerad support
-- Anpassningar
-- On-premise option
+- Obegränsade projekt
+- Obegränsade instrument
+- Egen databas (på begäran)
+- Full anpassad branding
+- Custom email domain
+- API-åtkomst
+- Prioriterad support (4h svar)
+- Dedikerad account manager
+- Fakturering tillgänglig
 
 ## Teknisk implementation
 
@@ -179,12 +178,20 @@ interface TenantLimits {
 4. Google Ads & Facebook
 5. Branschmässor & konferenser
 
-## Tidslinje
+## Tidslinje (UPPDATERAD 2025-06-28)
 
-**Q1 2025**: Slutför grundsystem (Fas 1-6)
-**Q2 2025**: Påbörja SaaS-transformation
-**Q3 2025**: Beta med utvalda orkestrar
-**Q4 2025**: Officiell SaaS-lansering
+**Juni 2025**: ✅ Grundsystem 98% färdigt
+**Juli 2025**: Påbörja SaaS-transformation (6 veckor)
+- Vecka 1: Databas & Autentisering
+- Vecka 2: Superadmin Dashboard
+- Vecka 3: Self-Service Signup
+- Vecka 4: Orchestra Admin Features
+- Vecka 5: Migration System
+- Vecka 6: Billing & Payments
+
+**Augusti 2025**: Beta med 1-2 utvalda orkestrar
+**September 2025**: Officiell SaaS-lansering
+**Q4 2025**: 10+ betalande kunder
 
 ## Success metrics
 
@@ -203,10 +210,13 @@ interface TenantLimits {
 | Konkurrens | Hög | Medium | Fokus på UX & branschkunskap |
 | GDPR-compliance | Medium | Hög | Juridisk rådgivning, tydlig DPA |
 
-## Nästa steg
+## Nästa steg (UPPDATERAD 2025-06-28)
 
 1. ✅ Dokumentera SaaS-vision (denna fil)
-2. ⏳ Slutföra fas 1-6 (grundsystem)
-3. 🔜 Påbörja teknisk PoC för multi-tenant
-4. 🔜 Undersöka juridiska krav (GDPR, DPA)
-5. 🔜 Skapa business plan & finansiering
+2. ✅ Slutföra fas 1-6 (grundsystem) - 98% klart!
+3. ✅ Besluta prenumerationsmodell - $79/$499/$1500
+4. ✅ Planera multi-tenant arkitektur - Shared DB → Dedicated DB migration
+5. 🚀 **NÄSTA**: Påbörja implementation om 3 timmar (Fas 1: Databas & Auth)
+6. 🔜 Juridisk granskning (GDPR, DPA, användaravtal)
+7. 🔜 Sätta upp Stripe-konto för betalningar
+8. 🔜 Skapa marknadsföringsmaterial

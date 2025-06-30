@@ -64,14 +64,17 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
   }
 }
 
-export async function getEmailTemplate(type: string): Promise<{ subject: string; body: string } | null> {
+export async function getEmailTemplate(type: string, language: 'sv' | 'en' = 'sv'): Promise<{ subject: string; body: string } | null> {
   try {
+    // Add language suffix for non-Swedish templates
+    const templateType = language === 'en' ? `${type}_en` : type
+    
     const template = await prisma.emailTemplate.findUnique({
-      where: { type }
+      where: { type: templateType }
     })
     
     if (!template) {
-      console.error(`Email template not found: ${type}`)
+      console.error(`Email template not found: ${templateType}`)
       return null
     }
 
@@ -85,7 +88,7 @@ export async function getEmailTemplate(type: string): Promise<{ subject: string;
   }
 }
 
-export function replaceTemplateVariables(template: string, variables: TemplateVariables): string {
+export function replaceTemplateVariables(template: string, variables: TemplateVariables, language: 'sv' | 'en' = 'sv'): string {
   let result = template
 
   // Replace all variables
@@ -94,25 +97,26 @@ export function replaceTemplateVariables(template: string, variables: TemplateVa
     result = result.replace(regex, value || '')
   })
 
-  // Format dates in Swedish
-  result = result.replace(/{{startDate}}/g, formatDate(variables.startDate))
+  // Format dates according to language
+  result = result.replace(/{{startDate}}/g, formatDate(variables.startDate, language))
 
   return result
 }
 
 export async function sendRequestEmail(
   musicianEmail: string,
-  variables: TemplateVariables
+  variables: TemplateVariables,
+  language: 'sv' | 'en' = 'sv'
 ): Promise<boolean> {
-  const template = await getEmailTemplate('request')
+  const template = await getEmailTemplate('request', language)
   
   if (!template) {
     console.error('Could not find request template')
     return false
   }
 
-  const subject = replaceTemplateVariables(template.subject, variables)
-  const html = replaceTemplateVariables(template.body, variables)
+  const subject = replaceTemplateVariables(template.subject, variables, language)
+  const html = replaceTemplateVariables(template.body, variables, language)
 
   return sendEmail({
     to: musicianEmail,
@@ -123,17 +127,18 @@ export async function sendRequestEmail(
 
 export async function sendReminderEmail(
   musicianEmail: string,
-  variables: TemplateVariables
+  variables: TemplateVariables,
+  language: 'sv' | 'en' = 'sv'
 ): Promise<boolean> {
-  const template = await getEmailTemplate('reminder')
+  const template = await getEmailTemplate('reminder', language)
   
   if (!template) {
     console.error('Could not find reminder template')
     return false
   }
 
-  const subject = replaceTemplateVariables(template.subject, variables)
-  const html = replaceTemplateVariables(template.body, variables)
+  const subject = replaceTemplateVariables(template.subject, variables, language)
+  const html = replaceTemplateVariables(template.body, variables, language)
 
   return sendEmail({
     to: musicianEmail,
@@ -144,18 +149,19 @@ export async function sendReminderEmail(
 
 export async function sendConfirmationEmail(
   musicianEmail: string,
-  variables: TemplateVariables & { accepted: boolean }
+  variables: TemplateVariables & { accepted: boolean },
+  language: 'sv' | 'en' = 'sv'
 ): Promise<boolean> {
   const templateType = variables.accepted ? 'confirmation' : 'position_filled'
-  const template = await getEmailTemplate(templateType)
+  const template = await getEmailTemplate(templateType, language)
   
   if (!template) {
     console.error(`Could not find ${templateType} template`)
     return false
   }
 
-  const subject = replaceTemplateVariables(template.subject, variables)
-  const html = replaceTemplateVariables(template.body, variables)
+  const subject = replaceTemplateVariables(template.subject, variables, language)
+  const html = replaceTemplateVariables(template.body, variables, language)
 
   return sendEmail({
     to: musicianEmail,
@@ -171,9 +177,10 @@ function stripHtml(html: string): string {
     .trim()
 }
 
-function formatDate(dateString: string): string {
+function formatDate(dateString: string, language: 'sv' | 'en' = 'sv'): string {
   const date = new Date(dateString)
-  return date.toLocaleDateString('sv-SE', {
+  const locale = language === 'en' ? 'en-US' : 'sv-SE'
+  return date.toLocaleDateString(locale, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',

@@ -79,7 +79,33 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { firstName, lastName, email, phone, localResidence, qualificationIds } = body
+    const { firstName, lastName, email, phone, preferredLanguage, localResidence, notes, qualificationIds } = body
+    
+    // Check for duplicate email
+    const emailExists = await prisma.musician.findFirst({
+      where: { email }
+    })
+    
+    if (emailExists) {
+      return NextResponse.json(
+        { error: `E-postadressen används redan av ${emailExists.firstName} ${emailExists.lastName} (${emailExists.musicianId})` },
+        { status: 400 }
+      )
+    }
+    
+    // Check for duplicate phone if provided
+    if (phone) {
+      const phoneExists = await prisma.musician.findFirst({
+        where: { phone }
+      })
+      
+      if (phoneExists) {
+        return NextResponse.json(
+          { error: `Telefonnumret används redan av ${phoneExists.firstName} ${phoneExists.lastName} (${phoneExists.musicianId})` },
+          { status: 400 }
+        )
+      }
+    }
     
     // Generate unique musician ID
     const musicianId = await generateUniqueId('musician')
@@ -92,7 +118,9 @@ export async function POST(request: Request) {
         lastName,
         email,
         phone: phone || null,
+        preferredLanguage: preferredLanguage || 'sv',
         localResidence: localResidence || false,
+        notes: notes || null,
         qualifications: {
           create: qualificationIds.map((positionId: number) => ({
             positionId

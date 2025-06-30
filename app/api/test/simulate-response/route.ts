@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { handleDeclinedRequest } from '@/lib/request-strategies'
+import { handleDeclinedRequest } from '@/lib/request-handlers'
 
 export async function POST(request: Request) {
   if (process.env.NODE_ENV !== 'development') {

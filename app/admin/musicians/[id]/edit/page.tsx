@@ -24,7 +24,9 @@ interface Musician {
   lastName: string
   email: string
   phone: string | null
+  preferredLanguage: string | null
   localResidence: boolean
+  notes: string | null
   isActive: boolean
   qualifications: Array<{
     position: {
@@ -41,7 +43,7 @@ interface Musician {
 export default function EditMusicianPage({
   params
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -51,20 +53,27 @@ export default function EditMusicianPage({
   const [musician, setMusician] = useState<Musician | null>(null)
   const [selectedInstrumentId, setSelectedInstrumentId] = useState<number | null>(null)
   const [selectedPositions, setSelectedPositions] = useState<number[]>([])
+  const [musicianId, setMusicianId] = useState<string>('')
   
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
-    localResidence: false
+    preferredLanguage: 'sv',
+    localResidence: false,
+    notes: ''
   })
 
   // Hämta musiker och instrument
   useEffect(() => {
-    Promise.all([
-      fetch(`/api/musicians/${params.id}`).then(res => res.json()),
-      fetch('/api/instruments').then(res => res.json())
+    const loadData = async () => {
+      const { id } = await params
+      setMusicianId(id)
+      
+      Promise.all([
+        fetch(`/api/musicians/${id}`).then(res => res.json()),
+        fetch('/api/instruments').then(res => res.json())
     ])
       .then(([musicianData, instrumentsData]) => {
         setMusician(musicianData)
@@ -76,7 +85,9 @@ export default function EditMusicianPage({
           lastName: musicianData.lastName,
           email: musicianData.email,
           phone: musicianData.phone || '',
-          localResidence: musicianData.localResidence
+          preferredLanguage: musicianData.preferredLanguage || 'sv',
+          localResidence: musicianData.localResidence,
+          notes: musicianData.notes || ''
         })
         
         // Sätt instrument och kvalifikationer
@@ -91,7 +102,10 @@ export default function EditMusicianPage({
         setError('Kunde inte hämta musikerinformation')
       })
       .finally(() => setLoading(false))
-  }, [params.id])
+    }
+    
+    loadData()
+  }, [params])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -99,7 +113,8 @@ export default function EditMusicianPage({
     setError('')
 
     try {
-      const response = await fetch(`/api/musicians/${params.id}`, {
+      const { id } = await params
+      const response = await fetch(`/api/musicians/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -114,7 +129,7 @@ export default function EditMusicianPage({
         throw new Error(data.error || 'Något gick fel')
       }
 
-      router.push(`/admin/musicians/${params.id}`)
+      router.push(`/admin/musicians/${musicianId}`)
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -147,18 +162,20 @@ export default function EditMusicianPage({
   }
 
   return (
-    <div className="max-w-2xl">
-      <div className="mb-6">
-        <Link
-          href={`/admin/musicians/${params.id}`}
-          className="text-sm text-gray-500 hover:text-gray-700"
-        >
-          ← Tillbaka till musikerprofil
-        </Link>
-        <h2 className="mt-2 text-2xl font-bold text-gray-900">
-          Redigera musiker - {musician.musicianId}
-        </h2>
-      </div>
+    <div className="min-h-screen pt-8 pb-16">
+      <div className="max-w-3xl mx-auto px-4">
+        <div className="mb-6">
+          <Link
+            href={`/admin/musicians/${musicianId}`}
+            className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            ← Tillbaka till musikerprofil
+          </Link>
+          <h1 className="mt-4 text-3xl font-bold text-gray-900">
+            Redigera musiker - {musician.musicianId}
+          </h1>
+          <p className="mt-2 text-sm text-gray-600">Uppdatera musikerinformation</p>
+        </div>
 
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
@@ -166,11 +183,12 @@ export default function EditMusicianPage({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6 bg-white shadow rounded-lg p-6">
-        {/* Personuppgifter */}
-        <div>
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Personuppgifter</h3>
-          <div className="grid grid-cols-2 gap-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Grundinformation */}
+        <section className="bg-white rounded-lg shadow-sm p-5">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Grundinformation</h2>
+          
+          <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
                 Förnamn *
@@ -181,7 +199,7 @@ export default function EditMusicianPage({
                 required
                 value={formData.firstName}
                 onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-400 bg-gray-50 shadow-sm hover:border-gray-500 focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 transition-colors"
               />
             </div>
             <div>
@@ -194,59 +212,90 @@ export default function EditMusicianPage({
                 required
                 value={formData.lastName}
                 onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-400 bg-gray-50 shadow-sm hover:border-gray-500 focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 transition-colors"
               />
             </div>
           </div>
-        </div>
 
-        {/* Kontaktuppgifter */}
-        <div>
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Kontaktuppgifter</h3>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                E-postadress *
-              </label>
-              <input
-                type="email"
-                id="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-              />
+          <div className="border-t pt-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                  E-postadress *
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-400 bg-gray-50 shadow-sm hover:border-gray-500 focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 transition-colors"
+                />
+              </div>
+              <div>
+                <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                  Telefonnummer
+                </label>
+                <input
+                  type="tel"
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-400 bg-gray-50 shadow-sm hover:border-gray-500 focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 transition-colors"
+                />
+              </div>
             </div>
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                Telefonnummer
+            
+            <div className="mt-4">
+              <label htmlFor="preferredLanguage" className="block text-sm font-medium text-gray-700">
+                Språk för e-post
               </label>
-              <input
-                type="tel"
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-              />
+              <select
+                id="preferredLanguage"
+                value={formData.preferredLanguage}
+                onChange={(e) => setFormData({ ...formData, preferredLanguage: e.target.value })}
+                className="mt-1 block w-full rounded-md border-gray-400 bg-gray-50 shadow-sm hover:border-gray-500 focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 transition-colors"
+              >
+                <option value="sv">Svenska</option>
+                <option value="en">English</option>
+              </select>
             </div>
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="localResidence"
-                checked={formData.localResidence}
-                onChange={(e) => setFormData({ ...formData, localResidence: e.target.checked })}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="localResidence" className="ml-2 block text-sm text-gray-900">
-                Lokalt boende
+            
+            <div className="mt-4">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={formData.localResidence}
+                  onChange={(e) => setFormData({ ...formData, localResidence: e.target.checked })}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-400 rounded transition-colors"
+                />
+                <span className="ml-2 text-sm text-gray-700">Lokalt boende</span>
               </label>
             </div>
           </div>
-        </div>
+        </section>
+
+        {/* Anteckningar */}
+        <section className="bg-white rounded-lg shadow-sm p-5">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Anteckningar</h2>
+          <div>
+            <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
+              Interna anteckningar
+            </label>
+            <textarea
+              id="notes"
+              rows={3}
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-400 bg-gray-50 shadow-sm hover:border-gray-500 focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 transition-colors"
+              placeholder="Interna anteckningar om musikern..."
+            />
+          </div>
+        </section>
 
         {/* Instrument och kvalifikationer */}
-        <div>
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Instrument och kvalifikationer</h3>
+        <section className="bg-white rounded-lg shadow-sm p-5">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Instrument och kvalifikationer</h2>
           <div className="space-y-4">
             <div>
               <label htmlFor="instrument" className="block text-sm font-medium text-gray-700">
@@ -260,7 +309,7 @@ export default function EditMusicianPage({
                   setSelectedInstrumentId(Number(e.target.value))
                   setSelectedPositions([])
                 }}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-400 bg-gray-50 shadow-sm hover:border-gray-500 focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 transition-colors"
               >
                 <option value="">Välj instrument...</option>
                 {instruments.map((instrument) => (
@@ -276,9 +325,9 @@ export default function EditMusicianPage({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Kvalifikationer för {selectedInstrument.name} *
                 </label>
-                <div className="space-y-2 border border-gray-200 rounded-md p-4">
+                <div className="space-y-2 border border-gray-200 rounded-md p-4 bg-gray-50">
                   {selectedInstrument.positions.map((position) => (
-                    <label key={position.id} className="flex items-center">
+                    <label key={position.id} className="flex items-center hover:bg-white p-2 rounded transition-colors">
                       <input
                         type="checkbox"
                         value={position.id}
@@ -290,7 +339,7 @@ export default function EditMusicianPage({
                             setSelectedPositions(selectedPositions.filter(id => id !== position.id))
                           }
                         }}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-400 rounded transition-colors"
                       />
                       <span className="ml-2 text-sm text-gray-900">{position.name}</span>
                     </label>
@@ -302,25 +351,26 @@ export default function EditMusicianPage({
               </div>
             )}
           </div>
-        </div>
+        </section>
 
         {/* Knappar */}
-        <div className="flex justify-end space-x-3 pt-6 border-t">
+        <div className="flex justify-end gap-3 pt-4">
           <Link
-            href={`/admin/musicians/${params.id}`}
-            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            href={`/admin/musicians/${musicianId}`}
+            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
           >
             Avbryt
           </Link>
           <button
             type="submit"
             disabled={saving || selectedPositions.length === 0}
-            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
           >
             {saving ? 'Sparar...' : 'Spara ändringar'}
           </button>
         </div>
       </form>
+      </div>
     </div>
   )
 }

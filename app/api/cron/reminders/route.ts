@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { sendReminders, handleTimeouts } from '@/lib/request-strategies'
+import { sendReminders, handleTimeouts } from '@/lib/request-handlers'
 
 export async function GET(request: Request) {
   // Verify cron secret to prevent unauthorized calls

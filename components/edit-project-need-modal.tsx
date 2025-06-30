@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import ResponseTimeSelectorNested from './response-time-selector-nested'
 
 interface ProjectNeed {
   id: number
@@ -199,14 +200,29 @@ export default function EditProjectNeedModal({
                 type="number"
                 id="quantity"
                 value={formData.quantity}
-                onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
+                onChange={(e) => {
+                  const newValue = parseInt(e.target.value) || 1
+                  if (need.requestStrategy === 'sequential' && newValue > 1) {
+                    alert('Sekventiell strategi är begränsad till 1 behov.')
+                    return
+                  }
+                  setFormData({ ...formData, quantity: newValue })
+                }}
                 min={requestCounts.accepted || 1}
+                max={need.requestStrategy === 'sequential' ? 1 : undefined}
                 className="w-20 text-center border-gray-300 rounded-md"
               />
               <button
                 type="button"
-                onClick={() => setFormData({ ...formData, quantity: formData.quantity + 1 })}
-                className="px-3 py-1 border border-gray-300 rounded-md"
+                onClick={() => {
+                  if (need.requestStrategy === 'sequential' && formData.quantity >= 1) {
+                    alert('Sekventiell strategi är begränsad till 1 behov.')
+                    return
+                  }
+                  setFormData({ ...formData, quantity: formData.quantity + 1 })
+                }}
+                disabled={need.requestStrategy === 'sequential' && formData.quantity >= 1}
+                className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50"
               >
                 +
               </button>
@@ -228,21 +244,13 @@ export default function EditProjectNeedModal({
             <label htmlFor="responseTime" className="block text-sm font-medium text-gray-700">
               Svarstid
             </label>
-            <select
-              id="responseTime"
-              value={formData.responseTimeHours}
-              disabled={hasRequests}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm disabled:bg-gray-100"
-            >
-              <option value="0.017">1 minut (test)</option>
-              <option value="3">3 timmar</option>
-              <option value="12">12 timmar</option>
-              <option value="24">24 timmar</option>
-              <option value="48">48 timmar</option>
-              <option value="168">7 dagar</option>
-              <option value="336">14 dagar</option>
-              <option value="720">30 dagar</option>
-            </select>
+            <div className="mt-1">
+              <ResponseTimeSelectorNested
+                value={formData.responseTimeHours.toString()}
+                onChange={(hours) => setFormData({ ...formData, responseTimeHours: parseInt(hours) || 24 })}
+                disabled={hasRequests}
+              />
+            </div>
             {hasRequests && (
               <p className="mt-1 text-xs text-gray-500">Kan inte ändras efter att förfrågningar skickats</p>
             )}

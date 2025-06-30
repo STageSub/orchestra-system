@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { generateUniqueId } from '@/lib/id-generator'
 
 const defaultTemplates = [
+  // Swedish templates
   {
     type: 'request',
     subject: 'Förfrågan om vikariat - {{project_name}}',
@@ -67,6 +68,73 @@ Vi tackar för ditt intresse och hoppas få återkomma vid framtida tillfällen.
 
 Med vänliga hälsningar,
 Orkesteradministrationen`,
+    variables: ['musician_name', 'position', 'project_name']
+  },
+  // English templates
+  {
+    type: 'request_en',
+    subject: 'Substitute Request - {{project_name}}',
+    body: `Hello {{musician_name}}!
+
+You have received a request to substitute as {{position}} in the production {{project_name}}.
+
+The project starts {{start_date}} and includes {{quantity}} position(s) for {{instrument_name}}.
+
+Rehearsal schedule:
+{{rehearsal_schedule}}
+
+Concert information:
+{{concert_info}}
+
+Please respond by clicking the link below:
+{{response_url}}
+
+You have {{response_time}} hours to respond to this request.
+
+Best regards,
+Orchestra Administration`,
+    variables: ['musician_name', 'position', 'project_name', 'start_date', 'quantity', 'instrument_name', 'rehearsal_schedule', 'concert_info', 'response_url', 'response_time']
+  },
+  {
+    type: 'reminder_en',
+    subject: 'Reminder: Response to substitute request - {{project_name}}',
+    body: `Hello {{musician_name}}!
+
+This is a reminder that you have an unanswered request to substitute as {{position}} in {{project_name}}.
+
+Please respond as soon as possible by clicking the link below:
+{{response_url}}
+
+Best regards,
+Orchestra Administration`,
+    variables: ['musician_name', 'position', 'project_name', 'response_url']
+  },
+  {
+    type: 'confirmation_en',
+    subject: 'Confirmation: {{project_name}}',
+    body: `Hello {{musician_name}}!
+
+Thank you for accepting the assignment as {{position}} in {{project_name}}.
+
+The project starts {{start_date}}.
+
+We will be in touch with more detailed information closer to the start date.
+
+Best regards,
+Orchestra Administration`,
+    variables: ['musician_name', 'position', 'project_name', 'start_date']
+  },
+  {
+    type: 'position_filled_en',
+    subject: 'Position filled - {{project_name}}',
+    body: `Hello {{musician_name}}!
+
+Unfortunately, we must inform you that the position as {{position}} in {{project_name}} has now been filled.
+
+We thank you for your interest and hope to contact you for future opportunities.
+
+Best regards,
+Orchestra Administration`,
     variables: ['musician_name', 'position', 'project_name']
   }
 ]

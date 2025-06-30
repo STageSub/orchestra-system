@@ -1,0 +1,32 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es2020",
+    "lib": ["es2020"],
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "noEmit": false,
+    "outDir": "../dist",
+    "paths": {
+      "@/*": ["../src/*"],
+      "@/lib/*": ["../lib/*"],
+      "@/components/*": ["../components/*"]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "../lib/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ],
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs"
+    }
+  }
+}

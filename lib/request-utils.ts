@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { generateUniqueId } from '@/lib/id-generator'
 import { sendRequestEmail, sendReminderEmail } from '@/lib/email-service'
+import { formatHoursToReadable } from '@/lib/utils'
 
 export interface CreateRequestParams {
   projectNeedId: number
@@ -49,6 +50,7 @@ export async function createRequest({ projectNeedId, musicianId }: CreateRequest
   }
 
   // Send email
+  const language = (request.musician.preferredLanguage || 'sv') as 'sv' | 'en'
   const emailSent = await sendRequestEmail(request.musician.email, {
     firstName: request.musician.firstName,
     projectName: request.projectNeed.project.name,
@@ -58,11 +60,11 @@ export async function createRequest({ projectNeedId, musicianId }: CreateRequest
     weekNumber: request.projectNeed.project.weekNumber.toString(),
     rehearsalSchedule: request.projectNeed.project.rehearsalSchedule || undefined,
     concertInfo: request.projectNeed.project.concertInfo || undefined,
-    responseTime: `${responseTimeHours} timmar`,
+    responseTime: formatHoursToReadable(responseTimeHours),
     yesLink: responseUrls.yes,
     noLink: responseUrls.no,
     additionalInfo: request.projectNeed.project.notes || undefined
-  })
+  }, language)
 
   const communicationLogId = await generateUniqueId('communicationLog')
   await prisma.communicationLog.create({
@@ -121,6 +123,7 @@ export async function sendReminder(requestId: number) {
   }
 
   // Send reminder email
+  const language = (request.musician.preferredLanguage || 'sv') as 'sv' | 'en'
   const emailSent = await sendReminderEmail(request.musician.email, {
     firstName: request.musician.firstName,
     projectName: request.projectNeed.project.name,
@@ -133,7 +136,7 @@ export async function sendReminder(requestId: number) {
     yesLink: responseUrls.yes,
     noLink: responseUrls.no,
     additionalInfo: request.projectNeed.project.notes || undefined
-  })
+  }, language)
 
   await prisma.request.update({
     where: { id: requestId },

@@ -81,6 +81,65 @@ export default function EditProjectPage({
     setFormData(prev => ({ ...prev, weekNumber: weekNumber.toString() }))
   }
 
+  const calculateDateFromWeek = (weekNum: string, year?: number) => {
+    const weekNumber = parseInt(weekNum)
+    if (!weekNumber || weekNumber < 1 || weekNumber > 53) return ''
+    
+    const today = new Date()
+    const currentWeek = getCurrentWeekNumber()
+    let targetYear = year || today.getFullYear()
+    
+    // Om inget år anges och veckan har passerat, använd nästa år
+    if (!year && weekNumber < currentWeek) {
+      targetYear = today.getFullYear() + 1
+    }
+    
+    // Enkel och korrekt ISO veckoberäkning
+    const jan4 = new Date(targetYear, 0, 4)
+    const time = jan4.getTime()
+    const dayOfWeek = (jan4.getDay() + 6) % 7
+    const startOfWeek1 = new Date(time - dayOfWeek * 86400000)
+    
+    const targetDate = new Date(startOfWeek1.getTime() + (weekNumber - 1) * 7 * 86400000)
+    
+    // Formatera datum i lokal tid, inte UTC
+    const y = targetDate.getFullYear()
+    const m = String(targetDate.getMonth() + 1).padStart(2, '0')
+    const d = String(targetDate.getDate()).padStart(2, '0')
+    
+    return `${y}-${m}-${d}`
+  }
+
+  const getCurrentWeekNumber = () => {
+    const today = new Date()
+    const d = new Date(today)
+    d.setHours(0, 0, 0, 0)
+    d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7))
+    const week1 = new Date(d.getFullYear(), 0, 4)
+    return 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7)
+  }
+
+  const getWeekDateRange = (weekNum: string) => {
+    const startDate = calculateDateFromWeek(weekNum)
+    if (!startDate) return ''
+    
+    const start = new Date(startDate)
+    const end = new Date(start)
+    end.setDate(start.getDate() + 6)
+    
+    const months = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
+    const startMonth = months[start.getMonth()]
+    const endMonth = months[end.getMonth()]
+    
+    if (start.getMonth() === end.getMonth()) {
+      return `${start.getDate()}-${end.getDate()} ${startMonth} ${start.getFullYear()}`
+    } else if (start.getFullYear() === end.getFullYear()) {
+      return `${start.getDate()} ${startMonth} - ${end.getDate()} ${endMonth} ${start.getFullYear()}`
+    } else {
+      return `${start.getDate()} ${startMonth} ${start.getFullYear()} - ${end.getDate()} ${endMonth} ${end.getFullYear()}`
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
@@ -161,11 +220,41 @@ export default function EditProjectPage({
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm placeholder:text-gray-400"
+                className="mt-1 block w-full rounded-md border-gray-400 bg-gray-50 shadow-sm hover:border-gray-500 focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 transition-colors placeholder:text-gray-400"
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="weekNumber" className="block text-sm font-medium text-gray-700">
+                  Veckonummer <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  id="weekNumber"
+                  required
+                  min="1"
+                  max="53"
+                  value={formData.weekNumber}
+                  onChange={(e) => {
+                    const weekNum = e.target.value
+                    const newDate = calculateDateFromWeek(weekNum)
+                    setFormData(prev => ({
+                      ...prev,
+                      weekNumber: weekNum,
+                      startDate: newDate || prev.startDate
+                    }))
+                  }}
+                  className="mt-1 block w-full rounded-md border-gray-400 bg-gray-50 shadow-sm hover:border-gray-500 focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 transition-colors placeholder:text-gray-400"
+                  placeholder="T.ex. 14"
+                />
+                {formData.weekNumber && getWeekDateRange(formData.weekNumber) && (
+                  <p className="mt-1 text-xs text-gray-600">
+                    Vecka {formData.weekNumber}: {getWeekDateRange(formData.weekNumber)}
+                  </p>
+                )}
+              </div>
+
               <div>
                 <label htmlFor="startDate" className="block text-sm font-medium text-gray-700">
                   Startdatum <span className="text-red-500">*</span>
@@ -181,26 +270,10 @@ export default function EditProjectPage({
                       calculateWeekNumber(e.target.value)
                     }
                   }}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm placeholder:text-gray-400"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="weekNumber" className="block text-sm font-medium text-gray-700">
-                  Veckonummer <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  id="weekNumber"
-                  required
-                  min="1"
-                  max="53"
-                  value={formData.weekNumber}
-                  onChange={(e) => setFormData({ ...formData, weekNumber: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm placeholder:text-gray-400"
+                  className="mt-1 block w-full rounded-md border-gray-400 bg-gray-50 shadow-sm hover:border-gray-500 focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 transition-colors placeholder:text-gray-400"
                 />
                 <p className="mt-1 text-xs text-gray-500">
-                  Uppdateras automatiskt när du ändrar startdatum
+                  Fylls i automatiskt från veckonummer (måndag)
                 </p>
               </div>
             </div>
@@ -220,7 +293,7 @@ export default function EditProjectPage({
                 rows={4}
                 value={formData.rehearsalSchedule}
                 onChange={(e) => setFormData({ ...formData, rehearsalSchedule: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm placeholder:text-gray-400"
+                className="mt-1 block w-full rounded-md border-gray-400 bg-gray-50 shadow-sm hover:border-gray-500 focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 transition-colors placeholder:text-gray-400"
                 placeholder="Beskriv repetitionstider och datum..."
               />
             </div>
@@ -234,7 +307,7 @@ export default function EditProjectPage({
                 rows={4}
                 value={formData.concertInfo}
                 onChange={(e) => setFormData({ ...formData, concertInfo: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm placeholder:text-gray-400"
+                className="mt-1 block w-full rounded-md border-gray-400 bg-gray-50 shadow-sm hover:border-gray-500 focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 transition-colors placeholder:text-gray-400"
                 placeholder="Information om konserten, plats, tid, etc..."
               />
             </div>
@@ -248,7 +321,7 @@ export default function EditProjectPage({
                 rows={3}
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm placeholder:text-gray-400"
+                className="mt-1 block w-full rounded-md border-gray-400 bg-gray-50 shadow-sm hover:border-gray-500 focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 transition-colors placeholder:text-gray-400"
                 placeholder="Interna anteckningar om projektet..."
               />
             </div>

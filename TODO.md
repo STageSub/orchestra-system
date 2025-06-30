@@ -1,4 +1,268 @@
-# 📋 Detaljerad TODO-lista - Orkestervikarieförfrågningssystem
+# 📋 TODO - Orchestra System
+
+## 🔴 KRITISKA BUGGAR ATT FIXA FÖRE SaaS (Uppdaterad 2025-06-29)
+
+### ✅ Kritiska problem som NU ÄR LÖSTA
+- [x] **E-posthistorik fungerar inte** - SQL migration skapad: `/prisma/migrations/manual_add_group_email_log.sql`
+- [x] **Lokalt boende-filter** - Fullt implementerat med databas, UI och filtrering
+- [x] **Konfliktvarningar och strategier** - Tre strategier implementerade (Enkel, Detaljerad, Smart)
+- [x] **Toast-notifikationer** - Korrekt implementerat med rätt mönster (alert för admin, toast för externa händelser)
+
+### ✅ Viktiga användbarhetsproblem som NU ÄR LÖSTA
+- [x] **Moment 22 med strategi/antal** - REDAN LÖST! Smart implementation utan default-val finns redan
+- [x] **Instrument laddas utan feedback** - Loading state implementerat med "Laddar instrument..."
+- [x] **Arkivera musiker redirect** - Stannar nu på profilen och refreshar data
+- [x] **Archive/restore för instrument** - Fullt implementerat med UI och API
+
+### 🔴 Nya kritiska buggar att fixa (2025-06-30)
+- [ ] **Synkronisera Preview/Sändningslogik** - Preview visar fel resultat jämfört med faktisk sändning
+  - [ ] FCFS preview visar bara en mottagare när maxRecipients är tomt
+  - [ ] Preview respekterar inte lokalt boende-filter
+  - [ ] Preview hanterar inte konflikter korrekt
+  - [ ] Extrahera gemensam logik för preview och sändning
+
+### Mindre problem (förbättringar)
+- [x] **Uppdateringstext i projekt** - Ta bort "Uppdateras automatiskt" och sekundräkning ✅ (2025-06-29)
+- [ ] **Visningsordning i instrumentredigering** - Ta bort fältet från UI
+- [ ] **Ta bort-knapp placering** - Flytta delete-ikon från lista till redigeringsvyn
+- [x] **Accepterade musiker modal bugg** - Fixad case sensitivity och förbättrad design ✅ (2025-06-30)
+- [x] **Modern tech design för projektdetaljer** - Implementerat breadcrumbs, smooth transitions, eleganta progress bars ✅ (2025-06-30)
+
+### Nya förbättringar planerade (2025-06-30)
+- [ ] **Gröna bockar i bekräftelsemodaler** - Visuell feedback med ✓ i alla bekräftelsedialoger
+- [ ] **Flexibla svarstider** - Anpassade svarstider per projekt (standard 48h)
+- [ ] **Radera-ikon för ej startade projekt** - Delete-ikon på hover för projekt utan förfrågningar
+- [ ] **Multi-select för rankningslistor** - Välj flera listor som fallback vid behov
+- [ ] **Språkval för e-postmallar** - Flerspråkigt stöd för mallar
+- [ ] **Rankningshierarki i musikerkort** - Visa högsta ranking först om musiker finns i flera listor
+
+### Realtidslösning (framtida)
+- [ ] **Server-Sent Events (SSE)** för realtidsnotifikationer
+- [ ] **Optimerad polling** kombinerat med SSE
+- [ ] **Toast-notifikationer** för alla händelser
+
+Se `/BUGFIX_CHECKLIST.md` för detaljerad information om varje bugg.
+
+## 🚀 Current Phase: Transforming to Multi-Tenant SaaS
+
+### Overview
+6-week implementation plan to transform StageSub from single-orchestra to multi-tenant SaaS platform with three subscription tiers ($79/$499/$1500).
+
+**✅ ALLA KRITISKA OCH VIKTIGA BUGGAR ÄR NU FIXADE! Systemet är redo för SaaS-transformation.**
+
+## 📅 Week 1: Database & Authentication
+
+### Database Schema Updates
+- [ ] Create migration for Tenant table
+- [ ] Create migration for User table (replace single password)
+- [ ] Add tenantId to ALL existing tables
+- [ ] Create indexes for tenant filtering performance
+- [ ] Create audit log table for tracking changes
+
+### Prisma Schema
+- [ ] Update schema.prisma with Tenant and User models
+- [ ] Add tenantId relation to all models
+- [ ] Generate new Prisma client
+- [ ] Test migrations on development database
+
+### Authentication System
+- [ ] Install and configure NextAuth.js
+- [ ] Create login page at `/login`
+- [ ] Implement JWT token generation with tenant context
+- [ ] Create middleware for tenant validation
+- [ ] Replace current auth system with user-based auth
+- [ ] Add logout functionality
+- [ ] Implement "remember me" functionality
+
+### Connection Management
+- [ ] Create DatabaseConnectionManager class
+- [ ] Implement connection pooling for shared DB
+- [ ] Add support for dedicated DB connections
+- [ ] Create Prisma middleware for automatic tenant filtering
+- [ ] Test connection switching
+
+### ID Generation Updates
+- [ ] Update generateUniqueId to include tenant prefix
+- [ ] Format: TEN-MUS-001 (tenant-type-number)
+- [ ] Update all existing ID references
+
+## 📅 Week 2: Superadmin Dashboard
+
+### Superadmin Routes
+- [ ] Create `/superadmin` layout and navigation
+- [ ] Implement superadmin authentication check
+- [ ] Create dashboard overview page
+- [ ] Add analytics widgets (tenants, revenue, usage)
+
+### Tenant Management
+- [ ] Create `/superadmin/tenants` page
+- [ ] Tenant list with search/filter
+- [ ] Create new tenant form
+- [ ] Edit tenant details
+- [ ] View tenant usage statistics
+- [ ] Activate/deactivate tenants
+- [ ] Set subscription limits
+
+### User Management
+- [ ] Create `/superadmin/users` page
+- [ ] List all users across tenants
+- [ ] Create users manually
+- [ ] Reset user passwords
+- [ ] Change user roles
+- [ ] Impersonate users (for support)
+
+### Migration Tools
+- [ ] Create `/superadmin/migrations` page
+- [ ] List migration requests
+- [ ] Approve/reject migrations
+- [ ] Schedule migrations
+- [ ] Monitor migration progress
+- [ ] View migration logs
+
+## 📅 Week 3: Self-Service Signup
+
+### Public Website
+- [ ] Create landing page at `/`
+- [ ] Pricing page with tier comparison
+- [ ] Feature showcase
+- [ ] Customer testimonials section
+- [ ] Contact form
+
+### Signup Flow
+- [ ] Create `/signup` route
+- [ ] Plan selection (Small/Medium/Institution)
+- [ ] Orchestra registration form
+- [ ] Subdomain availability check
+- [ ] Admin user creation
+- [ ] Email verification
+- [ ] Success page with next steps
+
+### Subdomain Routing
+- [ ] Configure middleware for subdomain detection
+- [ ] Update Next.js config for wildcard domains
+- [ ] Test subdomain routing locally
+- [ ] Implement subdomain → tenant resolution
+
+### Trial Management
+- [ ] Implement 30-day trial logic
+- [ ] Trial expiry notifications
+- [ ] Grace period handling
+- [ ] Upgrade prompts in UI
+
+## 📅 Week 4: Orchestra Admin Features
+
+### Subscription Management
+- [ ] Create `/admin/settings/subscription` page
+- [ ] Display current plan and limits
+- [ ] Show usage vs limits (progress bars)
+- [ ] Upgrade/downgrade buttons
+- [ ] Billing history
+
+### User Invitation System
+- [ ] Create `/admin/settings/users` page
+- [ ] Invite users by email
+- [ ] Set user roles (admin/user)
+- [ ] Manage existing users
+- [ ] Remove users
+
+### Branding Customization
+- [ ] Create `/admin/settings/branding` page
+- [ ] Logo upload (Medium/Institution tiers)
+- [ ] Color picker (Institution tier)
+- [ ] Font selection (Institution tier)
+- [ ] Preview changes
+
+### Usage Monitoring
+- [ ] Real-time musician count
+- [ ] Active projects tracker
+- [ ] Monthly request statistics
+- [ ] Storage usage meter
+- [ ] Export usage reports
+
+## 📅 Week 5: Migration System
+
+### Export Functionality
+- [ ] Create data export functions
+- [ ] Export all tenant data to JSON
+- [ ] Include all relationships
+- [ ] Compress large exports
+- [ ] Secure file storage
+
+### Import Functionality
+- [ ] Create data import functions
+- [ ] Validate data integrity
+- [ ] Handle foreign keys correctly
+- [ ] Progress tracking
+- [ ] Error recovery
+
+### Migration UI
+- [ ] Request migration button (Orchestra admin)
+- [ ] Migration approval UI (Superadmin)
+- [ ] Schedule picker
+- [ ] Progress monitoring
+- [ ] Success/failure notifications
+
+### Database Operations
+- [ ] Create dedicated database via Neon API
+- [ ] Run migrations on new database
+- [ ] Import data with verification
+- [ ] Update tenant configuration
+- [ ] Clean up shared database
+
+## 📅 Week 6: Billing & Payments
+
+### Stripe Integration
+- [ ] Set up Stripe account
+- [ ] Install Stripe SDK
+- [ ] Create products for each tier
+- [ ] Set up pricing (monthly/annual)
+- [ ] Webhook endpoints
+
+### Payment Flow
+- [ ] Credit card form
+- [ ] Payment processing
+- [ ] Success/failure handling
+- [ ] Receipt generation
+- [ ] Retry failed payments
+
+### Subscription Management
+- [ ] Create/update subscriptions
+- [ ] Handle plan changes
+- [ ] Proration calculation
+- [ ] Cancel subscriptions
+- [ ] Reactivation flow
+
+### Invoice System (Institution tier)
+- [ ] Generate invoices
+- [ ] Custom invoice templates
+- [ ] Send invoices via email
+- [ ] Payment tracking
+- [ ] Overdue notifications
+
+## 🎯 Critical Path Items
+
+These MUST be done in order:
+
+1. **Tenant table and schema updates** (everything depends on this)
+2. **User authentication** (can't have multiple users without it)
+3. **Tenant isolation middleware** (security critical)
+4. **Subdomain routing** (UX critical)
+5. **Limit enforcement** (business model critical)
+
+## 🚨 Launch Checklist
+
+- [ ] 3+ orchestras using the system
+- [ ] Data completely isolated between tenants
+- [ ] Self-service signup operational
+- [ ] Payment processing functional
+- [ ] Support for 50+ concurrent orchestras
+- [ ] Zero security vulnerabilities
+- [ ] Complete documentation
+- [ ] 99.9% uptime achieved
+
+---
+
+# Previous TODO - Single Orchestra System (98% COMPLETE)
 
 ## ✅ Fas 1: Grundsystem (AVKLARAD!)
 

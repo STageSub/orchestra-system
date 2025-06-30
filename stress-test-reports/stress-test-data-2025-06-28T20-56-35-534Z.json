@@ -1,0 +1,382 @@
+{
+  "metadata": {
+    "testId": "TEST_1751144193931",
+    "startTime": "2025-06-28T20:56:33.931Z",
+    "endTime": "2025-06-28T20:56:35.533Z",
+    "duration": 1602,
+    "environment": {
+      "node": "v24.3.0",
+      "platform": "darwin",
+      "database": "Connected"
+    }
+  },
+  "summary": {
+    "totalTests": 11,
+    "passed": 10,
+    "failed": 1,
+    "skipped": 0
+  },
+  "categories": {
+    "Infrastructure": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "scenarios": [
+        {
+          "category": "Infrastructure",
+          "scenario": "Database Connection",
+          "passed": true,
+          "timestamp": "2025-06-28T20:56:34.199Z",
+          "details": {
+            "responseTime": "254ms"
+          }
+        }
+      ]
+    },
+    "Data Integrity": {
+      "total": 2,
+      "passed": 2,
+      "failed": 0,
+      "scenarios": [
+        {
+          "category": "Data Integrity",
+          "scenario": "No Orphaned Requests",
+          "passed": true,
+          "timestamp": "2025-06-28T20:56:34.299Z",
+          "details": {
+            "orphanedCount": "0"
+          }
+        },
+        {
+          "category": "Data Integrity",
+          "scenario": "Valid Request Statuses",
+          "passed": true,
+          "timestamp": "2025-06-28T20:56:34.399Z",
+          "details": {
+            "invalidCount": 0
+          }
+        }
+      ]
+    },
+    "Request Strategies": {
+      "total": 2,
+      "passed": 2,
+      "failed": 0,
+      "scenarios": [
+        {
+          "category": "Request Strategies",
+          "scenario": "Sequential - Max 1 Pending",
+          "passed": true,
+          "timestamp": "2025-06-28T20:56:34.639Z",
+          "details": {
+            "needsChecked": 8
+          }
+        },
+        {
+          "category": "Request Strategies",
+          "scenario": "Parallel - Correct Active Count",
+          "passed": true,
+          "timestamp": "2025-06-28T20:56:34.795Z",
+          "details": {
+            "needsChecked": 3
+          }
+        }
+      ]
+    },
+    "Conflict Detection": {
+      "total": 2,
+      "passed": 1,
+      "failed": 1,
+      "scenarios": [
+        {
+          "category": "Conflict Detection",
+          "scenario": "No Multiple Requests Per Project",
+          "passed": false,
+          "timestamp": "2025-06-28T20:56:34.908Z",
+          "details": {
+            "conflictsFound": 1,
+            "conflicts": [
+              "Brusk Zanganeh - Shostakovich Nr. 3"
+            ]
+          }
+        },
+        {
+          "category": "Conflict Detection",
+          "scenario": "Musicians on Multiple Lists Detected",
+          "passed": true,
+          "timestamp": "2025-06-28T20:56:35.002Z",
+          "details": {
+            "musiciansFound": 4,
+            "topConflicts": [
+              "Brusk Zanganeh (3 lists)",
+              "Daniel Migdal (3 lists)",
+              "Frieda Mossop (3 lists)",
+              "Filip Gloria (3 lists)"
+            ]
+          }
+        }
+      ]
+    },
+    "Email System": {
+      "total": 2,
+      "passed": 2,
+      "failed": 0,
+      "scenarios": [
+        {
+          "category": "Email System",
+          "scenario": "All Required Templates Exist",
+          "passed": true,
+          "timestamp": "2025-06-28T20:56:35.105Z",
+          "details": {
+            "found": [
+              "reminder",
+              "confirmation",
+              "position_filled",
+              "request"
+            ],
+            "missing": []
+          }
+        },
+        {
+          "category": "Email System",
+          "scenario": "Communication Logs Accessible",
+          "passed": true,
+          "timestamp": "2025-06-28T20:56:35.205Z",
+          "details": {
+            "recentLogCount": 3
+          }
+        }
+      ]
+    },
+    "Statistics": {
+      "total": 2,
+      "passed": 2,
+      "failed": 0,
+      "scenarios": [
+        {
+          "category": "Statistics",
+          "scenario": "Request Status Breakdown",
+          "passed": true,
+          "timestamp": "2025-06-28T20:56:35.320Z",
+          "details": {
+            "total": 3,
+            "breakdown": {
+              "pending": 3
+            }
+          }
+        },
+        {
+          "category": "Statistics",
+          "scenario": "Project Response Rates",
+          "passed": true,
+          "timestamp": "2025-06-28T20:56:35.533Z",
+          "details": {
+            "projects": [
+              {
+                "name": "Beethoven 5",
+                "totalRequests": 0,
+                "responded": 0,
+                "responseRate": "N/A"
+              },
+              {
+                "name": "Mahler 6",
+                "totalRequests": 0,
+                "responded": 0,
+                "responseRate": "N/A"
+              },
+              {
+                "name": "Brahms Piano Quintet",
+                "totalRequests": 0,
+                "responded": 0,
+                "responseRate": "N/A"
+              },
+              {
+                "name": "Shostakovich Nr. 3",
+                "totalRequests": 3,
+                "responded": 0,
+                "responseRate": "0.0%"
+              },
+              {
+                "name": "Rach",
+                "totalRequests": 0,
+                "responded": 0,
+                "responseRate": "N/A"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "details": [
+    {
+      "category": "Infrastructure",
+      "scenario": "Database Connection",
+      "passed": true,
+      "timestamp": "2025-06-28T20:56:34.199Z",
+      "details": {
+        "responseTime": "254ms"
+      }
+    },
+    {
+      "category": "Data Integrity",
+      "scenario": "No Orphaned Requests",
+      "passed": true,
+      "timestamp": "2025-06-28T20:56:34.299Z",
+      "details": {
+        "orphanedCount": "0"
+      }
+    },
+    {
+      "category": "Data Integrity",
+      "scenario": "Valid Request Statuses",
+      "passed": true,
+      "timestamp": "2025-06-28T20:56:34.399Z",
+      "details": {
+        "invalidCount": 0
+      }
+    },
+    {
+      "category": "Request Strategies",
+      "scenario": "Sequential - Max 1 Pending",
+      "passed": true,
+      "timestamp": "2025-06-28T20:56:34.639Z",
+      "details": {
+        "needsChecked": 8
+      }
+    },
+    {
+      "category": "Request Strategies",
+      "scenario": "Parallel - Correct Active Count",
+      "passed": true,
+      "timestamp": "2025-06-28T20:56:34.795Z",
+      "details": {
+        "needsChecked": 3
+      }
+    },
+    {
+      "category": "Conflict Detection",
+      "scenario": "No Multiple Requests Per Project",
+      "passed": false,
+      "timestamp": "2025-06-28T20:56:34.908Z",
+      "details": {
+        "conflictsFound": 1,
+        "conflicts": [
+          "Brusk Zanganeh - Shostakovich Nr. 3"
+        ]
+      }
+    },
+    {
+      "category": "Conflict Detection",
+      "scenario": "Musicians on Multiple Lists Detected",
+      "passed": true,
+      "timestamp": "2025-06-28T20:56:35.002Z",
+      "details": {
+        "musiciansFound": 4,
+        "topConflicts": [
+          "Brusk Zanganeh (3 lists)",
+          "Daniel Migdal (3 lists)",
+          "Frieda Mossop (3 lists)",
+          "Filip Gloria (3 lists)"
+        ]
+      }
+    },
+    {
+      "category": "Email System",
+      "scenario": "All Required Templates Exist",
+      "passed": true,
+      "timestamp": "2025-06-28T20:56:35.105Z",
+      "details": {
+        "found": [
+          "reminder",
+          "confirmation",
+          "position_filled",
+          "request"
+        ],
+        "missing": []
+      }
+    },
+    {
+      "category": "Email System",
+      "scenario": "Communication Logs Accessible",
+      "passed": true,
+      "timestamp": "2025-06-28T20:56:35.205Z",
+      "details": {
+        "recentLogCount": 3
+      }
+    },
+    {
+      "category": "Statistics",
+      "scenario": "Request Status Breakdown",
+      "passed": true,
+      "timestamp": "2025-06-28T20:56:35.320Z",
+      "details": {
+        "total": 3,
+        "breakdown": {
+          "pending": 3
+        }
+      }
+    },
+    {
+      "category": "Statistics",
+      "scenario": "Project Response Rates",
+      "passed": true,
+      "timestamp": "2025-06-28T20:56:35.533Z",
+      "details": {
+        "projects": [
+          {
+            "name": "Beethoven 5",
+            "totalRequests": 0,
+            "responded": 0,
+            "responseRate": "N/A"
+          },
+          {
+            "name": "Mahler 6",
+            "totalRequests": 0,
+            "responded": 0,
+            "responseRate": "N/A"
+          },
+          {
+            "name": "Brahms Piano Quintet",
+            "totalRequests": 0,
+            "responded": 0,
+            "responseRate": "N/A"
+          },
+          {
+            "name": "Shostakovich Nr. 3",
+            "totalRequests": 3,
+            "responded": 0,
+            "responseRate": "0.0%"
+          },
+          {
+            "name": "Rach",
+            "totalRequests": 0,
+            "responded": 0,
+            "responseRate": "N/A"
+          }
+        ]
+      }
+    }
+  ],
+  "performance": {
+    "databaseQueries": 1,
+    "averageQueryTime": "254.00",
+    "slowestQuery": {
+      "time": 254,
+      "query": "Database connection test"
+    },
+    "memoryUsage": {
+      "rss": 69779456,
+      "heapTotal": 11321344,
+      "heapUsed": 7486032,
+      "external": 1922092,
+      "arrayBuffers": 16659
+    }
+  },
+  "emailStatistics": {
+    "totalSent": 0,
+    "byTemplate": {},
+    "byRecipient": {},
+    "errors": []
+  }
+}

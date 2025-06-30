@@ -2,9 +2,35 @@
 
 This document contains important context and guidelines for Claude when working on the Orchestra System project.
 
+## 📝 DOCUMENTATION RULES (CRITICAL - MUST FOLLOW)
+
+### Automatic Documentation Requirements
+1. **ALWAYS update documentation IMMEDIATELY when:**
+   - ✅ A feature is implemented → Update `IMPLEMENTATION_STATUS.md`
+   - 🐛 A bug is fixed → Update `BUGFIX_CHECKLIST.md` + `TODO.md`
+   - ⚠️ A problem is discovered → Add to `BUGFIX_CHECKLIST.md`
+   - 📅 Daily work is done → Create/update `DAGENS_ARBETE_[date].md`
+   - 🔧 Any significant change → Update relevant .md files
+
+2. **Documentation is PART OF THE TASK** - Never complete work without updating docs
+
+3. **Documentation Template for Changes:**
+   ```
+   ### [Feature/Bug Name]
+   - **Status**: IMPLEMENTED/FIXED (date)
+   - **Problem**: What was the issue?
+   - **Solution**: What was done?
+   - **Files Changed**: List of modified files
+   - **Verification**: How to verify it works
+   ```
+
+4. **Never wait for user reminder** - If docs aren't updated, the task isn't complete
+
 ## Project Overview
 
 This is an orchestra substitute request system (orkestervikarieförfrågningssystem) built with Next.js 15, TypeScript, Prisma, and PostgreSQL. The system manages musicians, their qualifications, ranking lists, and substitute requests.
+
+**🚀 Multi-Tenant SaaS Architecture**: The system is being transformed into a multi-tenant SaaS platform where multiple orchestras can use the same application with complete data isolation. Starting with a shared database approach with the ability to migrate to dedicated databases for enterprise customers.
 
 ## Critical Implementation Rules
 
@@ -12,6 +38,7 @@ This is an orchestra substitute request system (orkestervikarieförfrågningssys
 - **NEVER reuse IDs** - All deleted IDs are stored in the DeletedIds table
 - Always use the `generateUniqueId` function from `/lib/id-generator.ts`
 - ID format: PREFIX + 3-digit number (e.g., MUS001, INST001, POS001)
+- **Multi-tenant format**: TENANT-PREFIX-NUMBER (e.g., GOT-MUS-001 for Göteborg)
 - Prefixes:
   - MUS: Musicians
   - INST: Instruments  
@@ -20,11 +47,17 @@ This is an orchestra substitute request system (orkestervikarieförfrågningssys
   - REQ: Requests
   - TEMP: Templates
 
-### 2. Database Conventions
+### 2. Database Conventions & Prisma-Supabase Sync 🚨
 - Tables use **UpperCamelCase** (e.g., `Musician`, `RankingList`)
 - When writing raw SQL, table names must be quoted: `"Musician"`, `"RankingList"`
 - Foreign key relationships are properly maintained
 - Use transactions for operations that modify multiple tables
+- **CRITICAL**: When adding new fields to Prisma schema:
+  1. Run `npx prisma migrate dev` locally
+  2. Create manual SQL file in `/prisma/migrations/manual_*.sql`
+  3. Run SQL in Supabase Dashboard
+  4. See `/docs/PRISMA_SUPABASE_SYNC.md` for detailed instructions
+  5. **NEVER** deploy without syncing Supabase first!
 
 ### 3. Next.js 15 Compatibility
 - All API routes must handle async params:
@@ -67,6 +100,30 @@ This is an orchestra substitute request system (orkestervikarieförfrågningssys
   - Wrong: `{condition && functionCheck && <Component>}`
   - Correct: `{condition && functionCheck ? <Component> : null}`
   - Always use ternary operator with explicit null
+
+### 8. UI/UX Feedback Patterns (IMPORTANT)
+- **Admin Actions** - Use `alert()` for confirmations
+  - Creating, saving, deleting records
+  - Sending requests
+  - Any action initiated by the admin user
+  - Example: `alert('Förfrågningar skickade! 9 förfrågningar skickades ut.')`
+- **External Events** - Use toast notifications
+  - Musician responses (accepted/declined)
+  - Request timeouts
+  - Any event that happens externally
+  - Example: `toast.success('${musician} har accepterat förfrågan')`
+- **Consistency is key**: Never mix these patterns - admin actions always use alert(), external events always use toast
+
+### 9. Request Filtering Logic (CRITICAL)
+- **One musician = One request per project**
+  - A musician can only have ONE active (pending/accepted) request per project
+  - This applies across ALL positions and instruments
+  - Must check entire project, not just current position
+- **Declined = No more requests**
+  - If musician declined ANY position in project, exclude from all future requests
+  - Timeouts are treated as declines
+- **Implementation**: See `/docs/REQUEST_FILTERING_LOGIC.md` for detailed implementation
+- **NEVER** send multiple requests to same musician for same project
 
 ## Request Strategies (CRITICAL)
 
@@ -347,6 +404,53 @@ prisma/             # Database schema and migrations
 
 **Status**: 🚀 **FULLY OPERATIONAL IN PRODUCTION**
 
+### ⚠️ KNOWN ISSUES (2025-06-28)
+
+#### Critical Issues (Blocks Usage)
+1. **E-posthistorik fungerar inte**
+   - GroupEmailLog table doesn't exist (migration failed to run)
+   - Returns error when trying to view email history
+   - Need to manually create table or run migration
+
+2. **Lokalt boende-filter saknas helt**
+   - No way to filter requests based on local residence requirement
+   - Need to add `requireLocalResidence` field to ProjectNeed
+   - Update UI and filtering logic in request-sender
+
+3. **Konfliktvarningar fungerar inte**
+   - No warnings when musician exists on multiple lists
+   - Need to create conflict detection API
+   - Integrate warnings into UI
+
+4. **Toast-notifikationer syns inte**
+   - Toast system exists but isn't used anywhere
+   - Need to integrate `showToast()` calls throughout the system
+   - Replace all `alert()` calls with toasts
+
+#### Important Usability Issues
+1. **Moment 22 med strategi/antal**
+   - Can't change from sequential to parallel due to validation
+   - Remove default strategy selection
+
+2. **Instrument laddas utan feedback**
+   - No loading state when clicking "Välj instrument"
+   - Add spinner or disabled state
+
+3. **Arkivera musiker redirect**
+   - Automatically redirects to list after archiving
+   - Should stay on the musician profile page
+
+4. **Archive/restore för instrument saknas**
+   - Schema updated but no UI implementation
+   - Need to add archive/restore buttons to instrument edit page
+
+#### Partial Implementations
+- **Phone validation**: Works but doesn't show who has the duplicate number
+- **Smart polling**: Works but no real-time notifications via SSE
+- **Sequential strategy limit**: Validation exists but creates UX problems
+
+See `/BUGFIX_CHECKLIST.md` for detailed bug tracking and solutions.
+
 #### Phase 6 - Latest Implementations (2025-06-27)
 
 #### Phase 7 - UI/UX Improvements (2025-06-28)
@@ -505,15 +609,91 @@ All templates support these variables:
      - Line 284: Pause/Resume button conditional
      - Line 272: Send button conditional
 
+## Multi-Tenant Context (NEW)
+
+### Tenant Isolation
+- **ALWAYS** filter queries by `tenantId` in shared database mode
+- Use the DatabaseConnectionManager to get the correct database connection
+- Never query across tenants unless you're a superadmin
+- All tables (except User and Tenant) must have a `tenantId` column
+
+### User Roles
+- **superadmin**: Can access all tenants, manage subscriptions, perform migrations
+- **admin**: Full access to their orchestra only
+- **user**: Standard access within their orchestra
+- **musician**: External role, no login, only responds to requests
+
+### Subscription Tiers
+- **Small Ensemble ($79)**: 50 musicians, 5 projects, 10 instruments
+- **Medium Ensemble ($499)**: 200 musicians, 20 projects, unlimited instruments
+- **Institution ($1,500)**: Unlimited everything, dedicated DB option, custom branding
+
+### Database Strategy
+- Start with shared database for all tenants
+- Migrate to dedicated database for enterprise customers
+- Use subdomain routing: `orchestra.stagesub.com`
+- Connection manager handles both shared and dedicated databases transparently
+
 ## Important Reminders
 - Always check if an ID exists before reusing it
 - Use transactions for multi-table operations
 - Test with Swedish characters (å, ä, ö)
 - Maintain backward compatibility
 - Follow the existing code patterns
+- **NEW**: Always include tenant context in queries
+- **NEW**: Check subscription limits before allowing operations
 
-## Database Connection - IMPORTANT
-Currently using **pooler connection** (higher latency ~300-900ms) due to DNS issues with direct connection.
-- **Current**: `postgresql://postgres.tckcuexsdzovsqaqiqkr:Kurdistan12@aws-0-eu-north-1.pooler.supabase.com:6543/postgres?pgbouncer=true`
-- **Preferred**: `postgresql://postgres:Kurdistan12@db.tckcuexsdzovsqaqiqkr.supabase.co:5432/postgres` (lower latency)
-- **TODO**: Switch back to direct connection when DNS resolves properly for better performance
+## Database Connection - IMPORTANT (Updated 2025-06-28)
+Currently using **Supabase** (switched back from Neon.tech due to data saving issues).
+
+### Current Setup
+- **Provider**: Supabase 
+- **Connection**: Using pooler connection due to DNS issues
+- **DATABASE_URL**: `postgresql://postgres.tckcuexsdzovsqaqiqkr:Kurdistan12@aws-0-eu-north-1.pooler.supabase.com:6543/postgres?pgbouncer=true`
+- **Note**: Should switch to direct connection when DNS resolves for better performance
+
+## Known Issues & Limitations (2025-06-28)
+
+### 🔴 CRITICAL - Not Working
+1. **E-posthistorik** - GroupEmailLog table migration not run, API returns error
+2. **Lokalt boende-filter** - Feature completely missing
+3. **Konfliktvarningar** - Settings exist but no actual warnings shown
+4. **Toast-notifikationer** - System implemented but not used for events
+
+### 🟡 Partial Implementations
+1. **Archive/Restore Instruments** - Schema updated but no UI
+2. **Phone Validation** - Works but doesn't show who has the number
+3. **Smart Polling** - Works but no real-time notifications
+4. **Sequential Strategy** - Limited to 1 but creates UX issues
+
+### 📝 Documentation vs Reality
+- Toast system exists (`/components/toast.tsx`) but only used in 3 places
+- Conflict handling has settings but no implementation
+- Several features marked as "COMPLETED" are only partially working
+
+## Features Needing Implementation
+
+### Lokalt Boende Filter
+- Add `requireLocalResidence` field to ProjectNeed
+- Update UI with checkbox "Kräv lokalt boende"
+- Filter musicians in request sending logic
+
+### Real-time Updates
+Recommended approach:
+1. **Server-Sent Events (SSE)** for notifications
+2. **Keep current polling** for data sync
+3. **Toast notifications** for all events
+
+### Conflict Handling
+The setting exists in System Settings but needs:
+1. API endpoint to detect conflicts
+2. Warning icons in UI
+3. Dialog or handling based on chosen strategy
+
+### UI/UX Fixes Needed
+- Remove "Uppdateras automatiskt" text in projects
+- Hide display order in instrument edit
+- Move delete button to edit view for instruments
+- Fix archive redirect (should stay on page)
+- Add loading spinners for async operations
+- Fix strategy/quantity catch-22 (no default strategy)

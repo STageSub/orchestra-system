@@ -11,7 +11,9 @@ interface Musician {
   lastName: string
   email: string
   phone: string | null
+  preferredLanguage: string | null
   localResidence: boolean
+  notes: string | null
   isActive: boolean
   isArchived: boolean
   createdAt: string
@@ -72,12 +74,13 @@ interface ProjectHistory {
 export default function MusicianProfilePage({
   params
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
   const router = useRouter()
   const [musician, setMusician] = useState<Musician | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [archiving, setArchiving] = useState(false)
   const [projectHistory, setProjectHistory] = useState<ProjectHistory[]>([])
   const [historyLoading, setHistoryLoading] = useState(true)
   const [statistics, setStatistics] = useState<{
@@ -91,15 +94,24 @@ export default function MusicianProfilePage({
   } | null>(null)
   const [statsLoading, setStatsLoading] = useState(true)
 
+  const [paramsId, setParamsId] = useState<string | null>(null)
+  
   useEffect(() => {
-    fetchMusician()
-    fetchProjectHistory()
-    fetchStatistics()
-  }, [params.id])
+    params.then(p => setParamsId(p.id))
+  }, [params])
+
+  useEffect(() => {
+    if (paramsId) {
+      fetchMusician()
+      fetchProjectHistory()
+      fetchStatistics()
+    }
+  }, [paramsId])
 
   const fetchMusician = async () => {
+    if (!paramsId) return
     try {
-      const response = await fetch(`/api/musicians/${params.id}`)
+      const response = await fetch(`/api/musicians/${paramsId}`)
       if (!response.ok) throw new Error('Failed to fetch musician')
       const data = await response.json()
       setMusician(data)
@@ -112,8 +124,9 @@ export default function MusicianProfilePage({
   }
 
   const fetchProjectHistory = async () => {
+    if (!paramsId) return
     try {
-      const response = await fetch(`/api/musicians/${params.id}/project-history`)
+      const response = await fetch(`/api/musicians/${paramsId}/project-history`)
       if (!response.ok) throw new Error('Failed to fetch project history')
       const data = await response.json()
       setProjectHistory(data)
@@ -125,8 +138,9 @@ export default function MusicianProfilePage({
   }
 
   const fetchStatistics = async () => {
+    if (!paramsId) return
     try {
-      const response = await fetch(`/api/musicians/${params.id}/statistics`)
+      const response = await fetch(`/api/musicians/${paramsId}/statistics`)
       if (!response.ok) throw new Error('Failed to fetch statistics')
       const data = await response.json()
       setStatistics(data)
@@ -138,14 +152,20 @@ export default function MusicianProfilePage({
   }
 
   const handleStatusToggle = async () => {
-    if (!musician) return
+    if (!musician || !paramsId) return
     
     try {
-      const response = await fetch(`/api/musicians/${params.id}`, {
+      const response = await fetch(`/api/musicians/${paramsId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...musician,
+          firstName: musician.firstName,
+          lastName: musician.lastName,
+          email: musician.email,
+          phone: musician.phone,
+          preferredLanguage: musician.preferredLanguage,
+          localResidence: musician.localResidence,
+          notes: musician.notes,
           isActive: !musician.isActive,
           qualificationIds: musician.qualifications.map(q => q.position.id)
         })
@@ -162,17 +182,57 @@ export default function MusicianProfilePage({
 
   const handleArchive = async () => {
     if (!confirm('Är du säker på att du vill arkivera denna musiker?')) return
+    if (!paramsId) return
 
+    setArchiving(true)
     try {
-      const response = await fetch(`/api/musicians/${params.id}`, {
+      const response = await fetch(`/api/musicians/${paramsId}`, {
         method: 'DELETE'
       })
 
       if (!response.ok) throw new Error('Failed to archive musician')
-      router.push('/admin/musicians')
+      
+      // Stay on the same page and refresh data
+      alert('Musikern har arkiverats')
+      fetchMusician()
+      fetchProjectHistory()
+      fetchStatistics()
     } catch (error) {
       console.error('Error:', error)
       setError('Kunde inte arkivera musiker')
+    } finally {
+      setArchiving(false)
+    }
+  }
+
+  const handleRestore = async () => {
+    if (!confirm('Vill du återställa denna musiker från arkivet?')) return
+    if (!paramsId) return
+
+    try {
+      const response = await fetch(`/api/musicians/${paramsId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: musician!.firstName,
+          lastName: musician!.lastName,
+          email: musician!.email,
+          phone: musician!.phone,
+          preferredLanguage: musician!.preferredLanguage,
+          localResidence: musician!.localResidence,
+          isActive: true,
+          isArchived: false,
+          qualificationIds: musician!.qualifications.map(q => q.position.id)
+        })
+      })
+
+      if (!response.ok) throw new Error('Failed to restore musician')
+      const restoredMusician = await response.json()
+      setMusician(restoredMusician)
+      setError('')
+    } catch (error) {
+      console.error('Error:', error)
+      setError('Kunde inte återställa musiker')
     }
   }
 
@@ -248,7 +308,14 @@ export default function MusicianProfilePage({
               )}
             </div>
             <div className="flex items-center space-x-3">
-              {!musician.isArchived && (
+              {musician.isArchived ? (
+                <button
+                  onClick={handleRestore}
+                  className="inline-flex items-center px-3 py-1 border border-green-300 rounded-md shadow-sm text-sm font-medium text-green-700 bg-white hover:bg-green-50"
+                >
+                  Återställ
+                </button>
+              ) : (
                 <>
                   <button
                     onClick={handleStatusToggle}
@@ -257,16 +324,17 @@ export default function MusicianProfilePage({
                     {musician.isActive ? 'Inaktivera' : 'Aktivera'}
                   </button>
                   <Link
-                    href={`/admin/musicians/${params.id}/edit`}
+                    href={`/admin/musicians/${paramsId}/edit`}
                     className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                   >
                     Redigera
                   </Link>
                   <button
                     onClick={handleArchive}
-                    className="inline-flex items-center px-3 py-1 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50"
+                    disabled={archiving}
+                    className="inline-flex items-center px-3 py-1 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
                   >
-                    Arkivera
+                    {archiving ? 'Arkiverar...' : 'Arkivera'}
                   </button>
                 </>
               )}
@@ -287,6 +355,12 @@ export default function MusicianProfilePage({
               <dd className="mt-1 text-sm text-gray-900">{musician.phone || 'Ej angivet'}</dd>
             </div>
             <div>
+              <dt className="text-sm font-medium text-gray-500">Språk för e-post</dt>
+              <dd className="mt-1 text-sm text-gray-900">
+                {musician.preferredLanguage === 'en' ? 'English' : 'Svenska'}
+              </dd>
+            </div>
+            <div>
               <dt className="text-sm font-medium text-gray-500">Registrerad</dt>
               <dd className="mt-1 text-sm text-gray-900">
                 {new Date(musician.createdAt).toLocaleDateString('sv-SE')}
@@ -294,6 +368,16 @@ export default function MusicianProfilePage({
             </div>
           </dl>
         </div>
+
+        {/* Anteckningar */}
+        {musician.notes && (
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-medium text-gray-900 mb-3">Anteckningar</h3>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-sm text-gray-900 whitespace-pre-wrap">{musician.notes}</p>
+            </div>
+          </div>
+        )}
 
         {/* Kvalifikationer */}
         <div className="px-6 py-4">
@@ -325,19 +409,23 @@ export default function MusicianProfilePage({
             <p className="text-sm text-gray-500">Musikern finns inte med i några rankningslistor</p>
           ) : (
             <div className="space-y-4">
-              {/* Group rankings by instrument and position */}
-              {Object.entries(
-                musician.rankings.reduce((groups, ranking) => {
+              {/* Group rankings by instrument and position, maintaining the order from API */}
+              {(() => {
+                const groups = musician.rankings.reduce((acc, ranking) => {
                   const key = `${ranking.rankingList.position.instrument.name} - ${ranking.rankingList.position.name}`
-                  if (!groups[key]) groups[key] = []
-                  groups[key].push(ranking)
-                  return groups
-                }, {} as Record<string, typeof musician.rankings>)
-              ).map(([positionKey, rankings]) => (
+                  if (!acc.map.has(key)) {
+                    acc.map.set(key, [])
+                    acc.order.push(key)
+                  }
+                  acc.map.get(key)!.push(ranking)
+                  return acc
+                }, { map: new Map<string, typeof musician.rankings>(), order: [] as string[] })
+                
+                return groups.order.map(positionKey => (
                 <div key={positionKey} className="border border-gray-200 rounded-lg p-4">
                   <h4 className="font-medium text-gray-900 mb-2">{positionKey}</h4>
                   <div className="grid grid-cols-3 gap-4">
-                    {rankings.map((ranking) => (
+                    {groups.map.get(positionKey)!.map((ranking) => (
                       <div key={ranking.id} className="text-center">
                         <Link
                           href={`/admin/rankings?position=${ranking.rankingList.position.id}&list=${ranking.rankingList.listType}`}
@@ -359,7 +447,8 @@ export default function MusicianProfilePage({
                     ))}
                   </div>
                 </div>
-              ))}
+              ))
+              })()}
             </div>
           )}
         </div>

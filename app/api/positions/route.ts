@@ -9,8 +9,30 @@ export async function GET() {
       }
     })
     
+    // Add qualified musician count for each position
+    const positionsWithCounts = await Promise.all(
+      positions.map(async (position) => {
+        // Count only active musicians
+        const activeMusicians = await prisma.musician.findMany({
+          where: {
+            isActive: true,
+            isArchived: false,
+            qualifications: {
+              some: { positionId: position.id }
+            }
+          },
+          select: { id: true }
+        })
+        
+        return {
+          ...position,
+          qualifiedMusiciansCount: activeMusicians.length
+        }
+      })
+    )
+    
     // Sort positions by instrument displayOrder first, then by hierarchyLevel
-    const sortedPositions = positions.sort((a, b) => {
+    const sortedPositions = positionsWithCounts.sort((a, b) => {
       const orderA = a.instrument.displayOrder ?? 999
       const orderB = b.instrument.displayOrder ?? 999
       

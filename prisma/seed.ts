@@ -162,6 +162,7 @@ async function main() {
   // Create email templates
   console.log('\n📧 Seeding email templates...')
 
+  // Swedish templates
   const emailTemplates = [
     {
       type: 'request',
@@ -242,6 +243,87 @@ Orkesteradministrationen`,
 
     console.log(`✅ Created email template: ${template.type}`)
   }
+
+  // English templates
+  const englishTemplates = [
+    {
+      type: 'request_en',
+      subject: 'Substitute Request - {projectName} - {position}',
+      body: `Hello {firstName},
+
+We are looking for a {position} for {projectName}.
+
+Start date: {startDate} - week {weekNumber}
+Rehearsals: {rehearsalSchedule}
+Concerts: {concertInfo}
+
+Please respond within {responseTime} hours by clicking one of the buttons below:
+
+[Answer YES]({yesLink}) | [Answer NO]({noLink})
+
+Best regards,
+Orchestra Administration`,
+      variables: ['firstName', 'projectName', 'position', 'startDate', 'weekNumber', 'rehearsalSchedule', 'concertInfo', 'responseTime', 'yesLink', 'noLink']
+    },
+    {
+      type: 'reminder_en',
+      subject: 'Reminder - Response requested for {projectName}',
+      body: `Hello {firstName},
+
+This is a reminder about our request for {projectName}.
+Please respond as soon as possible.
+
+[Answer YES]({yesLink}) | [Answer NO]({noLink})
+
+Best regards,
+Orchestra Administration`,
+      variables: ['firstName', 'projectName', 'yesLink', 'noLink']
+    },
+    {
+      type: 'confirmation_en',
+      subject: 'Confirmation - {projectName}',
+      body: `Hello {firstName},
+
+Thank you for your response! You are now booked as {position} for {projectName}.
+
+Start date: {startDate} - week {weekNumber}
+Rehearsals: {rehearsalSchedule}
+Concerts: {concertInfo}
+
+{attachmentNote}
+
+We will be in touch with more information closer to the project start date.
+
+Best regards,
+Orchestra Administration`,
+      variables: ['firstName', 'projectName', 'position', 'startDate', 'weekNumber', 'rehearsalSchedule', 'concertInfo', 'attachmentNote']
+    },
+    {
+      type: 'position_filled_en',
+      subject: '{projectName} - Position has been filled',
+      body: `Hello {firstName},
+
+Thank you for your quick response regarding the {position} position for {projectName}.
+
+Unfortunately, the position has already been filled. We look forward to contacting you for future opportunities!
+
+Best regards,
+Orchestra Administration`,
+      variables: ['firstName', 'projectName', 'position']
+    }
+  ]
+
+  for (const template of englishTemplates) {
+    await prisma.emailTemplate.create({
+      data: {
+        type: template.type,
+        subject: template.subject,
+        body: template.body,
+        variables: template.variables
+      }
+    })
+
+    console.log(`✅ Created English email template: ${template.type}`)
 
   // Create ID sequences
   console.log('\n🔢 Seeding ID sequences...')

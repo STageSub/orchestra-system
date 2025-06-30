@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import ResponseTimeSelectorNested from './response-time-selector-nested'
 
 interface Instrument {
   id: number
@@ -12,6 +13,7 @@ interface Position {
   name: string
   instrumentId: number
   instrument: Instrument
+  qualifiedMusiciansCount?: number
 }
 
 interface RankingList {
@@ -19,6 +21,9 @@ interface RankingList {
   positionId: number
   listType: string
   description: string | null
+  availableMusiciansCount?: number
+  totalActiveMusicians?: number
+  isUsedInProject?: boolean
 }
 
 interface AddProjectNeedModalProps {
@@ -30,17 +35,20 @@ interface AddProjectNeedModalProps {
 export default function AddProjectNeedModal({ projectId, onClose, onSuccess }: AddProjectNeedModalProps) {
   const [loading, setLoading] = useState(false)
   const [instruments, setInstruments] = useState<Instrument[]>([])
+  const [instrumentsLoading, setInstrumentsLoading] = useState(false)
   const [positions, setPositions] = useState<Position[]>([])
   const [rankingLists, setRankingLists] = useState<RankingList[]>([])
   const [rankingListsLoading, setRankingListsLoading] = useState(false)
+  const [validationWarning, setValidationWarning] = useState('')
   const [formData, setFormData] = useState({
     instrumentId: '',
     positionId: '',
     rankingListId: '',
     quantity: '1',
-    requestStrategy: 'sequential',
+    requestStrategy: '',
     maxRecipients: '',
-    responseTimeHours: '24'
+    responseTimeHours: '',
+    requireLocalResidence: false
   })
 
   useEffect(() => {
@@ -65,14 +73,32 @@ export default function AddProjectNeedModal({ projectId, onClose, onSuccess }: A
       setFormData(prev => ({ ...prev, rankingListId: '' }))
     }
   }, [formData.positionId])
+  
+  // Check validation when quantity or ranking list changes
+  useEffect(() => {
+    if (formData.rankingListId) {
+      const selectedList = rankingLists.find(l => l.id === parseInt(formData.rankingListId))
+      if (selectedList && selectedList.availableMusiciansCount !== undefined) {
+        const quantity = parseInt(formData.quantity)
+        if (quantity > selectedList.availableMusiciansCount) {
+          setValidationWarning(`Antal behov (${quantity}) är högre än tillgängliga musiker (${selectedList.availableMusiciansCount})`)
+        } else {
+          setValidationWarning('')
+        }
+      }
+    }
+  }, [formData.quantity, formData.rankingListId, rankingLists])
 
   const fetchInstruments = async () => {
+    setInstrumentsLoading(true)
     try {
-      const response = await fetch('/api/instruments')
+      const response = await fetch('/api/instruments?includeMusiciansCount=true')
       const data = await response.json()
       setInstruments(data)
     } catch (error) {
       console.error('Error fetching instruments:', error)
+    } finally {
+      setInstrumentsLoading(false)
     }
   }
 
@@ -127,7 +153,8 @@ export default function AddProjectNeedModal({ projectId, onClose, onSuccess }: A
           quantity: formData.quantity,
           requestStrategy: formData.requestStrategy,
           maxRecipients: formData.maxRecipients || null,
-          responseTimeHours: parseInt(formData.responseTimeHours)
+          responseTimeHours: parseInt(formData.responseTimeHours),
+          requireLocalResidence: formData.requireLocalResidence
         })
       })
 
@@ -151,13 +178,13 @@ export default function AddProjectNeedModal({ projectId, onClose, onSuccess }: A
     : positions
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50 transition-opacity duration-200">
+      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full min-h-[600px] flex flex-col transform transition-all duration-200 ease-out">
         <div className="px-6 py-4 border-b border-gray-200">
           <h3 className="text-xl font-semibold text-gray-900">Lägg till musikerbehov</h3>
         </div>
         
-        <div className="p-6 overflow-y-auto flex-1">
+        <div className="p-6 overflow-visible flex-1">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -167,12 +194,17 @@ export default function AddProjectNeedModal({ projectId, onClose, onSuccess }: A
                 required
                 value={formData.instrumentId}
                 onChange={(e) => setFormData({ ...formData, instrumentId: e.target.value })}
-                className="block w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="block w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:bg-gray-50 disabled:text-gray-500"
+                disabled={instrumentsLoading}
               >
-                <option value="">Välj instrument</option>
-                {instruments.map((instrument) => (
-                  <option key={instrument.id} value={instrument.id}>
-                    {instrument.name}
+                <option value="">{instrumentsLoading ? 'Laddar instrument...' : 'Välj instrument'}</option>
+                {instruments.map((instrument: any) => (
+                  <option 
+                    key={instrument.id} 
+                    value={instrument.id}
+                    disabled={instrument.totalUniqueMusicians === 0}
+                  >
+                    {instrument.name} ({instrument.totalUniqueMusicians} musiker)
                   </option>
                 ))}
               </select>
@@ -191,8 +223,12 @@ export default function AddProjectNeedModal({ projectId, onClose, onSuccess }: A
               >
                 <option value="">Välj tjänst</option>
                 {filteredPositions.map((position) => (
-                  <option key={position.id} value={position.id}>
-                    {position.name}
+                  <option 
+                    key={position.id} 
+                    value={position.id}
+                    disabled={position.qualifiedMusiciansCount === 0}
+                  >
+                    {position.name} {position.qualifiedMusiciansCount !== undefined && `(${position.qualifiedMusiciansCount} musiker)`}
                   </option>
                 ))}
               </select>
@@ -214,39 +250,18 @@ export default function AddProjectNeedModal({ projectId, onClose, onSuccess }: A
                   <option 
                     key={list.id} 
                     value={list.id}
-                    disabled={list.isUsedInProject}
+                    disabled={list.isUsedInProject || (list.availableMusiciansCount !== undefined && list.availableMusiciansCount === 0)}
                   >
-                    {list.listType}-lista{list.description ? ` (${list.description})` : ''}{list.isUsedInProject ? ' (Redan använd)' : ''}
+                    {list.listType}-lista{list.description ? ` (${list.description})` : ''}
+                    {list.availableMusiciansCount !== undefined && ` (${list.availableMusiciansCount} tillgängliga)`}
+                    {list.isUsedInProject ? ' (Redan använd)' : ''}
+                    {list.availableMusiciansCount === 0 ? ' (Inga tillgängliga)' : ''}
                   </option>
                 ))}
               </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Antal <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                required
-                min="1"
-                value={formData.quantity}
-                onChange={(e) => {
-                  const newQuantity = e.target.value
-                  // Om parallell är vald och antal blir 1, byt till sekventiell
-                  if (formData.requestStrategy === 'parallel' && parseInt(newQuantity) === 1) {
-                    setFormData({ 
-                      ...formData, 
-                      quantity: newQuantity,
-                      requestStrategy: 'sequential'
-                    })
-                    alert('Bytte automatiskt till sekventiell strategi då parallell kräver minst 2 behov.')
-                  } else {
-                    setFormData({ ...formData, quantity: newQuantity })
-                  }
-                }}
-                className="block w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              />
+              {validationWarning && (
+                <p className="mt-2 text-sm text-red-600">{validationWarning}</p>
+              )}
             </div>
 
             <div>
@@ -258,15 +273,33 @@ export default function AddProjectNeedModal({ projectId, onClose, onSuccess }: A
                 value={formData.requestStrategy}
                 onChange={(e) => {
                   const newStrategy = e.target.value
-                  // Om parallell valts med endast 1 behov, byt automatiskt till sekventiell
-                  if (newStrategy === 'parallel' && parseInt(formData.quantity) === 1) {
-                    alert('Parallell strategi kräver minst 2 behov. Använd sekventiell för 1 behov.')
-                    return
+                  // Adjust quantity based on strategy
+                  if (newStrategy === 'sequential') {
+                    setFormData({ 
+                      ...formData, 
+                      requestStrategy: newStrategy,
+                      quantity: '1'
+                    })
+                  } else if (newStrategy === 'parallel') {
+                    setFormData({ 
+                      ...formData, 
+                      requestStrategy: newStrategy,
+                      quantity: '2'
+                    })
+                  } else if (newStrategy === 'first_come') {
+                    setFormData({ 
+                      ...formData, 
+                      requestStrategy: newStrategy,
+                      quantity: '1'
+                    })
+                  } else {
+                    setFormData({ ...formData, requestStrategy: newStrategy })
                   }
-                  setFormData({ ...formData, requestStrategy: newStrategy })
                 }}
-                className="block w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="block w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:bg-gray-50 disabled:text-gray-500"
+                disabled={!formData.rankingListId}
               >
+                <option value="">Välj strategi</option>
                 <option value="sequential">Sekventiell - Fråga en musiker i taget</option>
                 <option value="parallel">Parallell - Håll aktiva förfrågningar = antal behov (minst 2)</option>
                 <option value="first_come">Först till kvarn - Skicka till musiker samtidigt</option>
@@ -278,48 +311,128 @@ export default function AddProjectNeedModal({ projectId, onClose, onSuccess }: A
               </p>
             </div>
 
-            {formData.requestStrategy === 'first_come' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Max antal mottagare
-                </label>
-                <input
-                  type="number"
-                  min={formData.quantity || "1"}
-                  value={formData.maxRecipients}
-                  onChange={(e) => setFormData({ ...formData, maxRecipients: e.target.value })}
-                  className="block w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder:text-gray-400"
-                  placeholder="Lämna tomt för hela listan"
-                />
-                <p className="mt-2 text-xs text-gray-500">
-                  Hur många musiker som får förfrågan från toppen av listan. Lämna tomt för att fråga hela listan. Om angivet måste vara minst {formData.quantity || '1'}.
-                </p>
+            {formData.requestStrategy && formData.requestStrategy !== 'first_come' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Behov <span className="text-red-500">*</span>
+                  </label>
+                  {formData.requestStrategy === 'sequential' ? (
+                    <select
+                      required
+                      value={formData.quantity}
+                      disabled
+                      className="block w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+                    >
+                      <option value="1">1 musiker</option>
+                    </select>
+                  ) : (
+                    <select
+                      required
+                      value={formData.quantity}
+                      onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                      className="block w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white hover:bg-gray-50"
+                    >
+                      {formData.requestStrategy === 'parallel' ? (
+                        Array.from({ length: 19 }, (_, i) => i + 2).map(num => (
+                          <option key={num} value={num}>{num} musiker</option>
+                        ))
+                      ) : (
+                        Array.from({ length: 20 }, (_, i) => i + 1).map(num => (
+                          <option key={num} value={num}>{num} {num === 1 ? 'musiker' : 'musiker'}</option>
+                        ))
+                      )}
+                    </select>
+                  )}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Svarstid <span className="text-red-500">*</span>
+                  </label>
+                  <ResponseTimeSelectorNested
+                    value={formData.responseTimeHours}
+                    onChange={(hours) => setFormData({ ...formData, responseTimeHours: hours })}
+                    disabled={false}
+                    required={true}
+                    simple={true}
+                  />
+                </div>
+                
+                <div>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.requireLocalResidence}
+                      onChange={(e) => setFormData({ ...formData, requireLocalResidence: e.target.checked })}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm font-medium text-gray-700">Kräv lokalt boende</span>
+                  </label>
+                </div>
               </div>
             )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Svarstid <span className="text-red-500">*</span>
-              </label>
-              <select
-                required
-                value={formData.responseTimeHours}
-                onChange={(e) => setFormData({ ...formData, responseTimeHours: e.target.value })}
-                className="block w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              >
-                <option value="0.017">1 minut (test)</option>
-                <option value="3">3 timmar</option>
-                <option value="12">12 timmar</option>
-                <option value="24">24 timmar</option>
-                <option value="48">48 timmar</option>
-                <option value="168">7 dagar</option>
-                <option value="336">14 dagar</option>
-                <option value="720">30 dagar</option>
-              </select>
-              <p className="mt-2 text-xs text-gray-500">
-                Hur länge musiker har på sig att svara innan förfrågan automatiskt upphör
-              </p>
-            </div>
+            {formData.requestStrategy === 'first_come' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Behov <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      required
+                      value={formData.quantity}
+                      onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                      className="block w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white hover:bg-gray-50"
+                    >
+                      {Array.from({ length: 20 }, (_, i) => i + 1).map(num => (
+                        <option key={num} value={num}>{num} {num === 1 ? 'musiker' : 'musiker'}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Max antal mottagare
+                    </label>
+                    <input
+                      type="number"
+                      min={formData.quantity || "1"}
+                      value={formData.maxRecipients}
+                      onChange={(e) => setFormData({ ...formData, maxRecipients: e.target.value })}
+                      className="block w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder:text-gray-400"
+                      placeholder="Lämna tomt för hela listan"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Svarstid <span className="text-red-500">*</span>
+                  </label>
+                  <ResponseTimeSelectorNested
+                    value={formData.responseTimeHours}
+                    onChange={(hours) => setFormData({ ...formData, responseTimeHours: hours })}
+                    disabled={false}
+                    required={true}
+                    simple={true}
+                  />
+                </div>
+                  
+                <div>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.requireLocalResidence}
+                      onChange={(e) => setFormData({ ...formData, requireLocalResidence: e.target.checked })}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm font-medium text-gray-700">Kräv lokalt boende</span>
+                  </label>
+                </div>
+              </div>
+            )}
 
           </form>
         </div>
@@ -334,7 +447,7 @@ export default function AddProjectNeedModal({ projectId, onClose, onSuccess }: A
           </button>
           <button
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={loading || !!validationWarning}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? 'Lägger till...' : 'Lägg till'}

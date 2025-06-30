@@ -37,7 +37,8 @@ export async function GET(
         },
         _count: {
           select: {
-            projectFiles: true
+            projectFiles: true,
+            groupEmailLogs: true
           }
         }
       }
@@ -125,6 +126,39 @@ export async function DELETE(
   try {
     const { id } = await context.params
     
+    // First check if the project has any requests
+    const project = await prisma.project.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        projectNeeds: {
+          include: {
+            _count: {
+              select: {
+                requests: true
+              }
+            }
+          }
+        }
+      }
+    })
+    
+    if (!project) {
+      return NextResponse.json(
+        { error: 'Projekt hittades inte' },
+        { status: 404 }
+      )
+    }
+    
+    // Check if any projectNeed has requests
+    const hasRequests = project.projectNeeds.some(need => need._count.requests > 0)
+    
+    if (hasRequests) {
+      return NextResponse.json(
+        { error: 'Kan inte ta bort projekt som har skickat förfrågningar' },
+        { status: 400 }
+      )
+    }
+    
     // Delete the project - cascade will handle related records
     await prisma.project.delete({
       where: { id: parseInt(id) }
@@ -134,7 +168,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Error deleting project:', error)
     return NextResponse.json(
-      { error: 'Failed to delete project' },
+      { error: 'Ett fel uppstod vid borttagning av projektet' },
       { status: 500 }
     )
   }

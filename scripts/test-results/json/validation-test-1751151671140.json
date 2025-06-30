@@ -1,0 +1,49 @@
+{
+  "timestamp": "2025-06-28T23:01:11.140Z",
+  "total": 8,
+  "workingValidations": 8,
+  "missingValidations": 0,
+  "findings": [],
+  "tests": [
+    {
+      "name": "Sequential Strategy Quantity = 1",
+      "passed": true,
+      "duration": 209
+    },
+    {
+      "name": "First Come Requires MaxRecipients",
+      "passed": true,
+      "duration": 199
+    },
+    {
+      "name": "MaxRecipients >= Quantity",
+      "passed": true,
+      "duration": 205
+    },
+    {
+      "name": "Response Time Must Be Positive",
+      "passed": true,
+      "duration": 201
+    },
+    {
+      "name": "Quantity Must Be Positive",
+      "passed": true,
+      "duration": 205
+    },
+    {
+      "name": "Strategy Must Be Valid Enum",
+      "passed": true,
+      "duration": 219
+    },
+    {
+      "name": "No Duplicate Positions in Project",
+      "passed": true,
+      "duration": 224
+    },
+    {
+      "name": "Past Project Start Date Handling",
+      "passed": true,
+      "duration": 99
+    }
+  ]
+}

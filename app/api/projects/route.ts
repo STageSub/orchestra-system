@@ -29,6 +29,7 @@ export async function GET() {
     const projectsWithStaffing = projects.map(project => {
       let totalNeeded = 0
       let totalAccepted = 0
+      let totalRequests = 0
       
       let allNeedsPaused = false
       
@@ -36,6 +37,7 @@ export async function GET() {
         totalNeeded += need.quantity
         const acceptedCount = need.requests.filter(r => r.status === 'accepted').length
         totalAccepted += acceptedCount
+        totalRequests += need.requests.length
       })
       
       // Check if all needs are paused
@@ -55,6 +57,7 @@ export async function GET() {
         staffingPercentage,
         totalNeeded,
         totalAccepted,
+        totalRequests,
         allNeedsPaused
       }
     })

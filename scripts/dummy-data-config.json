@@ -1,0 +1,133 @@
+{
+  "version": "1.0",
+  "description": "Orchestra System Dummy Data Configuration",
+  "orchestra": {
+    "totalMusicians": 151,
+    "activePercentage": 0.95,
+    "inactivePercentage": 0.05,
+    "localResidencePercentage": 0.3,
+    "substituteCount": 10,
+    "archivedCount": 15,
+    "singersCount": 20
+  },
+  "instruments": [
+    { "name": "Violin", "displayOrder": 1 },
+    { "name": "Viola", "displayOrder": 2 },
+    { "name": "Cello", "displayOrder": 3 },
+    { "name": "Kontrabas", "displayOrder": 4 },
+    { "name": "Flöjt", "displayOrder": 5 },
+    { "name": "Oboe", "displayOrder": 6 },
+    { "name": "Klarinett", "displayOrder": 7 },
+    { "name": "Fagott", "displayOrder": 8 },
+    { "name": "Horn", "displayOrder": 9 },
+    { "name": "Trumpet", "displayOrder": 10 },
+    { "name": "Trombon", "displayOrder": 11 },
+    { "name": "Tuba", "displayOrder": 12 },
+    { "name": "Pukor", "displayOrder": 13 },
+    { "name": "Slagverk", "displayOrder": 14 },
+    { "name": "Harpa", "displayOrder": 15 },
+    { "name": "Piano", "displayOrder": 16 },
+    { "name": "Sång", "displayOrder": 17 }
+  ],
+  "positions": {
+    "strings": {
+      "violin1": ["Förste konsertmästare", "Andre konsertmästare", "Tutti violin 1"],
+      "violin2": ["Stämledare violin 2", "Biträdande stämledare violin 2", "Tutti violin 2"],
+      "viola": ["Stämledare viola", "Biträdande stämledare viola", "Tutti viola"],
+      "cello": ["Solocellist", "Biträdande solocellist", "Tutti cello"],
+      "bass": ["Stämledare kontrabas", "Tutti kontrabas"]
+    },
+    "woodwinds": {
+      "flute": ["Soloflöjt", "Tutti flöjt", "Piccoloflöjt"],
+      "oboe": ["Solooboe", "Tutti oboe", "Engelskt horn"],
+      "clarinet": ["Soloklarinett", "Tutti klarinett", "Basklarinett"],
+      "bassoon": ["Solofagott", "Tutti fagott", "Kontrafagott"]
+    },
+    "brass": {
+      "horn": ["Solohorn", "Tutti horn"],
+      "trumpet": ["Solotrumpet", "Tutti trumpet"],
+      "trombone": ["Solotrombon", "Tutti trombon", "Bastrombon"],
+      "tuba": ["Solotuba"]
+    },
+    "percussion": {
+      "timpani": ["Solopukist"],
+      "percussion": ["Slagverkare"],
+      "harp": ["Harpist"],
+      "piano": ["Pianist"]
+    },
+    "voice": {
+      "soprano": ["Sopran"],
+      "alto": ["Alt"],
+      "tenor": ["Tenor"],
+      "bass": ["Bas"]
+    }
+  },
+  "rankingLists": {
+    "types": ["A", "B", "C"],
+    "distribution": {
+      "A": { "percentage": 0.6, "startIndex": 0 },
+      "B": { "percentage": 0.7, "overlapWithA": 0.5 },
+      "C": { "percentage": 0.5, "overlapWithB": 0.4 }
+    }
+  },
+  "projects": {
+    "completed": {
+      "count": 8,
+      "successRates": {
+        "memorial": 1.0,
+        "seasonal": 0.95,
+        "festival": 0.88,
+        "family": 0.92,
+        "contemporary": 0.85,
+        "outdoor": 0.8,
+        "gala": 0.75
+      }
+    },
+    "upcoming": {
+      "count": 15,
+      "weekRange": { "start": 27, "end": 51 },
+      "strategies": {
+        "sequential": 0.4,
+        "parallel": 0.4,
+        "first_come": 0.2
+      }
+    }
+  },
+  "files": {
+    "sheetMusic": [
+      "beethoven-symfoni-5-noter.pdf",
+      "mozart-requiem-noter.pdf",
+      "brahms-symfoni-1-noter.pdf",
+      "mahler-symfoni-2-noter.pdf",
+      "sibelius-symfoni-2-noter.pdf"
+    ],
+    "information": [
+      "konsert-information.pdf",
+      "repetitionsschema.pdf",
+      "parkering-vägbeskrivning.pdf",
+      "klädkod-information.pdf",
+      "turneschema-2025.pdf"
+    ],
+    "distribution": {
+      "sheet_music": "on_accept",
+      "info": "on_request"
+    }
+  },
+  "emailDomain": "@stagesubtest.com",
+  "swedishNames": {
+    "firstNames": {
+      "male": [
+        "Erik", "Lars", "Karl", "Anders", "Per", "Nils", "Jan", "Olof", "Bengt", "Sven",
+        "Gustav", "Fredrik", "Magnus", "Johan", "Björn", "Stefan", "Henrik", "Thomas", "Daniel", "Mikael"
+      ],
+      "female": [
+        "Maria", "Anna", "Margareta", "Elisabeth", "Eva", "Birgitta", "Kristina", "Karin", "Elisabet", "Ingrid",
+        "Christina", "Linnéa", "Kerstin", "Lena", "Helena", "Emma", "Johanna", "Sofia", "Linda", "Sara"
+      ]
+    },
+    "lastNames": [
+      "Andersson", "Johansson", "Karlsson", "Nilsson", "Eriksson", "Larsson", "Olsson", "Persson", "Svensson", "Gustafsson",
+      "Pettersson", "Jonsson", "Jansson", "Hansson", "Bengtsson", "Jönsson", "Lindberg", "Jakobsson", "Magnusson", "Olofsson"
+    ]
+  }
+}

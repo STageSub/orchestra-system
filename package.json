@@ -3,12 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "DEBUG=\"\" next dev",
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "stress-test": "node scripts/stress-test.js",
+    "stress-test:verbose": "node scripts/stress-test.js --verbose",
+    "stress-test:no-cleanup": "node scripts/stress-test.js --no-cleanup",
+    "stress-test:report": "node scripts/stress-test.js --report=html",
+    "stress-test:ts": "ts-node --project scripts/tsconfig.json scripts/stress-test-requests.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -41,6 +46,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20.19.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",

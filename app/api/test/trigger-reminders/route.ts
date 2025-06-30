@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { sendReminders } from '@/lib/request-strategies'
+import { sendReminders } from '@/lib/request-handlers'
 
 export async function POST() {
   if (process.env.NODE_ENV !== 'development') {

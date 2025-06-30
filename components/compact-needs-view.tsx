@@ -29,6 +29,7 @@ interface ProjectNeed {
   requestStrategy: string
   maxRecipients: number | null
   responseTimeHours: number | null
+  requireLocalResidence?: boolean
   position: Position
   rankingList: RankingList
   needStatus?: string
@@ -180,8 +181,8 @@ export default function CompactNeedsView({
 
   const getProgressBar = (need: ProjectNeed) => {
     if (!need.status) return (
-      <div className="w-full bg-gray-200 rounded-full h-2">
-        <div className="bg-gray-300 h-2 rounded-full w-0" />
+      <div className="w-full bg-gray-100 rounded-full h-1.5">
+        <div className="bg-gray-200 h-1.5 rounded-full w-0" />
       </div>
     )
     
@@ -191,13 +192,13 @@ export default function CompactNeedsView({
     const totalActivePercentage = Math.min(((acceptedCount + pendingCount) / total) * 100, 100)
 
     return (
-      <div className="w-full bg-gray-200 rounded-full h-2 relative overflow-hidden">
+      <div className="w-full bg-gray-100 rounded-full h-1.5 relative overflow-hidden">
         <div 
-          className="bg-yellow-300 h-2 rounded-full absolute left-0 transition-all duration-300" 
+          className="bg-yellow-200 h-1.5 rounded-full absolute left-0 transition-all duration-500 ease-out" 
           style={{ width: `${Math.min(totalActivePercentage, 100)}%` }}
         />
         <div 
-          className="bg-green-500 h-2 rounded-full absolute left-0 transition-all duration-300" 
+          className="bg-green-400 h-1.5 rounded-full absolute left-0 transition-all duration-500 ease-out" 
           style={{ width: `${Math.min(acceptedPercentage, 100)}%` }}
         />
       </div>
@@ -238,44 +239,53 @@ export default function CompactNeedsView({
                 return (
                   <div key={need.id} className="p-4 hover:bg-gray-50">
                     <div className="space-y-2">
-                      {/* First row: Status badge, position name, metadata */}
-                      <div className="grid grid-cols-[75px_200px_120px_310px] gap-1 items-center">
+                      {/* First row: Status badge, icons, position name, metadata */}
+                      <div className="relative py-2 -my-2">
+                        
+                        {/* Content grid - 9 columns: status, edit, delete, position, metadata, count, visa, pausa/skicka, upload */}
+                        <div className="relative grid grid-cols-[minmax(70px,max-content)_minmax(20px,20px)_minmax(20px,20px)_minmax(120px,1fr)_minmax(150px,1fr)_minmax(45px,45px)_minmax(45px,max-content)_minmax(60px,max-content)_minmax(20px,20px)] gap-1 items-center">
                         {/* Column 1: Status badge */}
-                        <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-medium ${statusInfo.color} flex-shrink-0`}>
+                        <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-medium ${statusInfo.color} flex-shrink-0 whitespace-nowrap`}>
                           {statusInfo.label}
                         </span>
                         
-                        {/* Column 2: Position name with edit/delete icons */}
-                        <div className="flex items-center space-x-2">
-                          <h5 className="text-sm font-medium text-gray-900 truncate">
-                            {!groupByInstrument && `${need.position.instrument.name} - `}{need.position.name}
-                          </h5>
+                        {/* Column 2: Edit icon */}
+                        <div className="flex items-center justify-center">
                           {(!need.status || need.status.totalRequests === 0) && (
-                            <div className="flex items-center space-x-1 flex-shrink-0">
-                              <button
-                                onClick={() => onEditNeed(need.id)}
-                                className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                                title="Redigera"
-                              >
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={() => onDeleteNeed(need.id)}
-                                className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                                title="Radera behov"
-                              >
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
-                            </div>
+                            <button
+                              onClick={() => onEditNeed(need.id)}
+                              className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                              title="Redigera"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
                           )}
                         </div>
                         
-                        {/* Column 3: Metadata */}
-                        <div className="text-xs text-gray-500 whitespace-nowrap flex items-center">
+                        {/* Column 3: Delete icon */}
+                        <div className="flex items-center justify-center">
+                          {(!need.status || need.status.totalRequests === 0) && (
+                            <button
+                              onClick={() => onDeleteNeed(need.id)}
+                              className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                              title="Radera behov"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                        
+                        {/* Column 4: Position name */}
+                        <h5 className="text-sm font-medium text-gray-900 truncate">
+                          {!groupByInstrument && `${need.position.instrument.name} - `}{need.position.name}
+                        </h5>
+                        
+                        {/* Column 5: Metadata */}
+                        <div className="text-xs text-gray-500 flex items-center flex-wrap gap-x-1">
                           <Tooltip
                             content={
                               <RankingListTooltip 
@@ -286,7 +296,7 @@ export default function CompactNeedsView({
                             }
                             delay={700}
                           >
-                            <span className="cursor-help border-b border-dashed border-gray-400">
+                            <span className="cursor-help border-b border-dashed border-gray-400 whitespace-nowrap">
                               Lista {need.rankingList.listType}
                             </span>
                           </Tooltip>
@@ -295,86 +305,86 @@ export default function CompactNeedsView({
                             content={<StrategyTooltip strategy={need.requestStrategy} />}
                             delay={700}
                           >
-                            <span className="cursor-help border-b border-dashed border-gray-400">
+                            <span className="cursor-help border-b border-dashed border-gray-400 whitespace-nowrap">
                               {getStrategyLabel(need.requestStrategy)}
+                            </span>
+                          </Tooltip>
+                          {need.requireLocalResidence && (
+                            <>
+                              <span className="mx-1">•</span>
+                              <Tooltip
+                                content="Endast musiker med lokalt boende kommer att få förfrågan"
+                                delay={700}
+                              >
+                                <span className="cursor-help text-blue-600 font-medium whitespace-nowrap">
+                                  Lokalt boende
+                                </span>
+                              </Tooltip>
+                            </>
+                          )}
+                        </div>
+                        
+                        {/* Column 6: Progress count */}
+                        <div className="relative flex items-center justify-center group">
+                          {/* Progress bar background */}
+                          {need.status && (
+                            <div className="absolute inset-0 overflow-hidden rounded transition-all duration-300 group-hover:shadow-sm">
+                              {/* Yellow background for total active (pending + accepted) */}
+                              <div 
+                                className="absolute inset-y-0 left-0 bg-yellow-200 opacity-20 transition-all duration-700 ease-in-out group-hover:opacity-30"
+                                style={{ width: `${Math.min(((need.status.acceptedCount + need.status.pendingCount) / need.quantity) * 100, 100)}%` }}
+                              />
+                              {/* Green background for accepted only */}
+                              <div 
+                                className="absolute inset-y-0 left-0 bg-green-200 opacity-30 transition-all duration-700 ease-in-out group-hover:opacity-40"
+                                style={{ width: `${Math.min((need.status.acceptedCount / need.quantity) * 100, 100)}%` }}
+                              />
+                              {/* Green glow effect at the edge */}
+                              {need.status.acceptedCount > 0 && (
+                                <div 
+                                  className="absolute inset-y-0 w-1 bg-gradient-to-r from-green-400 to-transparent opacity-40 transition-[left] duration-700 ease-in-out"
+                                  style={{ left: `calc(${Math.min((need.status.acceptedCount / need.quantity) * 100, 100)}% - 2px)` }}
+                                />
+                              )}
+                              {/* Completion celebration glow */}
+                              {need.status.acceptedCount >= need.quantity && (
+                                <div className="absolute inset-0 bg-green-300 opacity-20 animate-pulse" />
+                              )}
+                            </div>
+                          )}
+                          <Tooltip 
+                            content={
+                              <div className="space-y-2">
+                                <div className="text-center">
+                                  <div className="text-sm font-medium">
+                                    {Math.round((need.status?.acceptedCount || 0) / need.quantity * 100)}% bemannat
+                                  </div>
+                                  {need.status?.pendingCount > 0 && (
+                                    <div className="text-xs text-gray-500">
+                                      {need.status.pendingCount} förfrågan{need.status.pendingCount > 1 ? 'ar' : ''} väntar på svar
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="border-t pt-2">
+                                  <RequestSummaryTooltip 
+                                    projectId={projectId} 
+                                    needId={need.id} 
+                                    strategy={need.requestStrategy}
+                                  />
+                                </div>
+                              </div>
+                            }
+                            delay={500}
+                          >
+                            <span className="relative text-xs text-gray-600 font-medium cursor-pointer hover:text-gray-800 transition-colors duration-200">
+                              {need.status?.acceptedCount || 0}/{need.quantity}
                             </span>
                           </Tooltip>
                         </div>
                         
-                        {/* Column 4: Progress bar and count */}
-                        <Tooltip 
-                          content={
-                            <RequestSummaryTooltip 
-                              projectId={projectId} 
-                              needId={need.id} 
-                              strategy={need.requestStrategy}
-                            />
-                          }
-                          delay={500}
-                        >
-                          <div className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity justify-end pr-4">
-                            <div className="w-24 flex-shrink-0">
-                              {getProgressBar(need)}
-                            </div>
-                            <span className="text-xs text-gray-500 w-8 text-center">
-                              {need.status?.acceptedCount || 0}/{need.quantity}
-                            </span>
-                          </div>
-                        </Tooltip>
-                      </div>
-                      
-                      {/* Second row: Action icons */}
-                      <div className="grid grid-cols-[75px_200px_120px_310px] gap-1 items-center">
-                        {/* Column 1: Empty space to align with status badge */}
-                        <div></div>
-                        
-                        {/* Column 2: Empty */}
-                        <div></div>
-                        
-                        {/* Column 3: Expand/collapse button centered under bullet */}
-                        <div className="flex justify-center">
-                          <button
-                            onClick={() => toggleNeedExpansion(need.id)}
-                            className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-all group"
-                            title={needsWithFiles.has(need.id) ? "Visa/dölj filer" : "Ladda upp filer"}
-                          >
-                            <div className="relative">
-                              {needsWithFiles.has(need.id) ? (
-                                // Document icon when files exist
-                                <svg 
-                                  className="w-4.5 h-4.5" 
-                                  fill="none" 
-                                  stroke="currentColor" 
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                              ) : (
-                                // Upload icon when no files
-                                <svg 
-                                  className="w-4.5 h-4.5" 
-                                  fill="none" 
-                                  stroke="currentColor" 
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                </svg>
-                              )}
-                              <svg 
-                                className={`absolute -bottom-1 -right-1 w-3 h-3 transition-transform bg-white rounded-full ${expandedNeeds.has(need.id) ? 'rotate-180' : ''}`}
-                                fill="currentColor" 
-                                viewBox="0 0 20 20"
-                              >
-                                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                              </svg>
-                            </div>
-                          </button>
-                        </div>
-                        
-                        {/* Column 4: Action buttons */}
-                        <div className="flex items-center justify-end space-x-2 pr-4">
-                          {/* View button */}
-                          {need.status?.totalRequests > 0 && (
+                        {/* Column 7: Visa button */}
+                        <div className="flex items-center justify-center">
+                          {need.status?.totalRequests > 0 ? (
                             <button
                               onClick={() => onViewRequests(need.id)}
                               className="px-3 py-1 text-xs font-medium rounded transition-colors bg-white text-gray-600 hover:bg-gray-50 border border-gray-300"
@@ -382,10 +392,12 @@ export default function CompactNeedsView({
                             >
                               Visa
                             </button>
-                          )}
-                          
-                          {/* Pause/Resume button */}
-                          {need.status?.totalRequests > 0 && onTogglePause && !need.status.isFullyStaffed && (
+                          ) : null}
+                        </div>
+                        
+                        {/* Column 8: Pausa/Skicka button */}
+                        <div className="flex items-center justify-center">
+                          {need.status?.totalRequests > 0 && onTogglePause && !need.status.isFullyStaffed ? (
                             <button
                               onClick={() => onTogglePause(need.id)}
                               className={`px-3 py-1 text-xs font-medium rounded transition-colors border ${
@@ -397,10 +409,7 @@ export default function CompactNeedsView({
                             >
                               {need.needStatus === 'paused' ? 'Återuppta' : 'Pausa'}
                             </button>
-                          )}
-                          
-                          {/* Send button */}
-                          {need.status?.totalRequests === 0 && onSendRequests && (
+                          ) : need.status?.totalRequests === 0 && onSendRequests ? (
                             <button
                               onClick={() => onSendRequests(need.id)}
                               className="px-3 py-1 text-xs font-medium rounded transition-colors bg-white text-blue-600 hover:bg-blue-50 border border-blue-300"
@@ -408,7 +417,27 @@ export default function CompactNeedsView({
                             >
                               Skicka
                             </button>
-                          )}
+                          ) : null}
+                        </div>
+                        
+                        {/* Column 9: Upload icon */}
+                        <div className="flex items-center justify-end">
+                          <button
+                            onClick={() => toggleNeedExpansion(need.id)}
+                            className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                            title={needsWithFiles.has(need.id) ? 'Visa filer' : 'Ladda upp filer'}
+                          >
+                            {needsWithFiles.has(need.id) ? (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                            ) : (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                              </svg>
+                            )}
+                          </button>
+                        </div>
                         </div>
                       </div>
                     </div>

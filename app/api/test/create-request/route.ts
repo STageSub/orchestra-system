@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { sendRequests } from '@/lib/request-strategies'
+import { getRecipientsForNeed } from '@/lib/recipient-selection'
 
 export async function POST(request: Request) {
   if (process.env.NODE_ENV !== 'development') {
@@ -39,13 +39,10 @@ export async function POST(request: Request) {
     // Get the count before sending
     const beforeCount = need.requests.length
 
-    // Use the same sendRequests function as the real system
-    await sendRequests({
-      projectNeedId: need.id,
-      strategy: need.requestStrategy as 'sequential' | 'parallel' | 'first_come',
-      quantity: need.quantity,
-      maxRecipients: need.maxRecipients || undefined,
-      rankingListId: need.rankingListId || undefined
+    // Use the unified function to send requests
+    await getRecipientsForNeed(need.id, {
+      dryRun: false,
+      includeDetails: false
     })
 
     // Get updated need to see how many requests were created

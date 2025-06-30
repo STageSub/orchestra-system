@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { toast } from '@/components/toast'
 
 interface TestRequest {
   id: number
@@ -189,6 +190,23 @@ export default function TestRequestsPage() {
 
       if (res.ok) {
         alert(`Svar simulerat: ${response === 'accepted' ? 'Accepterat' : 'Avböjt'}`)
+        
+        // Trigger toast notification for testing
+        const req = requests.find(r => r.id === requestId)
+        if (req) {
+          if (response === 'accepted') {
+            toast.success(
+              `${req.musician.firstName} ${req.musician.lastName} har accepterat förfrågan för ${req.position}`,
+              10000
+            )
+          } else {
+            toast.error(
+              `${req.musician.firstName} ${req.musician.lastName} har tackat nej till förfrågan för ${req.position}`,
+              10000
+            )
+          }
+        }
+        
         fetchRequests()
         fetchStats()
       } else {

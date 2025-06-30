@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { formatHoursToReadable } from '@/lib/utils'
 
 export async function POST(request: Request) {
   if (process.env.NODE_ENV !== 'development') {
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
       start_date: new Date(projectNeed.project.startDate).toLocaleDateString('sv-SE'),
       end_date: new Date(projectNeed.project.endDate).toLocaleDateString('sv-SE'),
       response_url: responseUrl,
-      response_time: `${projectNeed.responseTimeHours} timmar`
+      response_time: formatHoursToReadable(projectNeed.responseTimeHours || 24)
     }
 
     let subject = template.subject

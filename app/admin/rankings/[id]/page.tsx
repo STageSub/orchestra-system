@@ -152,6 +152,8 @@ export default function RankingListPage({
   const [clearConfirmText, setClearConfirmText] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [selectedMusicians, setSelectedMusicians] = useState<number[]>([])
+  const [isAddingMusicians, setIsAddingMusicians] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -258,20 +260,39 @@ export default function RankingListPage({
     }
   }
 
-  const handleAddMusician = async (musicianId: number) => {
+  const handleAddMusician = async (musicianId: number | number[]) => {
+    const musicianIds = Array.isArray(musicianId) ? musicianId : [musicianId]
+    
     try {
-      const response = await fetch(`/api/rankings/${paramsId}/add-musician`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ musicianId })
-      })
-
-      if (response.ok) {
-        setShowAddMusician(false)
+      setIsAddingMusicians(true)
+      
+      // Make multiple API calls for each musician
+      const promises = musicianIds.map(id => 
+        fetch(`/api/rankings/${paramsId}/add-musician`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ musicianId: id })
+        })
+      )
+      
+      const results = await Promise.all(promises)
+      const allSuccessful = results.every(response => response.ok)
+      
+      if (allSuccessful) {
+        // Clear selections after successful add
+        setSelectedMusicians([])
+        // Update available musicians list
+        fetchAvailableMusicians()
+        // Update ranking list
         fetchRankingList()
+      } else {
+        alert('Vissa musiker kunde inte läggas till')
       }
     } catch (error) {
       console.error('Error adding musician:', error)
+      alert('Ett fel uppstod när musiker skulle läggas till')
+    } finally {
+      setIsAddingMusicians(false)
     }
   }
 
@@ -288,6 +309,22 @@ export default function RankingListPage({
       }
     } catch (error) {
       console.error('Error removing musician:', error)
+    }
+  }
+
+  const handleToggleSelectMusician = (musicianId: number) => {
+    setSelectedMusicians(prev => 
+      prev.includes(musicianId) 
+        ? prev.filter(id => id !== musicianId)
+        : [...prev, musicianId]
+    )
+  }
+
+  const handleSelectAll = () => {
+    if (selectedMusicians.length === availableMusicians.length) {
+      setSelectedMusicians([])
+    } else {
+      setSelectedMusicians(availableMusicians.map(m => m.id))
     }
   }
 
@@ -449,6 +486,7 @@ export default function RankingListPage({
               <button
                 onClick={() => {
                   setShowAddMusician(true)
+                  setSelectedMusicians([])
                   fetchAvailableMusicians()
                 }}
                 className="inline-flex items-center px-3 py-1 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
@@ -505,35 +543,70 @@ export default function RankingListPage({
                   Inga tillgängliga musiker för denna position
                 </p>
               ) : (
-                <ul className="space-y-2">
-                  {availableMusicians.map((musician) => (
-                    <li
-                      key={musician.id}
-                      className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
-                    >
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {musician.firstName} {musician.lastName}
-                          {!musician.isActive && (
-                            <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                              Inaktiv
-                            </span>
-                          )}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {musician.email}
-                          {musician.localResidence && ' • Lokalt boende'}
-                        </p>
-                      </div>
+                <>
+                  {/* Select all checkbox */}
+                  <div className="mb-4 flex items-center justify-between border-b pb-3">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedMusicians.length === availableMusicians.length && availableMusicians.length > 0}
+                        onChange={handleSelectAll}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <span className="ml-2 text-sm font-medium text-gray-700">
+                        Välj alla ({availableMusicians.length})
+                      </span>
+                    </label>
+                    {selectedMusicians.length > 0 && (
                       <button
-                        onClick={() => handleAddMusician(musician.id)}
-                        className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-blue-600 hover:text-blue-500"
+                        onClick={() => handleAddMusician(selectedMusicians)}
+                        disabled={isAddingMusicians}
+                        className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
                       >
-                        Lägg till
+                        {isAddingMusicians ? 'Lägger till...' : `Lägg till alla valda (${selectedMusicians.length})`}
                       </button>
-                    </li>
-                  ))}
-                </ul>
+                    )}
+                  </div>
+                  
+                  <ul className="space-y-2">
+                    {availableMusicians.map((musician) => (
+                      <li
+                        key={musician.id}
+                        className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                      >
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedMusicians.includes(musician.id)}
+                            onChange={() => handleToggleSelectMusician(musician.id)}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-3"
+                          />
+                          <div>
+                            <p className="font-medium text-gray-900">
+                              {musician.firstName} {musician.lastName}
+                              {!musician.isActive && (
+                                <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                  Inaktiv
+                                </span>
+                              )}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              {musician.email}
+                              {musician.localResidence && ' • Lokalt boende'}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleAddMusician(musician.id)}
+                          disabled={isAddingMusicians}
+                          className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-blue-600 hover:text-blue-500 disabled:text-gray-400"
+                        >
+                          Lägg till
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
               )}
             </div>
             <div className="px-6 py-4 border-t border-gray-200 flex justify-end">

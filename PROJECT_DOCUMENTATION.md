@@ -1,8 +1,22 @@
 # Komplett Projektdokumentation - Orkestervikarieförfrågningssystem
 
+**Senast uppdaterad: 2025-06-28**
+
 ## 📋 Projektbeskrivning
 
 Ett orkestervikarieförfrågningssystem för admin-personal i orkestrar. Systemet hanterar en musikerdatabas där varje musiker har kvalifikationer kopplade till specifika tjänster inom olika instrument. Admin kan skapa rankningslistor för varje tjänst/kvalifikation och sedan automatisera förfrågningsprocessen för vikariat baserat på dessa rankningar.
+
+## ⚠️ VIKTIGT: Aktuell Status
+
+Systemet är ~65% färdigt och har flera kritiska buggar som måste åtgärdas innan produktionslansering:
+
+### Kritiska problem:
+- **E-posthistorik fungerar inte** - Databastabellen saknas
+- **Lokalt boende-filter saknas helt** - Ingen möjlighet att filtrera baserat på boende
+- **Konfliktvarningar fungerar inte** - Ingen varning när musiker finns på flera listor
+- **Toast-notifikationer syns inte** - Systemet finns men används inte
+
+Se `/BUGFIX_CHECKLIST.md` för fullständig lista och `/IMPLEMENTATION_STATUS.md` för detaljerad status.
 
 ## 🎯 Kärnfunktionalitet
 

@@ -20,6 +20,7 @@ interface Project {
   staffingPercentage?: number
   totalNeeded?: number
   totalAccepted?: number
+  totalRequests?: number
   allNeedsPaused?: boolean
 }
 
@@ -71,7 +72,14 @@ export default function ProjectsPage() {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     
-    if (projectDate >= today) {
+    // Calculate end of project week (Sunday)
+    const endOfProjectWeek = new Date(projectDate)
+    const daysUntilSunday = 7 - projectDate.getDay()
+    endOfProjectWeek.setDate(projectDate.getDate() + daysUntilSunday)
+    endOfProjectWeek.setHours(23, 59, 59, 999)
+    
+    // Project is "upcoming" until the Monday after project week
+    if (today <= endOfProjectWeek) {
       return 'upcoming'
     } else {
       return 'past'
@@ -81,27 +89,29 @@ export default function ProjectsPage() {
   const filteredProjects = projects
     .filter(project => {
       const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase())
-      const status = getProjectStatus(project.startDate)
-      const matchesFilter = filter === 'all' || filter === status
+      
+      // For filter compatibility, use the same status logic
+      const dateStatus = getProjectStatus(project.startDate)
+      const matchesFilter = filter === 'all' || filter === dateStatus
       
       return matchesSearch && matchesFilter
     })
     .sort((a, b) => {
       switch (sortBy) {
         case 'date': {
-          // Original intelligent sorting
-          const statusA = getProjectStatus(a.startDate)
-          const statusB = getProjectStatus(b.startDate)
+          // Original intelligent sorting with date-based status
+          const dateStatusA = getProjectStatus(a.startDate)
+          const dateStatusB = getProjectStatus(b.startDate)
           const dateA = new Date(a.startDate).getTime()
           const dateB = new Date(b.startDate).getTime()
           
           // Om en är kommande och en är genomförd, visa kommande först
-          if (statusA === 'upcoming' && statusB === 'past') return -1
-          if (statusA === 'past' && statusB === 'upcoming') return 1
+          if (dateStatusA === 'upcoming' && dateStatusB === 'past') return -1
+          if (dateStatusA === 'past' && dateStatusB === 'upcoming') return 1
           
           // Om båda har samma status
-          if (statusA === statusB) {
-            if (statusA === 'upcoming') {
+          if (dateStatusA === dateStatusB) {
+            if (dateStatusA === 'upcoming') {
               // Kommande projekt: tidigast datum först (kronologisk ordning)
               return dateA - dateB
             } else {
@@ -390,25 +400,43 @@ export default function ProjectsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {project.totalNeeded > 0 ? (
-                          <div className="flex items-center space-x-2">
-                            <div className="flex-1 max-w-20">
-                              <div className="w-full bg-gray-200 rounded-full h-2">
-                                <div 
-                                  className={`h-2 rounded-full transition-all duration-300 ${
-                                    project.staffingPercentage >= 80 
-                                      ? 'bg-green-500' 
-                                      : project.staffingPercentage >= 50 
-                                        ? 'bg-yellow-500' 
-                                        : 'bg-red-500'
-                                  }`}
-                                  style={{ width: `${Math.min(project.staffingPercentage, 100)}%` }}
-                                />
+                          project.totalRequests === 0 ? (
+                            <span className="text-xs text-gray-500">Förfrågningar ej startade</span>
+                          ) : project.staffingPercentage === 100 ? (
+                            <div className="flex items-center space-x-2">
+                              <div className="flex-1 max-w-20">
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div 
+                                    className="h-2 rounded-full bg-green-500"
+                                    style={{ width: '100%' }}
+                                  />
+                                </div>
                               </div>
+                              <span className="text-xs font-medium text-green-700">
+                                Fullbemannad
+                              </span>
                             </div>
-                            <span className="text-xs font-medium text-gray-700 whitespace-nowrap">
-                              {project.staffingPercentage}% ({project.totalAccepted}/{project.totalNeeded})
-                            </span>
-                          </div>
+                          ) : (
+                            <div className="flex items-center space-x-2">
+                              <div className="flex-1 max-w-20">
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div 
+                                    className={`h-2 rounded-full transition-all duration-300 ${
+                                      project.staffingPercentage >= 80 
+                                        ? 'bg-green-500' 
+                                        : project.staffingPercentage >= 50 
+                                          ? 'bg-yellow-500' 
+                                          : 'bg-red-500'
+                                    }`}
+                                    style={{ width: `${Math.min(project.staffingPercentage, 100)}%` }}
+                                  />
+                                </div>
+                              </div>
+                              <span className="text-xs font-medium text-gray-700 whitespace-nowrap">
+                                {project.staffingPercentage}% ({project.totalAccepted}/{project.totalNeeded})
+                              </span>
+                            </div>
+                          )
                         ) : (
                           <span className="text-xs text-gray-400">Inga behov</span>
                         )}
@@ -500,26 +528,44 @@ export default function ProjectsPage() {
                     </div>
 
                     {/* Bemanningsgrad */}
-                    {project.totalNeeded > 0 && (
+                    {project.totalNeeded > 0 ? (
                       <div className="mb-4">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs text-gray-500">Bemanningsgrad</span>
-                          <span className="text-xs font-medium text-gray-700">
-                            {project.staffingPercentage}% ({project.totalAccepted}/{project.totalNeeded})
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className={`h-2 rounded-full transition-all duration-300 ${
-                              project.staffingPercentage >= 80 
-                                ? 'bg-green-500' 
-                                : project.staffingPercentage >= 50 
-                                  ? 'bg-yellow-500' 
-                                  : 'bg-red-500'
-                            }`}
-                            style={{ width: `${Math.min(project.staffingPercentage, 100)}%` }}
-                          />
-                        </div>
+                        {project.totalRequests === 0 ? (
+                          <div className="text-center py-2">
+                            <span className="text-xs text-gray-500">Förfrågningar ej startade</span>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs text-gray-500">Bemanningsgrad</span>
+                              <span className="text-xs font-medium text-gray-700">
+                                {project.staffingPercentage === 100 ? (
+                                  <span className="text-green-700">Fullbemannad</span>
+                                ) : (
+                                  `${project.staffingPercentage}% (${project.totalAccepted}/${project.totalNeeded})`
+                                )}
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className={`h-2 rounded-full transition-all duration-300 ${
+                                  project.staffingPercentage === 100
+                                    ? 'bg-green-500'
+                                    : project.staffingPercentage >= 80 
+                                      ? 'bg-green-500' 
+                                      : project.staffingPercentage >= 50 
+                                        ? 'bg-yellow-500' 
+                                        : 'bg-red-500'
+                                }`}
+                                style={{ width: `${Math.min(project.staffingPercentage, 100)}%` }}
+                              />
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mb-4 text-center py-2">
+                        <span className="text-xs text-gray-400">Inga behov</span>
                       </div>
                     )}
 
