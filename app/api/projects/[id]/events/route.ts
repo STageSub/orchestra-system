@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET(
   request: NextRequest,
@@ -24,7 +24,7 @@ export async function GET(
     const events = []
     
     // Get recent responses for this project
-    const recentResponses = await prisma.request.findMany({
+    const recentResponses = await prismaMultitenant.request.findMany({
       where: {
         projectNeed: {
           projectId

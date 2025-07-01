@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function POST(
   request: NextRequest,
@@ -11,7 +11,7 @@ export async function POST(
     const { pause } = await request.json()
 
     // Get all needs for this project
-    const projectNeeds = await prisma.projectNeed.findMany({
+    const projectNeeds = await prismaMultitenant.projectNeed.findMany({
       where: { projectId: parseInt(id) }
     })
 
@@ -23,7 +23,7 @@ export async function POST(
     }
 
     // Update all needs
-    await prisma.projectNeed.updateMany({
+    await prismaMultitenant.projectNeed.updateMany({
       where: { projectId: parseInt(id) },
       data: { status: pause ? 'paused' : 'active' }
     })

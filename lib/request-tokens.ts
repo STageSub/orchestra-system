@@ -1,11 +1,11 @@
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function generateRequestToken(requestId: number, responseTimeHours: number): Promise<string> {
   // Token expires exactly when response time runs out
   const expiresAt = new Date()
   expiresAt.setTime(expiresAt.getTime() + (responseTimeHours * 60 * 60 * 1000))
 
-  const token = await prisma.requestToken.create({
+  const token = await prismaMultitenant.requestToken.create({
     data: {
       requestId,
       expiresAt
@@ -16,7 +16,7 @@ export async function generateRequestToken(requestId: number, responseTimeHours:
 }
 
 export async function validateToken(token: string) {
-  const requestToken = await prisma.requestToken.findUnique({
+  const requestToken = await prismaMultitenant.requestToken.findUnique({
     where: { token },
     include: {
       request: {
@@ -57,7 +57,7 @@ export async function validateToken(token: string) {
 }
 
 export async function markTokenAsUsed(token: string) {
-  await prisma.requestToken.update({
+  await prismaMultitenant.requestToken.update({
     where: { token },
     data: { usedAt: new Date() }
   })
@@ -65,7 +65,7 @@ export async function markTokenAsUsed(token: string) {
 
 export async function getOrCreateTokenForRequest(requestId: number): Promise<string> {
   // Check if there's an existing valid token
-  const existingToken = await prisma.requestToken.findFirst({
+  const existingToken = await prismaMultitenant.requestToken.findFirst({
     where: {
       requestId,
       usedAt: null,
@@ -78,7 +78,7 @@ export async function getOrCreateTokenForRequest(requestId: number): Promise<str
   }
 
   // Get response time hours for this request
-  const request = await prisma.request.findUnique({
+  const request = await prismaMultitenant.request.findUnique({
     where: { id: requestId },
     include: {
       projectNeed: true

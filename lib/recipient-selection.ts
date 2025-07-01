@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 import { generateRequestToken } from '@/lib/request-tokens'
 import { sendRequestEmail } from '@/lib/email'
 import { generateUniqueId } from '@/lib/id-generator'
@@ -85,7 +85,7 @@ async function analyzeConflictsForProject(
   projectId: number, 
   includeDetails: boolean = false
 ): Promise<Map<number, MusicianConflictInfo>> {
-  const projectNeeds = await prisma.projectNeed.findMany({
+  const projectNeeds = await prismaMultitenant.projectNeed.findMany({
     where: { 
       projectId,
       status: { not: 'paused' }
@@ -157,7 +157,7 @@ async function getAllMusiciansWithStatus(
   }
 
   // Get all existing requests for this project
-  const projectRequests = await prisma.request.findMany({
+  const projectRequests = await prismaMultitenant.request.findMany({
     where: {
       projectNeed: {
         projectId: projectId
@@ -367,7 +367,7 @@ export async function getRecipientsForNeed(
   const { dryRun = true, includeDetails = false } = options
 
   // Get the need with all required data
-  const need = await prisma.projectNeed.findUnique({
+  const need = await prismaMultitenant.projectNeed.findUnique({
     where: { id: needId },
     include: {
       position: {
@@ -400,7 +400,7 @@ export async function getRecipientsForNeed(
   }
 
   // Get conflict handling strategy
-  const conflictStrategySetting = await prisma.settings.findUnique({
+  const conflictStrategySetting = await prismaMultitenant.settings.findUnique({
     where: { key: 'ranking_conflict_strategy' }
   })
   const conflictStrategy = conflictStrategySetting?.value || 'simple'
@@ -411,7 +411,7 @@ export async function getRecipientsForNeed(
   const remainingNeeded = Math.max(0, need.quantity - acceptedCount)
 
   // Get all musicians already contacted for this project
-  const projectRequests = await prisma.request.findMany({
+  const projectRequests = await prismaMultitenant.request.findMany({
     where: {
       projectNeed: {
         projectId: need.projectId
@@ -544,7 +544,7 @@ export async function getRecipientsForProject(
   const { dryRun = true, includeDetails = false } = options
 
   // Get project with all active needs
-  const project = await prisma.project.findUnique({
+  const project = await prismaMultitenant.project.findUnique({
     where: { id: projectId },
     include: {
       projectNeeds: {
@@ -596,13 +596,13 @@ export async function getRecipientsForProject(
   })
 
   // Get conflict handling strategy
-  const conflictStrategySetting = await prisma.settings.findUnique({
+  const conflictStrategySetting = await prismaMultitenant.settings.findUnique({
     where: { key: 'ranking_conflict_strategy' }
   })
   const conflictStrategy = conflictStrategySetting?.value || 'simple'
 
   // Get all musicians already contacted for this project
-  const projectRequests = await prisma.request.findMany({
+  const projectRequests = await prismaMultitenant.request.findMany({
     where: {
       projectNeed: {
         projectId
@@ -766,7 +766,7 @@ async function createAndSendRequest(projectNeedId: number, musicianId: number): 
     const requestId = await generateUniqueId('request')
 
     // Create request
-    const request = await prisma.request.create({
+    const request = await prismaMultitenant.request.create({
       data: {
         requestId,
         projectNeedId,

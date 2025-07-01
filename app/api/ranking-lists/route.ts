@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET(request: Request) {
   try {
@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     
     const where = positionId ? { positionId: parseInt(positionId) } : {}
     
-    let rankingLists = await prisma.rankingList.findMany({
+    let rankingLists = await prismaMultitenant.rankingList.findMany({
       where,
       include: {
         position: {
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     const enhancedLists = await Promise.all(
       rankingLists.map(async (list) => {
         // Get musicians in this ranking list who are active
-        const musiciansInList = await prisma.musician.findMany({
+        const musiciansInList = await prismaMultitenant.musician.findMany({
           where: {
             isActive: true,
             isArchived: false,
@@ -48,7 +48,7 @@ export async function GET(request: Request) {
         
         // If projectId is provided, exclude musicians who already have requests in this project
         if (projectId) {
-          const musiciansWithRequests = await prisma.request.findMany({
+          const musiciansWithRequests = await prismaMultitenant.request.findMany({
             where: {
               projectNeed: {
                 projectId: parseInt(projectId)
@@ -77,7 +77,7 @@ export async function GET(request: Request) {
     
     // If projectId is provided, filter out already used ranking lists
     if (projectId) {
-      const projectNeeds = await prisma.projectNeed.findMany({
+      const projectNeeds = await prismaMultitenant.projectNeed.findMany({
         where: { projectId: parseInt(projectId) },
         select: { rankingListId: true }
       })

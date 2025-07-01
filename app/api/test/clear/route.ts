@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function DELETE() {
   if (process.env.NODE_ENV !== 'development') {
@@ -10,12 +10,12 @@ export async function DELETE() {
   }
 
   try {
-    await prisma.$transaction([
-      prisma.communicationLog.deleteMany({}),
-      prisma.requestToken.deleteMany({}),
-      prisma.request.deleteMany({}),
+    await prismaMultitenant.$transaction([
+      prismaMultitenant.communicationLog.deleteMany({}),
+      prismaMultitenant.requestToken.deleteMany({}),
+      prismaMultitenant.request.deleteMany({}),
       // Reset ProjectNeed status back to active
-      prisma.projectNeed.updateMany({
+      prismaMultitenant.projectNeed.updateMany({
         where: { status: 'completed' },
         data: { status: 'active' }
       })

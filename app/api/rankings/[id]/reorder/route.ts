@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function PUT(
   request: Request,
@@ -34,7 +34,7 @@ export async function PUT(
 
     try {
       // Först, få alla rankings för att verifiera listId
-      const existingRankings = await prisma.ranking.findMany({
+      const existingRankings = await prismaMultitenant.ranking.findMany({
         where: { 
           id: { in: rankings.map((r: { id: number }) => r.id) }
         },
@@ -61,7 +61,7 @@ export async function PUT(
       
       // Uppdatera alla rankningar i en transaktion med högre timeout för pooler connection
       // Vi måste först sätta alla till temporära värden för att undvika unique constraint konflikter
-      const results = await prisma.$transaction(async (tx) => {
+      const results = await prismaMultitenant.$transaction(async (tx) => {
         // Steg 1: Sätt alla till temporära negativa rank värden
         await Promise.all(
           rankings.map((ranking: { id: number }, index: number) =>

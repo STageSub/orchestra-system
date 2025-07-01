@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET(
   request: Request,
@@ -8,7 +8,7 @@ export async function GET(
   try {
     const { needId } = await context.params
     
-    const files = await prisma.projectFile.findMany({
+    const files = await prismaMultitenant.projectFile.findMany({
       where: { projectNeedId: parseInt(needId) },
       orderBy: { uploadedAt: 'desc' }
     })

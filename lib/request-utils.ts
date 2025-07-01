@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 import { generateUniqueId } from '@/lib/id-generator'
 import { sendRequestEmail, sendReminderEmail } from '@/lib/email-service'
 import { formatHoursToReadable } from '@/lib/utils'
@@ -11,7 +11,7 @@ export interface CreateRequestParams {
 export async function createRequest({ projectNeedId, musicianId }: CreateRequestParams) {
   const requestId = await generateUniqueId('request')
   
-  const request = await prisma.request.create({
+  const request = await prismaMultitenant.request.create({
     data: {
       requestId,
       projectNeedId,
@@ -37,7 +37,7 @@ export async function createRequest({ projectNeedId, musicianId }: CreateRequest
   const expiresAt = new Date()
   expiresAt.setHours(expiresAt.getHours() + responseTimeHours)
 
-  const token = await prisma.requestToken.create({
+  const token = await prismaMultitenant.requestToken.create({
     data: {
       requestId: request.id,
       expiresAt
@@ -67,7 +67,7 @@ export async function createRequest({ projectNeedId, musicianId }: CreateRequest
   }, language)
 
   const communicationLogId = await generateUniqueId('communicationLog')
-  await prisma.communicationLog.create({
+  await prismaMultitenant.communicationLog.create({
     data: {
       communicationLogId,
       requestId: request.id,
@@ -85,7 +85,7 @@ export async function createRequest({ projectNeedId, musicianId }: CreateRequest
 }
 
 export async function sendReminder(requestId: number) {
-  const request = await prisma.request.findUnique({
+  const request = await prismaMultitenant.request.findUnique({
     where: { id: requestId },
     include: {
       musician: true,
@@ -138,13 +138,13 @@ export async function sendReminder(requestId: number) {
     additionalInfo: request.projectNeed.project.notes || undefined
   }, language)
 
-  await prisma.request.update({
+  await prismaMultitenant.request.update({
     where: { id: requestId },
     data: { reminderSentAt: new Date() }
   })
 
   const communicationLogId = await generateUniqueId('communicationLog')
-  await prisma.communicationLog.create({
+  await prismaMultitenant.communicationLog.create({
     data: {
       communicationLogId,
       requestId: request.id,
@@ -161,7 +161,7 @@ export async function sendReminder(requestId: number) {
 }
 
 export async function checkRequestStatus(projectNeedId: number) {
-  const projectNeed = await prisma.projectNeed.findUnique({
+  const projectNeed = await prismaMultitenant.projectNeed.findUnique({
     where: { id: projectNeedId },
     include: {
       requests: true

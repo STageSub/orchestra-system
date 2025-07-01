@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 import { generateUniqueId } from '@/lib/id-generator'
 
 export async function POST(
@@ -15,7 +15,7 @@ export async function POST(
     const positionId = await generateUniqueId('position')
     
     // Create new position
-    const position = await prisma.position.create({
+    const position = await prismaMultitenant.position.create({
       data: {
         positionId,
         name,

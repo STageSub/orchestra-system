@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 import { handleDeclinedRequest } from '@/lib/request-handlers'
 
 export async function POST(request: Request) {
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   try {
     const { requestId, response } = await request.json()
 
-    const req = await prisma.request.findUnique({
+    const req = await prismaMultitenant.request.findUnique({
       where: { id: requestId },
       include: {
         projectNeed: true
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
     const newStatus = response === 'accepted' ? 'accepted' : 'declined'
 
-    await prisma.request.update({
+    await prismaMultitenant.request.update({
       where: { id: requestId },
       data: {
         status: newStatus,
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
 
     // Check if need is fulfilled for first_come strategy
     if (response === 'accepted') {
-      const updatedProjectNeed = await prisma.projectNeed.findUnique({
+      const updatedProjectNeed = await prismaMultitenant.projectNeed.findUnique({
         where: { id: req.projectNeed.id },
         include: {
           requests: true
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
 
       if (acceptedCount >= updatedProjectNeed!.quantity && updatedProjectNeed!.requestStrategy === 'first_come') {
         // Cancel all pending requests for this need
-        const pendingRequests = await prisma.request.findMany({
+        const pendingRequests = await prismaMultitenant.request.findMany({
           where: {
             projectNeedId: updatedProjectNeed!.id,
             status: 'pending'
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
         })
 
         if (pendingRequests.length > 0) {
-          await prisma.request.updateMany({
+          await prismaMultitenant.request.updateMany({
             where: {
               projectNeedId: updatedProjectNeed!.id,
               status: 'pending'
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
 
           // Log cancellations
           for (const pendingReq of pendingRequests) {
-            await prisma.communicationLog.create({
+            await prismaMultitenant.communicationLog.create({
               data: {
                 requestId: pendingReq.id,
                 type: 'position_filled_notification',
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
       await handleDeclinedRequest(requestId)
     }
 
-    await prisma.communicationLog.create({
+    await prismaMultitenant.communicationLog.create({
       data: {
         requestId,
         type: 'response_simulated',

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function PUT(request: Request) {
   try {
@@ -7,9 +7,9 @@ export async function PUT(request: Request) {
     const { positions } = body
 
     // Update all positions in a transaction
-    await prisma.$transaction(
+    await prismaMultitenant.$transaction(
       positions.map((position: { id: number; hierarchyLevel: number }) =>
-        prisma.position.update({
+        prismaMultitenant.position.update({
           where: { id: position.id },
           data: { hierarchyLevel: position.hierarchyLevel }
         })

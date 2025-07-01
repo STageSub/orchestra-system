@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET() {
   try {
-    const settings = await prisma.settings.findMany()
+    const settings = await prismaMultitenant.settings.findMany()
     return NextResponse.json(settings)
   } catch (error) {
     console.error('Error fetching settings:', error)
@@ -21,7 +21,7 @@ export async function PUT(request: Request) {
 
     for (const [key, value] of Object.entries(body)) {
       updates.push(
-        prisma.settings.upsert({
+        prismaMultitenant.settings.upsert({
           where: { key },
           create: {
             key,
@@ -35,9 +35,9 @@ export async function PUT(request: Request) {
       )
     }
 
-    await prisma.$transaction(updates)
+    await prismaMultitenant.$transaction(updates)
 
-    const updatedSettings = await prisma.settings.findMany()
+    const updatedSettings = await prismaMultitenant.settings.findMany()
     return NextResponse.json(updatedSettings)
   } catch (error) {
     console.error('Error updating settings:', error)

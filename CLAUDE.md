@@ -645,10 +645,11 @@ All templates support these variables:
 - **user**: Standard access within their orchestra
 - **musician**: External role, no login, only responds to requests
 
-### Subscription Tiers
-- **Small Ensemble ($79)**: 50 musicians, 5 projects, 10 instruments
-- **Medium Ensemble ($499)**: 200 musicians, 20 projects, unlimited instruments
-- **Institution ($1,500)**: Unlimited everything, dedicated DB option, custom branding
+### Subscription Tiers (UPDATED 2025-07-01)
+- **Micro (Free)**: 5 musicians, 1 project, basic features
+- **Small ($299/month)**: 50 musicians, 5 projects, email automation
+- **Project Pass ($99/project)**: Full access for single projects
+- **Institution ($999/month)**: Unlimited everything, priority support, API access
 
 ### Database Strategy
 - Start with shared database for all tenants

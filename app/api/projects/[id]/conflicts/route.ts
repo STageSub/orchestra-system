@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET(
   request: Request,
@@ -10,7 +10,7 @@ export async function GET(
     const projectId = parseInt(id)
     
     // Get all project needs with their ranking lists
-    const projectNeeds = await prisma.projectNeed.findMany({
+    const projectNeeds = await prismaMultitenant.projectNeed.findMany({
       where: { projectId },
       include: {
         position: {

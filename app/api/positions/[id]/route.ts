@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function PUT(
   request: Request,
@@ -10,7 +10,7 @@ export async function PUT(
     const body = await request.json()
     const { name } = body
 
-    const position = await prisma.position.update({
+    const position = await prismaMultitenant.position.update({
       where: { id: parseInt(id) },
       data: { name }
     })
@@ -33,7 +33,7 @@ export async function DELETE(
     const { id } = await params
     
     // Check if any musicians have this qualification
-    const hasMusicians = await prisma.musicianQualification.findFirst({
+    const hasMusicians = await prismaMultitenant.musicianQualification.findFirst({
       where: { positionId: parseInt(id) }
     })
 
@@ -45,7 +45,7 @@ export async function DELETE(
     }
 
     // Simply delete the position - cascade will handle the rest
-    await prisma.position.delete({
+    await prismaMultitenant.position.delete({
       where: { id: parseInt(id) }
     })
 

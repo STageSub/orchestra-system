@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET(
   request: Request,
@@ -8,7 +8,7 @@ export async function GET(
   try {
     const { id } = await params;
     // Hämta rankningslistan för att få position
-    const rankingList = await prisma.rankingList.findUnique({
+    const rankingList = await prismaMultitenant.rankingList.findUnique({
       where: { id: parseInt(id) },
       include: {
         rankings: {
@@ -28,7 +28,7 @@ export async function GET(
     // men som inte redan finns i listan
     const existingMusicianIds = rankingList.rankings.map(r => r.musicianId)
 
-    const availableMusicians = await prisma.musician.findMany({
+    const availableMusicians = await prismaMultitenant.musician.findMany({
       where: {
         qualifications: {
           some: {

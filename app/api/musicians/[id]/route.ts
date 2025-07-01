@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET(
   request: Request,
@@ -7,7 +7,7 @@ export async function GET(
 ) {
   const { id } = await params
   try {
-    const musician = await prisma.musician.findUnique({
+    const musician = await prismaMultitenant.musician.findUnique({
       where: { id: parseInt(id) },
       include: {
         qualifications: {
@@ -67,7 +67,7 @@ export async function PUT(
     const { firstName, lastName, email, phone, preferredLanguage, localResidence, notes, qualificationIds, isActive, isArchived } = body
 
     // Check for duplicate email (excluding current musician)
-    const emailExists = await prisma.musician.findFirst({
+    const emailExists = await prismaMultitenant.musician.findFirst({
       where: { 
         email,
         NOT: { id: parseInt(id) }
@@ -83,7 +83,7 @@ export async function PUT(
     
     // Check for duplicate phone if provided (excluding current musician)
     if (phone) {
-      const phoneExists = await prisma.musician.findFirst({
+      const phoneExists = await prismaMultitenant.musician.findFirst({
         where: { 
           phone,
           NOT: { id: parseInt(id) }
@@ -99,7 +99,7 @@ export async function PUT(
     }
 
     // Update musician and qualifications in transaction
-    const musician = await prisma.$transaction(async (tx) => {
+    const musician = await prismaMultitenant.$transaction(async (tx) => {
       // Update basic info
       const updatedMusician = await tx.musician.update({
         where: { id: parseInt(id) },
@@ -136,7 +136,7 @@ export async function PUT(
     })
 
     // Fetch complete musician data
-    const updatedMusicianWithRelations = await prisma.musician.findUnique({
+    const updatedMusicianWithRelations = await prismaMultitenant.musician.findUnique({
       where: { id: musician.id },
       include: {
         qualifications: {
@@ -194,7 +194,7 @@ export async function DELETE(
   const { id } = await params
   try {
     // Soft delete - archive the musician
-    await prisma.musician.update({
+    await prismaMultitenant.musician.update({
       where: { id: parseInt(id) },
       data: {
         isArchived: true,

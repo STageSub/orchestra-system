@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 import { generateUniqueId } from '@/lib/id-generator'
 
 export async function GET(request: Request) {
@@ -7,7 +7,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const includeArchived = searchParams.get('includeArchived') === 'true'
     
-    const instruments = await prisma.instrument.findMany({
+    const instruments = await prismaMultitenant.instrument.findMany({
       where: includeArchived ? {} : { isArchived: false },
       orderBy: { displayOrder: 'asc' },
       include: {
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
         const positionsWithCounts = await Promise.all(
           instrument.positions.map(async (position) => {
             // Count only active musicians
-            const activeMusicians = await prisma.musician.findMany({
+            const activeMusicians = await prismaMultitenant.musician.findMany({
               where: {
                 isActive: true,
                 isArchived: false,
@@ -47,7 +47,7 @@ export async function GET(request: Request) {
         )
         
         // Get total unique active musicians for the instrument
-        const activeMusiciansForInstrument = await prisma.musician.findMany({
+        const activeMusiciansForInstrument = await prismaMultitenant.musician.findMany({
           where: {
             isActive: true,
             isArchived: false,
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
     const instrumentId = await generateUniqueId('instrument')
     
     // Skapa instrument med positioner
-    const instrument = await prisma.instrument.create({
+    const instrument = await prismaMultitenant.instrument.create({
       data: {
         instrumentId,
         name,

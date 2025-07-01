@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 import { generateUniqueId } from '@/lib/id-generator'
 
 export async function GET(request: Request) {
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
       where.isArchived = true
     }
     
-    const musicians = await prisma.musician.findMany({
+    const musicians = await prismaMultitenant.musician.findMany({
       where,
       include: {
         qualifications: {
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
     const { firstName, lastName, email, phone, preferredLanguage, localResidence, notes, qualificationIds } = body
     
     // Check for duplicate email
-    const emailExists = await prisma.musician.findFirst({
+    const emailExists = await prismaMultitenant.musician.findFirst({
       where: { email }
     })
     
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
     
     // Check for duplicate phone if provided
     if (phone) {
-      const phoneExists = await prisma.musician.findFirst({
+      const phoneExists = await prismaMultitenant.musician.findFirst({
         where: { phone }
       })
       
@@ -111,7 +111,7 @@ export async function POST(request: Request) {
     const musicianId = await generateUniqueId('musician')
     
     // Create musician with qualifications
-    const musician = await prisma.musician.create({
+    const musician = await prismaMultitenant.musician.create({
       data: {
         musicianId,
         firstName,

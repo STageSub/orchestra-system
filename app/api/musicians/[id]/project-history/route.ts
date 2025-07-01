@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET(
   request: Request,
@@ -9,7 +9,7 @@ export async function GET(
   
   try {
     // Fetch all requests for this musician
-    const requests = await prisma.request.findMany({
+    const requests = await prismaMultitenant.request.findMany({
       where: { musicianId: parseInt(id) },
       include: {
         projectNeed: {

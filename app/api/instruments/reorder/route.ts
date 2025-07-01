@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function PUT(request: Request) {
   try {
@@ -14,9 +14,9 @@ export async function PUT(request: Request) {
     }
 
     // Update all instruments in a transaction
-    await prisma.$transaction(
+    await prismaMultitenant.$transaction(
       instruments.map(({ id, displayOrder }) =>
-        prisma.instrument.update({
+        prismaMultitenant.instrument.update({
           where: { id },
           data: { displayOrder }
         })

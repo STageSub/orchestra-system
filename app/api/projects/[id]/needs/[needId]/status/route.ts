@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function PATCH(
   request: Request,
@@ -17,7 +17,7 @@ export async function PATCH(
       )
     }
 
-    const updatedNeed = await prisma.projectNeed.update({
+    const updatedNeed = await prismaMultitenant.projectNeed.update({
       where: { id: parseInt(needId) },
       data: { 
         status,

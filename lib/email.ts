@@ -1,5 +1,5 @@
 import { Resend } from 'resend'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 import { readFile } from 'fs/promises'
 import path from 'path'
 import { getLogStorage } from '@/lib/log-storage'
@@ -128,7 +128,7 @@ export async function sendTemplatedEmail(
   console.error('Language check: language === "en"?', language === 'en')
   console.error('Looking for template:', templateType)
   
-  const template = await prisma.emailTemplate.findUnique({
+  const template = await prismaMultitenant.emailTemplate.findUnique({
     where: { type: templateType }
   })
 
@@ -136,7 +136,7 @@ export async function sendTemplatedEmail(
     console.error('Template not found:', templateType)
     console.log('Falling back to Swedish template:', type)
     // Fallback to Swedish template if English not found
-    const fallbackTemplate = await prisma.emailTemplate.findUnique({
+    const fallbackTemplate = await prismaMultitenant.emailTemplate.findUnique({
       where: { type: type }
     })
     if (fallbackTemplate) {
@@ -229,7 +229,7 @@ async function getProjectFilesForEmail(
   
   try {
     // Fetch files from database
-    const files = await prisma.projectFile.findMany({
+    const files = await prismaMultitenant.projectFile.findMany({
       where: {
         projectId,
         sendTiming,
@@ -288,7 +288,7 @@ export async function sendRequestEmail(
   const responseUrl = `${appUrl}/respond?token=${token}`
   console.log('Response URL:', responseUrl)
   
-  const musician = await prisma.musician.findUnique({
+  const musician = await prismaMultitenant.musician.findUnique({
     where: { id: request.musicianId },
     include: {
       qualifications: {
@@ -303,7 +303,7 @@ export async function sendRequestEmail(
     }
   })
 
-  const projectNeed = await prisma.projectNeed.findUnique({
+  const projectNeed = await prismaMultitenant.projectNeed.findUnique({
     where: { id: request.projectNeedId },
     include: {
       project: true,
@@ -359,7 +359,7 @@ export async function sendRequestEmail(
   console.log('✅ Request email sent successfully')
 
   // Log the communication
-  await prisma.communicationLog.create({
+  await prismaMultitenant.communicationLog.create({
     data: {
       requestId: request.id,
       type: 'request_sent',
@@ -374,11 +374,11 @@ export async function sendReminderEmail(request: RequestWithRelations, token: st
   if (global.sendReminderEmail && process.env.NODE_ENV === 'test') {
     return global.sendReminderEmail(request, token)
   }
-  const musician = await prisma.musician.findUnique({
+  const musician = await prismaMultitenant.musician.findUnique({
     where: { id: request.musicianId }
   })
 
-  const projectNeed = await prisma.projectNeed.findUnique({
+  const projectNeed = await prismaMultitenant.projectNeed.findUnique({
     where: { id: request.projectNeedId },
     include: {
       project: true,
@@ -413,13 +413,13 @@ export async function sendReminderEmail(request: RequestWithRelations, token: st
   await sendTemplatedEmail('reminder', musician.email, variables, undefined, language)
 
   // Update reminder sent timestamp
-  await prisma.request.update({
+  await prismaMultitenant.request.update({
     where: { id: request.id },
     data: { reminderSentAt: new Date() }
   })
 
   // Log the communication
-  await prisma.communicationLog.create({
+  await prismaMultitenant.communicationLog.create({
     data: {
       requestId: request.id,
       type: 'reminder_sent',
@@ -455,7 +455,7 @@ export async function sendConfirmationEmail(request: RequestWithRelations) {
     // If data is not included, fetch from database
     if (!musician) {
       console.log('Musician not in request, fetching from database...')
-      musician = await prisma.musician.findUnique({
+      musician = await prismaMultitenant.musician.findUnique({
         where: { id: request.musicianId }
       })
     }
@@ -463,7 +463,7 @@ export async function sendConfirmationEmail(request: RequestWithRelations) {
 
     if (!projectNeed) {
       console.log('Project need not in request, fetching from database...')
-      projectNeed = await prisma.projectNeed.findUnique({
+      projectNeed = await prismaMultitenant.projectNeed.findUnique({
         where: { id: request.projectNeedId },
         include: {
           project: true,
@@ -535,7 +535,7 @@ export async function sendConfirmationEmail(request: RequestWithRelations) {
   // Update confirmation sent flag (skip for test requests)
   if (request.id !== 999) {
     console.log('Updating confirmation sent flag...')
-    await prisma.request.update({
+    await prismaMultitenant.request.update({
       where: { id: request.id },
       data: { confirmationSent: true }
     })
@@ -543,7 +543,7 @@ export async function sendConfirmationEmail(request: RequestWithRelations) {
 
     // Log the communication
     console.log('Creating communication log...')
-    await prisma.communicationLog.create({
+    await prismaMultitenant.communicationLog.create({
       data: {
         requestId: request.id,
         type: 'confirmation_sent',
@@ -576,13 +576,13 @@ export async function sendPositionFilledEmail(request: RequestWithRelations) {
   
   // If data is not included, fetch from database
   if (!musician) {
-    musician = await prisma.musician.findUnique({
+    musician = await prismaMultitenant.musician.findUnique({
       where: { id: request.musicianId }
     })
   }
 
   if (!projectNeed) {
-    projectNeed = await prisma.projectNeed.findUnique({
+    projectNeed = await prismaMultitenant.projectNeed.findUnique({
       where: { id: request.projectNeedId },
       include: {
         project: true,
@@ -613,7 +613,7 @@ export async function sendPositionFilledEmail(request: RequestWithRelations) {
   await sendTemplatedEmail('position_filled', musician.email, variables, undefined, language)
 
   // Log the communication
-  await prisma.communicationLog.create({
+  await prismaMultitenant.communicationLog.create({
     data: {
       requestId: request.id,
       type: 'position_filled_sent',

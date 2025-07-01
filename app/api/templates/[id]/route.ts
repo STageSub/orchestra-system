@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET(
   request: Request,
@@ -8,7 +8,7 @@ export async function GET(
   try {
     const { id } = await context.params
     
-    const template = await prisma.emailTemplate.findUnique({
+    const template = await prismaMultitenant.emailTemplate.findUnique({
       where: { id: parseInt(id) }
     })
     
@@ -38,7 +38,7 @@ export async function PUT(
     const body = await request.json()
     const { subject, body: templateBody, variables } = body
     
-    const template = await prisma.emailTemplate.update({
+    const template = await prismaMultitenant.emailTemplate.update({
       where: { id: parseInt(id) },
       data: {
         subject,
@@ -64,7 +64,7 @@ export async function DELETE(
   try {
     const { id } = await context.params
     
-    await prisma.emailTemplate.delete({
+    await prismaMultitenant.emailTemplate.delete({
       where: { id: parseInt(id) }
     })
     

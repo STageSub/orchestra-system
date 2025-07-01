@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET(
   request: Request,
@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const rankingList = await prisma.rankingList.findUnique({
+    const rankingList = await prismaMultitenant.rankingList.findUnique({
       where: { id: parseInt(id) },
       include: {
         position: {
@@ -50,7 +50,7 @@ export async function PUT(
     const body = await request.json()
     const { description } = body
 
-    const updatedList = await prisma.rankingList.update({
+    const updatedList = await prismaMultitenant.rankingList.update({
       where: { id: parseInt(id) },
       data: { description }
     })
@@ -73,7 +73,7 @@ export async function DELETE(
     const { id } = await params;
     
     // Check if ranking list has any musicians
-    const rankingList = await prisma.rankingList.findUnique({
+    const rankingList = await prismaMultitenant.rankingList.findUnique({
       where: { id: parseInt(id) },
       include: {
         _count: {
@@ -97,7 +97,7 @@ export async function DELETE(
     }
     
     // Simply delete the ranking list - cascade will handle rankings
-    await prisma.rankingList.delete({
+    await prismaMultitenant.rankingList.delete({
       where: { id: parseInt(id) }
     })
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 import { checkDatabaseHealth, getConnectionStats } from '@/lib/db-health'
 
 export async function GET() {
@@ -26,9 +26,9 @@ export async function GET() {
     
     // Get basic stats
     const stats = await Promise.allSettled([
-      prisma.musician.count(),
-      prisma.project.count(),
-      prisma.request.count({ where: { status: 'pending' } })
+      prismaMultitenant.musician.count(),
+      prismaMultitenant.project.count(),
+      prismaMultitenant.request.count({ where: { status: 'pending' } })
     ])
     
     const [musicianCount, projectCount, pendingRequests] = stats.map((result, index) => {

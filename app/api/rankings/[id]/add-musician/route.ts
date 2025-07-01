@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function POST(
   request: Request,
@@ -11,7 +11,7 @@ export async function POST(
     const { musicianId } = body
 
     // Hämta högsta rank i listan
-    const highestRank = await prisma.ranking.findFirst({
+    const highestRank = await prismaMultitenant.ranking.findFirst({
       where: { listId: parseInt(id) },
       orderBy: { rank: 'desc' },
       select: { rank: true }
@@ -20,7 +20,7 @@ export async function POST(
     const newRank = (highestRank?.rank || 0) + 1
 
     // Skapa ny ranking
-    const ranking = await prisma.ranking.create({
+    const ranking = await prismaMultitenant.ranking.create({
       data: {
         listId: parseInt(id),
         musicianId: parseInt(musicianId),

@@ -8,12 +8,66 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// Multi-tenant models
+model Tenant {
+  id                String    @id @default(cuid())
+  name              String
+  subdomain         String    @unique
+  subscription      String    @default("trial") // trial, small_ensemble, medium_ensemble, institution
+  maxMusicians      Int       @default(50)
+  maxActiveProjects Int       @default(5)
+  maxInstruments    Int       @default(10)
+  databaseType      String    @default("shared") // shared or dedicated
+  databaseUrl       String?   // Only for dedicated database
+  logoUrl           String?
+  primaryColor      String?
+  stripeCustomerId  String?
+  stripeSubscriptionId String?
+  subscriptionStatus String   @default("trialing") // trialing, active, past_due, canceled
+  trialEndsAt       DateTime?
+  currentPeriodEnd  DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  users             User[]
+  musicians         Musician[]
+  instruments       Instrument[]
+  positions         Position[]
+  projects          Project[]
+  rankingLists      RankingList[]
+  emailTemplates    EmailTemplate[]
+  settings          Settings[]
+  auditLogs         AuditLog[]
+  idSequences       IdSequence[]
+  deletedIds        DeletedIds[]
+  groupEmailLogs    GroupEmailLog[]
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  password          String?
+  name              String?
+  role              String    @default("admin") // superadmin, admin, user
+  tenantId          String?
+  lastLoginAt       DateTime?
+  emailVerified     DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  tenant            Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId])
+}
+
 model Musician {
   id               Int                     @id @default(autoincrement())
   musicianId       String                  @unique @default(cuid())
   firstName        String
   lastName         String
-  email            String                  @unique
+  email            String
   phone            String?
   preferredLanguage String?                @default("sv")
   localResidence   Boolean                 @default(false)
@@ -24,19 +78,33 @@ model Musician {
   restoredAt       DateTime?
   createdAt        DateTime                @default(now())
   updatedAt        DateTime                @updatedAt
+  tenantId         String
+  
+  // Relations
+  tenant           Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   qualifications   MusicianQualification[]
   rankings         Ranking[]
   requests         Request[]
+  
+  @@unique([email, tenantId])
+  @@index([tenantId])
 }
 
 model Instrument {
   id           Int        @id @default(autoincrement())
   instrumentId String     @unique @default(cuid())
-  name         String     @unique
+  name         String
   displayOrder Int?
   isArchived   Boolean    @default(false)
   archivedAt   DateTime?
+  tenantId     String
+  
+  // Relations
+  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   positions    Position[]
+  
+  @@unique([name, tenantId])
+  @@index([tenantId])
 }
 
 model Position {
@@ -45,12 +113,17 @@ model Position {
   instrumentId   Int
   name           String
   hierarchyLevel Int
+  tenantId       String
+  
+  // Relations
+  tenant         Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   qualifications MusicianQualification[]
   instrument     Instrument              @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
   projectNeeds   ProjectNeed[]
   rankingLists   RankingList[]
 
   @@unique([instrumentId, name])
+  @@index([tenantId])
 }
 
 model MusicianQualification {
@@ -69,11 +142,16 @@ model RankingList {
   listType      String
   description   String?
   version       Int           @default(1)
+  tenantId      String
+  
+  // Relations
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   projectNeeds  ProjectNeed[]
   rankings      Ranking[]
   position      Position      @relation(fields: [positionId], references: [id], onDelete: Cascade)
 
   @@unique([positionId, listType])
+  @@index([tenantId])
 }
 
 model Ranking {
@@ -100,9 +178,15 @@ model Project {
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
   notes             String?
+  tenantId          String
+  
+  // Relations
+  tenant            Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   projectFiles      ProjectFile[]
   projectNeeds      ProjectNeed[]
   groupEmailLogs    GroupEmailLog[]
+  
+  @@index([tenantId])
 }
 
 model ProjectNeed {
@@ -154,12 +238,19 @@ model RequestToken {
 model EmailTemplate {
   id              Int      @id @default(autoincrement())
   emailTemplateId String   @unique @default(cuid())
-  type            String   @unique
+  type            String
   subject         String
   body            String
   variables       Json?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  tenantId        String
+  
+  // Relations
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@unique([type, tenantId])
+  @@index([tenantId])
 }
 
 model CommunicationLog {
@@ -198,16 +289,28 @@ model AuditLog {
   oldValues  Json?
   newValues  Json?
   timestamp  DateTime @default(now())
+  tenantId   String
+  
+  // Relations
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([entityType, entityId])
   @@index([timestamp])
+  @@index([tenantId])
 }
 
 model IdSequence {
   id         Int      @id @default(autoincrement())
-  entityType String   @unique
+  entityType String
   lastNumber Int      @default(0)
   updatedAt  DateTime @updatedAt
+  tenantId   String
+  
+  // Relations
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@unique([entityType, tenantId])
+  @@index([tenantId])
 }
 
 model DeletedIds {
@@ -215,18 +318,30 @@ model DeletedIds {
   entityType String
   deletedId  String
   deletedAt  DateTime @default(now())
+  tenantId   String
+  
+  // Relations
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@unique([entityType, deletedId])
+  @@unique([entityType, deletedId, tenantId])
   @@index([entityType])
+  @@index([tenantId])
 }
 
 model Settings {
   id          Int      @id @default(autoincrement())
-  key         String   @unique
+  key         String
   value       String
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  tenantId    String
+  
+  // Relations
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@unique([key, tenantId])
+  @@index([tenantId])
 }
 
 model GroupEmailLog {
@@ -239,5 +354,11 @@ model GroupEmailLog {
   failedCount Int
   filters     Json?    // {instruments: [], positions: []}
   createdAt   DateTime @default(now())
+  tenantId    String
+  
+  // Relations
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  
+  @@index([tenantId])
 }

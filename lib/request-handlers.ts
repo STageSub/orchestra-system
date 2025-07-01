@@ -1,10 +1,10 @@
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function handleDeclinedRequest(requestId: number) {
   console.log('\n=== HANDLE DECLINED REQUEST - START ===')
   console.log('Request ID:', requestId)
   
-  const request = await prisma.request.findUnique({
+  const request = await prismaMultitenant.request.findUnique({
     where: { id: requestId },
     include: {
       projectNeed: true
@@ -27,7 +27,7 @@ export async function handleDeclinedRequest(requestId: number) {
   console.log('- Current status:', projectNeed.status)
 
   // Check current state before sending new requests
-  const currentRequests = await prisma.request.findMany({
+  const currentRequests = await prismaMultitenant.request.findMany({
     where: { projectNeedId: projectNeed.id }
   })
   
@@ -76,13 +76,13 @@ export async function handleDeclinedRequest(requestId: number) {
 
 export async function sendReminders() {
   // Get reminder percentage from settings
-  const reminderSetting = await prisma.settings.findUnique({
+  const reminderSetting = await prismaMultitenant.settings.findUnique({
     where: { key: 'reminder_percentage' }
   })
   const reminderPercentage = reminderSetting ? parseInt(reminderSetting.value) : 75
 
   // Get all pending requests with project need info
-  const pendingRequests = await prisma.request.findMany({
+  const pendingRequests = await prismaMultitenant.request.findMany({
     where: {
       status: 'pending',
       reminderSentAt: null
@@ -116,7 +116,7 @@ export async function sendReminders() {
 
 export async function handleTimeouts() {
   // Get all pending requests with project need info
-  const pendingRequests = await prisma.request.findMany({
+  const pendingRequests = await prismaMultitenant.request.findMany({
     where: {
       status: 'pending'
     },
@@ -134,7 +134,7 @@ export async function handleTimeouts() {
     if (hoursSinceSent >= request.projectNeed.responseTimeHours) {
       try {
         // Mark as timed out
-        await prisma.request.update({
+        await prismaMultitenant.request.update({
           where: { id: request.id },
           data: { status: 'timed_out' }
         })

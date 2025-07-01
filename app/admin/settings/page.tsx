@@ -1,5 +1,16 @@
 'use client'
 
+import Link from 'next/link'
+import { 
+  CreditCard, 
+  Mail, 
+  Users, 
+  Shield, 
+  Database,
+  ChevronRight,
+  Building2,
+  Settings
+} from 'lucide-react'
 import { useState, useEffect } from 'react'
 
 interface Setting {
@@ -9,11 +20,40 @@ interface Setting {
   description: string | null
 }
 
+const settingsSections = [
+  {
+    title: 'Prenumeration & Fakturering',
+    description: 'Hantera din plan, användning och betalningsmetoder',
+    icon: CreditCard,
+    href: '/admin/settings/subscription',
+    color: 'text-purple-600',
+    bgColor: 'bg-purple-50'
+  },
+  {
+    title: 'E-postmallar',
+    description: 'Anpassa e-postmeddelanden för förfrågningar och bekräftelser',
+    icon: Mail,
+    href: '/admin/settings/email-templates',
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50'
+  },
+  {
+    title: 'Systeminställningar',
+    description: 'Påminnelser, konflikthantering och andra globala inställningar',
+    icon: Settings,
+    href: '/admin/settings/system',
+    color: 'text-gray-600',
+    bgColor: 'bg-gray-50',
+    isInternal: true
+  }
+]
+
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [reminderPercentage, setReminderPercentage] = useState('75')
   const [conflictStrategy, setConflictStrategy] = useState('simple')
+  const [showSystemSettings, setShowSystemSettings] = useState(false)
 
   useEffect(() => {
     fetchSettings()
@@ -67,24 +107,24 @@ export default function SettingsPage() {
     }
   }
 
-  if (loading) {
+  if (showSystemSettings) {
     return (
-      <div className="text-center py-12">
-        <p className="text-sm text-gray-500">Laddar inställningar...</p>
-      </div>
-    )
-  }
+      <div>
+        <div className="mb-6">
+          <button
+            onClick={() => setShowSystemSettings(false)}
+            className="text-blue-600 hover:text-blue-800 flex items-center gap-2 mb-4"
+          >
+            <ChevronRight className="w-4 h-4 rotate-180" />
+            Tillbaka till inställningar
+          </button>
+          <h2 className="text-2xl font-bold text-gray-900">Systeminställningar</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Konfigurera globala inställningar för systemet
+          </p>
+        </div>
 
-  return (
-    <div>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Systeminställningar</h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Konfigurera globala inställningar för systemet
-        </p>
-      </div>
-
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="space-y-6">
           <div>
             <h3 className="text-lg font-medium text-gray-900 mb-4">
@@ -183,6 +223,75 @@ export default function SettingsPage() {
             {saving ? 'Sparar...' : 'Spara ändringar'}
           </button>
         </div>
+      </div>
+    </div>
+  )
+  }
+
+  // Main settings page
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">Inställningar</h1>
+        <p className="mt-2 text-gray-600">
+          Hantera dina kontoinställningar och systemkonfigurationer
+        </p>
+      </div>
+
+      <div className="grid gap-4">
+        {settingsSections.map((section) => (
+          section.isInternal ? (
+            <button
+              key={section.href}
+              onClick={() => setShowSystemSettings(true)}
+              className="block group text-left w-full"
+            >
+              <div className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-start">
+                    <div className={`${section.bgColor} p-3 rounded-lg mr-4`}>
+                      <section.icon className={`w-6 h-6 ${section.color}`} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600">
+                        {section.title}
+                      </h3>
+                      <p className="mt-1 text-sm text-gray-600">
+                        {section.description}
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600" />
+                </div>
+              </div>
+            </button>
+          ) : (
+            <Link
+              key={section.href}
+              href={section.href}
+              className="block group"
+            >
+              <div className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-start">
+                    <div className={`${section.bgColor} p-3 rounded-lg mr-4`}>
+                      <section.icon className={`w-6 h-6 ${section.color}`} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600">
+                        {section.title}
+                      </h3>
+                      <p className="mt-1 text-sm text-gray-600">
+                        {section.description}
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600" />
+                </div>
+              </div>
+            </Link>
+          )
+        ))}
       </div>
     </div>
   )

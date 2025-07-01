@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 import { formatHoursToReadable } from '@/lib/utils'
 
 export async function POST(request: Request) {
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   try {
     const { requestId, type } = await request.json()
 
-    const req = await prisma.request.findUnique({
+    const req = await prismaMultitenant.request.findUnique({
       where: { id: requestId }
     })
 
@@ -24,11 +24,11 @@ export async function POST(request: Request) {
       )
     }
 
-    const musician = await prisma.musician.findUnique({
+    const musician = await prismaMultitenant.musician.findUnique({
       where: { id: req.musicianId }
     })
 
-    const projectNeed = await prisma.projectNeed.findUnique({
+    const projectNeed = await prismaMultitenant.projectNeed.findUnique({
       where: { id: req.projectNeedId },
       include: {
         project: true,
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
       }
     })
 
-    const token = await prisma.requestToken.findFirst({
+    const token = await prismaMultitenant.requestToken.findFirst({
       where: {
         requestId: req.id,
         expiresAt: { gt: new Date() }
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const template = await prisma.emailTemplate.findFirst({
+    const template = await prismaMultitenant.emailTemplate.findFirst({
       where: { type }
     })
 

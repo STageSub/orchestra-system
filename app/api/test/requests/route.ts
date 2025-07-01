@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET() {
   // Only allow in development
@@ -11,7 +11,7 @@ export async function GET() {
   }
 
   try {
-    const projects = await prisma.project.findMany({
+    const projects = await prismaMultitenant.project.findMany({
       where: {
         projectNeeds: {
           some: {

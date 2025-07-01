@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET(
   request: Request,
@@ -8,7 +8,7 @@ export async function GET(
   try {
     const { needId } = await context.params
     
-    const need = await prisma.projectNeed.findUnique({
+    const need = await prismaMultitenant.projectNeed.findUnique({
       where: { id: parseInt(needId) },
       include: {
         position: {
@@ -52,7 +52,7 @@ export async function DELETE(
     const { needId } = await context.params
     
     // Check if the need has any requests
-    const need = await prisma.projectNeed.findUnique({
+    const need = await prismaMultitenant.projectNeed.findUnique({
       where: { id: parseInt(needId) },
       include: {
         _count: {
@@ -70,7 +70,7 @@ export async function DELETE(
 
     // If there are requests, archive instead of delete
     if (need._count.requests > 0) {
-      await prisma.projectNeed.update({
+      await prismaMultitenant.projectNeed.update({
         where: { id: parseInt(needId) },
         data: {
           status: 'archived',
@@ -85,7 +85,7 @@ export async function DELETE(
     }
     
     // If no requests, delete normally
-    await prisma.projectNeed.delete({
+    await prismaMultitenant.projectNeed.delete({
       where: { id: parseInt(needId) }
     })
     
@@ -108,7 +108,7 @@ export async function PUT(
     const body = await request.json()
     
     // First check if need exists and get current state
-    const currentNeed = await prisma.projectNeed.findUnique({
+    const currentNeed = await prismaMultitenant.projectNeed.findUnique({
       where: { id: parseInt(needId) },
       include: {
         _count: {
@@ -137,7 +137,7 @@ export async function PUT(
     }
 
     // Check if requests have been sent (strategy and response time become locked)
-    const hasRequests = await prisma.request.findFirst({
+    const hasRequests = await prismaMultitenant.request.findFirst({
       where: { projectNeedId: parseInt(needId) }
     })
 
@@ -152,7 +152,7 @@ export async function PUT(
       if (body.maxRecipients !== undefined) updateData.maxRecipients = body.maxRecipients
     }
 
-    const updatedNeed = await prisma.projectNeed.update({
+    const updatedNeed = await prismaMultitenant.projectNeed.update({
       where: { id: parseInt(needId) },
       data: updateData,
       include: {

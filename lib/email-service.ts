@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 interface EmailOptions {
   to: string
@@ -69,7 +69,7 @@ export async function getEmailTemplate(type: string, language: 'sv' | 'en' = 'sv
     // Add language suffix for non-Swedish templates
     const templateType = language === 'en' ? `${type}_en` : type
     
-    const template = await prisma.emailTemplate.findUnique({
+    const template = await prismaMultitenant.emailTemplate.findUnique({
       where: { type: templateType }
     })
     

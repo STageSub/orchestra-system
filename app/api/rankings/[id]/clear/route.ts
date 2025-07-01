@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function DELETE(
   request: Request,
@@ -9,7 +9,7 @@ export async function DELETE(
     const { id } = await params;
     
     // Ta bort alla rankings för denna lista
-    await prisma.ranking.deleteMany({
+    await prismaMultitenant.ranking.deleteMany({
       where: { listId: parseInt(id) }
     })
 

@@ -47,9 +47,17 @@ Se `/BUGFIX_CHECKLIST.md` för detaljerad information om varje bugg.
 ## 🚀 Current Phase: Transforming to Multi-Tenant SaaS
 
 ### Overview
-6-week implementation plan to transform StageSub from single-orchestra to multi-tenant SaaS platform with three subscription tiers ($79/$499/$1500).
+6-week implementation plan to transform StageSub from single-orchestra to multi-tenant SaaS platform with NEW 4-tier pricing (Free/Small/Project Pass/Institution).
 
 **✅ ALLA KRITISKA OCH VIKTIGA BUGGAR ÄR NU FIXADE! Systemet är redo för SaaS-transformation.**
+
+### 🎨 LANDING PAGE MODERNIZATION COMPLETED (2025-07-01)
+- ✅ **Bilingual Landing Page**: Full Swedish/English implementation with localStorage persistence
+- ✅ **New 4-Tier Pricing**: Micro (Free), Small ($299), Project Pass ($99), Institution ($999)
+- ✅ **Professional Design**: Modern indigo/blue color scheme with StageSub branding
+- ✅ **Content Restructuring**: Removed AI badges, stats section, and dashboard cards
+- ✅ **Logo Integration**: Large responsive hero logo, white footer logo
+- ✅ **Mobile Optimization**: Responsive design with proper scaling
 
 ## 📅 Week 1: Database & Authentication
 
@@ -489,11 +497,11 @@ These MUST be done in order:
   - [ ] Demo-bokning
   - [ ] Knowledge base
 
-### Prisplaner
-- **Solo** (Gratis): 25 musiker, 2 projekt
-- **Ensemble** (499 kr): 100 musiker, 10 projekt
-- **Professional** (999 kr): 500 musiker, 50 projekt
-- **Enterprise** (Offert): Obegränsat, egen databas
+### Prisplaner (UPPDATERADE 2025-07-01)
+- **Micro** (Free): 5 musiker, 1 projekt, grundläggande funktioner
+- **Small** ($299/månaden): 50 musiker, 5 projekt, e-postautomation
+- **Project Pass** ($99/projekt): Full access för enskilda projekt
+- **Institution** ($999/månaden): Obegränsat, prioriterad support, API-åtkomst
 
 ## 🧪 Testing
 

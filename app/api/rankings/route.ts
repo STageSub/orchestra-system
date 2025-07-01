@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 import { generateUniqueId } from '@/lib/id-generator'
 
 export async function POST(request: Request) {
@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     const { positionId, listType, description } = body
     
     // Kontrollera om listan redan finns
-    const existingList = await prisma.rankingList.findUnique({
+    const existingList = await prismaMultitenant.rankingList.findUnique({
       where: {
         positionId_listType: {
           positionId: parseInt(positionId),
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     }
     
     // Hämta position för att skapa namn
-    const position = await prisma.position.findUnique({
+    const position = await prismaMultitenant.position.findUnique({
       where: { id: parseInt(positionId) },
       include: { instrument: true }
     })
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     const rankingListId = await generateUniqueId('rankingList')
     
     // Skapa rankningslista
-    const rankingList = await prisma.rankingList.create({
+    const rankingList = await prismaMultitenant.rankingList.create({
       data: {
         rankingListId,
         positionId: parseInt(positionId),

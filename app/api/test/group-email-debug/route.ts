@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET(request: Request) {
   if (process.env.NODE_ENV !== 'development') {
@@ -16,12 +16,12 @@ export async function GET(request: Request) {
     console.log('[GROUP EMAIL DEBUG] Starting debug for project:', projectId)
 
     // 1. Check if project exists
-    const project = await prisma.project.findUnique({
+    const project = await prismaMultitenant.project.findUnique({
       where: { id: parseInt(projectId) }
     })
 
     // 2. Get all requests for this project
-    const allRequests = await prisma.request.findMany({
+    const allRequests = await prismaMultitenant.request.findMany({
       where: {
         projectNeed: {
           projectId: parseInt(projectId)
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
     })
 
     // 3. Get musicians using the same query as the recipients API
-    const musicians = await prisma.musician.findMany({
+    const musicians = await prismaMultitenant.musician.findMany({
       where: {
         status: 'active',
         requests: {
@@ -85,7 +85,7 @@ export async function GET(request: Request) {
       // Find a pending request to accept
       const pendingRequest = allRequests.find(r => r.status === 'pending')
       if (pendingRequest) {
-        await prisma.request.update({
+        await prismaMultitenant.request.update({
           where: { id: pendingRequest.id },
           data: {
             status: 'accepted',
@@ -98,12 +98,12 @@ export async function GET(request: Request) {
     }
 
     // 5. Get instruments to check data structure
-    const instruments = await prisma.instrument.findMany({
+    const instruments = await prismaMultitenant.instrument.findMany({
       orderBy: { displayOrder: 'asc' }
     })
 
     // 6. Get positions to check data structure
-    const positions = await prisma.position.findMany({
+    const positions = await prismaMultitenant.position.findMany({
       include: { instrument: true }
     })
 

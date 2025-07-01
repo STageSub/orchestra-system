@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 import { generateUniqueId } from '@/lib/id-generator'
 
 export async function POST(
@@ -27,7 +27,7 @@ export async function POST(
     for (const file of files) {
       const projectFileId = await generateUniqueId('projectFile')
       
-      const newFile = await prisma.projectFile.create({
+      const newFile = await prismaMultitenant.projectFile.create({
         data: {
           projectFileId,
           projectId,

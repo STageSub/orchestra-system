@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get musicians with their accepted requests for this project
-    const musicians = await prisma.musician.findMany({
+    const musicians = await prismaMultitenant.musician.findMany({
       where,
       include: {
         requests: {

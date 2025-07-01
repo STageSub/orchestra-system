@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 import { generateUniqueId } from '@/lib/id-generator'
 import { saveFile, generateFileName, isValidFileType, isValidFileSize } from '@/lib/file-handler'
 
@@ -16,7 +16,7 @@ export async function GET(
   try {
     const { id } = await context.params
     
-    const files = await prisma.projectFile.findMany({
+    const files = await prismaMultitenant.projectFile.findMany({
       where: { projectId: parseInt(id) },
       include: {
         projectNeed: {
@@ -145,7 +145,7 @@ export async function POST(
     const projectFileId = await generateUniqueId('projectFile')
     
     // Spara i databasen
-    const projectFile = await prisma.projectFile.create({
+    const projectFile = await prismaMultitenant.projectFile.create({
       data: {
         projectFileId,
         projectId,

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createToken, setAuthCookie, verifyPassword } from '@/lib/auth'
+import { verifyPassword } from '@/lib/auth-edge'
+import { authenticateUser } from '@/lib/auth-node'
+import { getTenantFromRequest } from '@/lib/tenant-context'
 
 // Rate limiting: Track login attempts
 const loginAttempts = new Map<string, { count: number; resetTime: number }>()
@@ -39,36 +41,83 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    const { password } = await request.json()
+    const { email, password } = await request.json()
     
-    if (!password) {
+    // Get tenant from subdomain
+    const tenantId = getTenantFromRequest(request as unknown as Request)
+    
+    // Support legacy password-only login for backward compatibility
+    if (!email && password) {
+      // Legacy login - verify against ADMIN_PASSWORD
+      const isValid = await verifyPassword(password)
+      
+      if (!isValid) {
+        return NextResponse.json(
+          { error: 'Fel lösenord' },
+          { status: 401 }
+        )
+      }
+      
+      // For legacy login, use the admin user we just created
+      const authResult = await authenticateUser('admin@orchestra.local', password, 'default-tenant')
+      
+      if (!authResult.success) {
+        return NextResponse.json(
+          { error: authResult.error },
+          { status: 401 }
+        )
+      }
+      
+      // Reset login attempts on successful login
+      loginAttempts.delete(ip)
+      
+      // Create response with cookie
+      const response = NextResponse.json({ 
+        success: true,
+        user: authResult.user 
+      })
+      
+      // Set cookie directly in the response
+      response.cookies.set('orchestra-admin-session', authResult.token!, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24, // 24 hours
+        path: '/'
+      })
+      
+      return response
+    }
+    
+    // New multi-tenant login
+    if (!email || !password) {
       return NextResponse.json(
-        { error: 'Lösenord krävs' },
+        { error: 'Email och lösenord krävs' },
         { status: 400 }
       )
     }
     
-    // Verify password
-    const isValid = await verifyPassword(password)
+    // Authenticate user - don't pass tenantId for email login to allow flexible auth
+    const authResult = await authenticateUser(email, password)
     
-    if (!isValid) {
+    if (!authResult.success) {
       return NextResponse.json(
-        { error: 'Fel lösenord' },
+        { error: authResult.error },
         { status: 401 }
       )
     }
-    
-    // Create JWT token
-    const token = await createToken()
     
     // Reset login attempts on successful login
     loginAttempts.delete(ip)
     
     // Create response with cookie
-    const response = NextResponse.json({ success: true })
+    const response = NextResponse.json({ 
+      success: true,
+      user: authResult.user 
+    })
     
     // Set cookie directly in the response
-    response.cookies.set('orchestra-admin-session', token, {
+    response.cookies.set('orchestra-admin-session', authResult.token!, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',

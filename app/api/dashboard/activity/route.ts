@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET(request: Request) {
   try {
@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     const skip = parseInt(searchParams.get('skip') || '0')
 
     // Get communication logs with related data
-    const activities = await prisma.communicationLog.findMany({
+    const activities = await prismaMultitenant.communicationLog.findMany({
       take,
       skip,
       orderBy: { timestamp: 'desc' },
@@ -86,7 +86,7 @@ export async function GET(request: Request) {
     })
 
     // Get total count
-    const totalCount = await prisma.communicationLog.count()
+    const totalCount = await prismaMultitenant.communicationLog.count()
 
     return NextResponse.json({ 
       activities: formattedActivities,

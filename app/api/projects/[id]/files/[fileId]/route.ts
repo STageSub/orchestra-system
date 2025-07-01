@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 import { deleteFile } from '@/lib/file-handler'
 
 export async function DELETE(
@@ -10,7 +10,7 @@ export async function DELETE(
     const { fileId } = await context.params
     
     // Hämta fil för att få URL
-    const file = await prisma.projectFile.findUnique({
+    const file = await prismaMultitenant.projectFile.findUnique({
       where: { id: parseInt(fileId) }
     })
     
@@ -25,7 +25,7 @@ export async function DELETE(
     await deleteFile(file.fileUrl)
     
     // Ta bort från databasen
-    await prisma.projectFile.delete({
+    await prismaMultitenant.projectFile.delete({
       where: { id: parseInt(fileId) }
     })
     

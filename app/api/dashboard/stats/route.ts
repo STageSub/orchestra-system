@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET() {
   try {
@@ -16,8 +16,8 @@ export async function GET() {
 
     // Get musician stats
     const [totalMusicians, activeMusicians] = await Promise.all([
-      prisma.musician.count(),
-      prisma.musician.count({ where: { isActive: true } })
+      prismaMultitenant.musician.count(),
+      prismaMultitenant.musician.count({ where: { isActive: true } })
     ])
     
     stats.totalMusicians = totalMusicians
@@ -27,7 +27,7 @@ export async function GET() {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     
-    stats.activeProjects = await prisma.project.count({
+    stats.activeProjects = await prismaMultitenant.project.count({
       where: {
         startDate: {
           gte: today
@@ -37,15 +37,15 @@ export async function GET() {
 
     // Get request stats
     const [totalRequests, pendingResponses] = await Promise.all([
-      prisma.request.count(),
-      prisma.request.count({ where: { status: 'pending' } })
+      prismaMultitenant.request.count(),
+      prismaMultitenant.request.count({ where: { status: 'pending' } })
     ])
     
     stats.totalRequests = totalRequests
     stats.pendingResponses = pendingResponses
 
     // Get reminder count
-    const requestsWithReminders = await prisma.request.findMany({
+    const requestsWithReminders = await prismaMultitenant.request.findMany({
       where: {
         NOT: {
           reminderSentAt: null
@@ -58,7 +58,7 @@ export async function GET() {
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
     
-    const recentRequests = await prisma.request.findMany({
+    const recentRequests = await prismaMultitenant.request.findMany({
       where: {
         sentAt: { gte: thirtyDaysAgo }
       },

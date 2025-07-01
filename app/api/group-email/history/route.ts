@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET(request: Request) {
   try {
@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     
     const where = projectId ? { projectId: parseInt(projectId) } : {}
     
-    const logs = await prisma.groupEmailLog.findMany({
+    const logs = await prismaMultitenant.groupEmailLog.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       include: {

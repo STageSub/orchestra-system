@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 import { sendRequests } from '@/lib/request-sender'
 import { getLogStorage } from '@/lib/log-storage'
 
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     
     // Step 1: Find a test project need to use
     console.error('Step 1: Finding test project need...')
-    const projectNeed = await prisma.projectNeed.findFirst({
+    const projectNeed = await prismaMultitenant.projectNeed.findFirst({
       where: {
         status: { not: 'completed' }
       },
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
 
     // Step 2: Send request to Brusk (or first available musician)
     console.error('\nStep 2: Sending request...')
-    const musician = await prisma.musician.findFirst({
+    const musician = await prismaMultitenant.musician.findFirst({
       where: {
         email: 'brusk.zanganeh@gmail.com',
         isActive: true
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     })
 
     // Create a test request
-    const testRequest = await prisma.request.create({
+    const testRequest = await prismaMultitenant.request.create({
       data: {
         musicianId: musician.id,
         projectNeedId: projectNeed.id,
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
     console.error('Generated token:', token.substring(0, 20) + '...')
 
     // Fetch the request with all relations for email
-    const fullRequest = await prisma.request.findUnique({
+    const fullRequest = await prismaMultitenant.request.findUnique({
       where: { id: testRequest.id },
       include: {
         musician: true,

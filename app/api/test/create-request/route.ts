@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 import { getRecipientsForNeed } from '@/lib/recipient-selection'
 
 export async function POST(request: Request) {
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   try {
     const { needId } = await request.json()
 
-    const need = await prisma.projectNeed.findUnique({
+    const need = await prismaMultitenant.projectNeed.findUnique({
       where: { id: needId },
       include: {
         requests: true
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     })
 
     // Get updated need to see how many requests were created
-    const updatedNeed = await prisma.projectNeed.findUnique({
+    const updatedNeed = await prismaMultitenant.projectNeed.findUnique({
       where: { id: needId },
       include: {
         requests: {

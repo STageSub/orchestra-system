@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 import { generateUniqueId } from '@/lib/id-generator'
 
 export async function GET() {
   try {
-    const projects = await prisma.project.findMany({
+    const projects = await prismaMultitenant.project.findMany({
       include: {
         _count: {
           select: {
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
     // Generate unique project ID
     const projectId = await generateUniqueId('project')
     
-    const project = await prisma.project.create({
+    const project = await prismaMultitenant.project.create({
       data: {
         projectId,
         name,

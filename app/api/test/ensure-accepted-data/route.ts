@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET(request: Request) {
   if (process.env.NODE_ENV !== 'development') {
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     console.log('[ENSURE DATA] Checking project:', projectId)
 
     // 1. Check if project exists
-    const project = await prisma.project.findUnique({
+    const project = await prismaMultitenant.project.findUnique({
       where: { id: projectId },
       include: {
         projectNeeds: {
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
       // If no accepted requests, accept the first pending one
       if (acceptedRequests.length === 0 && pendingRequests.length > 0) {
         const toAccept = pendingRequests[0]
-        await prisma.request.update({
+        await prismaMultitenant.request.update({
           where: { id: toAccept.id },
           data: {
             status: 'accepted',
@@ -63,7 +63,7 @@ export async function GET(request: Request) {
     }
 
     // 3. Get updated stats
-    const updatedRequests = await prisma.request.findMany({
+    const updatedRequests = await prismaMultitenant.request.findMany({
       where: {
         projectNeed: {
           projectId: projectId

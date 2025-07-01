@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET(
   request: Request,
@@ -20,7 +20,7 @@ export async function GET(
     console.log('[DEBUG] Checking accepted musicians for project:', projectIdNum)
 
     // First, check if the project exists
-    const project = await prisma.project.findUnique({
+    const project = await prismaMultitenant.project.findUnique({
       where: { id: projectIdNum }
     })
 
@@ -32,7 +32,7 @@ export async function GET(
     }
 
     // Get all requests for this project
-    const allRequests = await prisma.request.findMany({
+    const allRequests = await prismaMultitenant.request.findMany({
       where: {
         projectNeed: {
           projectId: projectIdNum

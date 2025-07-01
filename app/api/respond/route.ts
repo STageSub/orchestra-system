@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 import { sendConfirmationEmail, sendPositionFilledEmail } from '@/lib/email'
 import { ensureLogStorage } from '@/lib/server-init'
 
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Find token and validate
-    const requestToken = await prisma.requestToken.findUnique({
+    const requestToken = await prismaMultitenant.requestToken.findUnique({
       where: { token },
       include: {
         request: {
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
     console.log('=== RESPOND API - Starting Transaction ===')
 
     // Start transaction
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prismaMultitenant.$transaction(async (tx) => {
       console.log('=== RESPOND API - Finding Token ===')
       
       // Find and validate token

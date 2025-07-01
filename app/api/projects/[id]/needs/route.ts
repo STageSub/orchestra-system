@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 import { generateUniqueId } from '@/lib/id-generator'
 
 export async function GET(
@@ -9,7 +9,7 @@ export async function GET(
   try {
     const { id } = await context.params
     
-    const needs = await prisma.projectNeed.findMany({
+    const needs = await prismaMultitenant.projectNeed.findMany({
       where: { projectId: parseInt(id) },
       include: {
         position: {
@@ -85,7 +85,7 @@ export async function POST(
     }
     
     // Validation 4: Check if position has any qualified musicians
-    const qualifiedMusicians = await prisma.musician.count({
+    const qualifiedMusicians = await prismaMultitenant.musician.count({
       where: {
         isActive: true,
         isArchived: false,
@@ -103,7 +103,7 @@ export async function POST(
     }
     
     // Validation 5: Check available musicians in ranking list
-    const musiciansInList = await prisma.musician.findMany({
+    const musiciansInList = await prismaMultitenant.musician.findMany({
       where: {
         isActive: true,
         isArchived: false,
@@ -115,7 +115,7 @@ export async function POST(
     })
     
     // Exclude musicians who already have requests in this project
-    const musiciansWithRequests = await prisma.request.findMany({
+    const musiciansWithRequests = await prismaMultitenant.request.findMany({
       where: {
         projectNeed: {
           projectId: parseInt(id)
@@ -150,7 +150,7 @@ export async function POST(
     // Generate unique project need ID
     const projectNeedId = await generateUniqueId('projectNeed')
     
-    const need = await prisma.projectNeed.create({
+    const need = await prismaMultitenant.projectNeed.create({
       data: {
         projectNeedId,
         projectId: parseInt(id),

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET(
   request: Request,
@@ -8,7 +8,7 @@ export async function GET(
   try {
     const { id } = await params
     
-    const instrument = await prisma.instrument.findUnique({
+    const instrument = await prismaMultitenant.instrument.findUnique({
       where: { id: parseInt(id) },
       include: {
         positions: {
@@ -43,7 +43,7 @@ export async function PUT(
     const body = await request.json()
     const { name, displayOrder, isArchived } = body
 
-    const instrument = await prisma.instrument.update({
+    const instrument = await prismaMultitenant.instrument.update({
       where: { id: parseInt(id) },
       data: {
         name,
@@ -70,7 +70,7 @@ export async function DELETE(
     const { id } = await params
     
     // Check if any musicians have this instrument
-    const hasMusicians = await prisma.musicianQualification.findFirst({
+    const hasMusicians = await prismaMultitenant.musicianQualification.findFirst({
       where: {
         position: {
           instrumentId: parseInt(id)
@@ -86,7 +86,7 @@ export async function DELETE(
     }
 
     // Simply delete the instrument - cascade will handle the rest
-    await prisma.instrument.delete({
+    await prismaMultitenant.instrument.delete({
       where: { id: parseInt(id) }
     })
 

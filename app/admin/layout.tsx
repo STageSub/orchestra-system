@@ -25,6 +25,7 @@ export default function AdminLayout({
   const pathname = usePathname()
   const [showSettings, setShowSettings] = useState(false)
   const settingsRef = useRef<HTMLDivElement>(null)
+  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true)
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -38,6 +39,34 @@ export default function AdminLayout({
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [])
+
+  useEffect(() => {
+    // Check onboarding status for new users
+    const checkOnboarding = async () => {
+      // Skip check if already on onboarding page
+      if (pathname.includes('/onboarding')) {
+        setIsCheckingOnboarding(false)
+        return
+      }
+
+      try {
+        const response = await fetch('/api/onboarding/status')
+        if (response.ok) {
+          const data = await response.json()
+          // Redirect to onboarding if not completed and user is new
+          if (!data.completed && !data.hasMusicians && !data.hasProjects) {
+            window.location.href = '/admin/onboarding'
+          }
+        }
+      } catch (error) {
+        console.error('Onboarding check failed:', error)
+      } finally {
+        setIsCheckingOnboarding(false)
+      }
+    }
+
+    checkOnboarding()
+  }, [pathname])
 
 
   return (
@@ -163,7 +192,13 @@ export default function AdminLayout({
         {/* Main content */}
         <main className="flex-1 overflow-y-auto">
           <div className="p-8">
-            {children}
+            {isCheckingOnboarding ? (
+              <div className="flex items-center justify-center h-64">
+                <div className="text-gray-500">Laddar...</div>
+              </div>
+            ) : (
+              children
+            )}
           </div>
         </main>
       </div>

@@ -43,36 +43,39 @@ Musiker (extern)
 └── Uppdatera sin profil
 ```
 
-## Prismodell (UPPDATERAD 2025-06-28)
+## Prismodell (UPPDATERAD 2025-07-01) - NY 4-TIER STRUKTUR
 
-### 🎵 Small Ensemble ($79/månad)
+### 🆓 Micro (Free)
+- Max 5 musiker
+- Max 1 aktiv projekt
+- Grundläggande funktioner
+- Community support
+- Perfekt för små ensembler och komposer
+
+### 🎵 Small ($299/månad)
 - Max 50 musiker
 - Max 5 aktiva projekt
 - Max 10 instrument
+- E-postautomation
 - Grundläggande support
 - Egen subdomain
 - 30 dagars gratis trial
 
-### 🎼 Medium Ensemble ($499/månad)
-- Max 200 musiker
-- Max 20 aktiva projekt
-- Obegränsat med instrument
-- E-postsupport (24h svar)
-- Egen subdomain
-- Logo i header
-- 30 dagars gratis trial
+### 🎫 Project Pass ($99/projekt)
+- Full access för enskilda projekt
+- Obegränsade musiker för projektet
+- Alla funktioner inkluderade
+- Perfekt för engångsprojekt
+- Support under projektets längd
 
-### 🏛️ Institution ($1,500/månad)
+### 🏛️ Institution ($999/månad)
 - Obegränsad användning
-- Obegränsade projekt
-- Obegränsade instrument
-- Egen databas (på begäran)
-- Full anpassad branding
-- Custom email domain
+- Obegränsade projekt och musiker
+- Alla premiumfunktioner
+- Prioriterad support
 - API-åtkomst
-- Prioriterad support (4h svar)
+- Anpassad branding
 - Dedikerad account manager
-- Fakturering tillgänglig
 
 ## Teknisk implementation
 
@@ -210,13 +213,15 @@ interface TenantLimits {
 | Konkurrens | Hög | Medium | Fokus på UX & branschkunskap |
 | GDPR-compliance | Medium | Hög | Juridisk rådgivning, tydlig DPA |
 
-## Nästa steg (UPPDATERAD 2025-06-28)
+## Nästa steg (UPPDATERAD 2025-07-01)
 
 1. ✅ Dokumentera SaaS-vision (denna fil)
 2. ✅ Slutföra fas 1-6 (grundsystem) - 98% klart!
-3. ✅ Besluta prenumerationsmodell - $79/$499/$1500
+3. ✅ Besluta prenumerationsmodell - NY 4-TIER: Micro (Free), Small ($299), Project Pass ($99), Institution ($999)
 4. ✅ Planera multi-tenant arkitektur - Shared DB → Dedicated DB migration
-5. 🚀 **NÄSTA**: Påbörja implementation om 3 timmar (Fas 1: Databas & Auth)
-6. 🔜 Juridisk granskning (GDPR, DPA, användaravtal)
-7. 🔜 Sätta upp Stripe-konto för betalningar
-8. 🔜 Skapa marknadsföringsmaterial
+5. ✅ Implementera Week 1-2: Databas, Auth, Superadmin Dashboard
+6. ✅ **Week 3**: Self-Service Signup & Moderniserad landningssida
+7. 🚀 **NÄSTA**: Slutföra Week 3 (Onboarding wizard, Trial management)
+8. 🔜 Week 4: Orchestra Admin Features & Billing integration
+9. 🔜 Juridisk granskning (GDPR, DPA, användaravtal)
+10. 🔜 Sätta upp Stripe-konto för betalningar

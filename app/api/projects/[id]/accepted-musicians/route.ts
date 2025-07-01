@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET(
   request: Request,
@@ -14,7 +14,7 @@ export async function GET(
     }
 
     // Hämta alla accepterade förfrågningar för projektet
-    const acceptedRequests = await prisma.request.findMany({
+    const acceptedRequests = await prismaMultitenant.request.findMany({
       where: {
         projectNeed: {
           projectId: projectId

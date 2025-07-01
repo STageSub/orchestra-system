@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendEmail } from '@/lib/email'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function POST(request: NextRequest) {
   try {
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     // Log the group email activity
     try {
-      await prisma.groupEmailLog.create({
+      await prismaMultitenant.groupEmailLog.create({
         data: {
           projectId: metadata?.projectId ? parseInt(metadata.projectId) : null,
           subject,

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function DELETE(
   request: Request,
@@ -9,7 +9,7 @@ export async function DELETE(
     const { id, musicianId } = await params
     
     // Find the ranking entry
-    const ranking = await prisma.ranking.findFirst({
+    const ranking = await prismaMultitenant.ranking.findFirst({
       where: {
         listId: parseInt(id),
         id: parseInt(musicianId)
@@ -24,20 +24,20 @@ export async function DELETE(
     }
     
     // Delete the ranking
-    await prisma.ranking.delete({
+    await prismaMultitenant.ranking.delete({
       where: { id: ranking.id }
     })
     
     // Reorder remaining rankings
-    const remainingRankings = await prisma.ranking.findMany({
+    const remainingRankings = await prismaMultitenant.ranking.findMany({
       where: { listId: parseInt(id) },
       orderBy: { rank: 'asc' }
     })
     
     // Update ranks to be sequential
-    await prisma.$transaction(
+    await prismaMultitenant.$transaction(
       remainingRankings.map((r, index) =>
-        prisma.ranking.update({
+        prismaMultitenant.ranking.update({
           where: { id: r.id },
           data: { rank: index + 1 }
         })

@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 import { generateUniqueId } from '@/lib/id-generator'
 
 export async function GET() {
   try {
-    const templates = await prisma.emailTemplate.findMany({
+    const templates = await prismaMultitenant.emailTemplate.findMany({
       orderBy: { type: 'asc' }
     })
     
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     const { type, subject, body: templateBody, variables } = body
     
     // Check if template type already exists
-    const existing = await prisma.emailTemplate.findUnique({
+    const existing = await prismaMultitenant.emailTemplate.findUnique({
       where: { type }
     })
     
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     // Generate unique template ID
     const emailTemplateId = await generateUniqueId('emailTemplate')
     
-    const template = await prisma.emailTemplate.create({
+    const template = await prismaMultitenant.emailTemplate.create({
       data: {
         emailTemplateId,
         type,

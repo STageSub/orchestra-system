@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET() {
   try {
-    const positions = await prisma.position.findMany({
+    const positions = await prismaMultitenant.position.findMany({
       include: {
         instrument: true
       }
@@ -13,7 +13,7 @@ export async function GET() {
     const positionsWithCounts = await Promise.all(
       positions.map(async (position) => {
         // Count only active musicians
-        const activeMusicians = await prisma.musician.findMany({
+        const activeMusicians = await prismaMultitenant.musician.findMany({
           where: {
             isActive: true,
             isArchived: false,

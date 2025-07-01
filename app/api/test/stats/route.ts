@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET() {
   if (process.env.NODE_ENV !== 'development') {
@@ -10,7 +10,7 @@ export async function GET() {
   }
 
   try {
-    const stats = await prisma.request.groupBy({
+    const stats = await prismaMultitenant.request.groupBy({
       by: ['status'],
       _count: true
     })

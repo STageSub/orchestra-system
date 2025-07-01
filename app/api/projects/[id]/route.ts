@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET(
   request: Request,
@@ -8,7 +8,7 @@ export async function GET(
   try {
     const { id } = await context.params
     
-    const project = await prisma.project.findUnique({
+    const project = await prismaMultitenant.project.findUnique({
       where: { id: parseInt(id) },
       include: {
         projectNeeds: {
@@ -97,7 +97,7 @@ export async function PUT(
     const body = await request.json()
     const { name, startDate, weekNumber, rehearsalSchedule, concertInfo, notes } = body
     
-    const project = await prisma.project.update({
+    const project = await prismaMultitenant.project.update({
       where: { id: parseInt(id) },
       data: {
         name,
@@ -127,7 +127,7 @@ export async function DELETE(
     const { id } = await context.params
     
     // First check if the project has any requests
-    const project = await prisma.project.findUnique({
+    const project = await prismaMultitenant.project.findUnique({
       where: { id: parseInt(id) },
       include: {
         projectNeeds: {
@@ -160,7 +160,7 @@ export async function DELETE(
     }
     
     // Delete the project - cascade will handle related records
-    await prisma.project.delete({
+    await prismaMultitenant.project.delete({
       where: { id: parseInt(id) }
     })
     

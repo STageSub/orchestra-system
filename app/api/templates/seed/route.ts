@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 import { generateUniqueId } from '@/lib/id-generator'
 
 const defaultTemplates = [
@@ -142,7 +142,7 @@ Orchestra Administration`,
 export async function POST() {
   try {
     // Get existing templates
-    const existingTemplates = await prisma.emailTemplate.findMany({
+    const existingTemplates = await prismaMultitenant.emailTemplate.findMany({
       select: { type: true }
     })
     
@@ -164,7 +164,7 @@ export async function POST() {
     for (const template of templatesToCreate) {
       const templateId = await generateUniqueId('template')
       
-      await prisma.emailTemplate.create({
+      await prismaMultitenant.emailTemplate.create({
         data: {
           emailTemplateId: templateId,
           type: template.type,

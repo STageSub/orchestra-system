@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prismaMultitenant } from '@/lib/prisma-multitenant'
 
 export async function GET() {
   try {
-    const instruments = await prisma.instrument.findMany({
+    const instruments = await prismaMultitenant.instrument.findMany({
       orderBy: { displayOrder: 'asc' },
       include: {
         positions: {

@@ -13,6 +13,14 @@ interface DashboardStats {
   responseRate: number
 }
 
+interface TrialStatus {
+  isOnTrial: boolean
+  daysRemaining: number
+  trialEndsAt: string
+  plan: string
+  subscriptionStatus: string
+}
+
 interface Activity {
   id: number
   description: string
@@ -27,10 +35,12 @@ export default function AdminDashboard() {
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingActivities, setLoadingActivities] = useState(true)
+  const [trialStatus, setTrialStatus] = useState<TrialStatus | null>(null)
 
   useEffect(() => {
     fetchDashboardStats()
     fetchActivities()
+    fetchTrialStatus()
   }, [])
 
   // Auto-refresh dashboard data every 30 seconds when page is visible
@@ -47,6 +57,7 @@ export default function AdminDashboard() {
         // Page became visible, refresh immediately
         fetchDashboardStats()
         fetchActivities()
+        fetchTrialStatus()
       }
     }
 
@@ -88,6 +99,18 @@ export default function AdminDashboard() {
       setLoadingActivities(false)
     }
   }
+
+  const fetchTrialStatus = async () => {
+    try {
+      const response = await fetch('/api/subscription/status')
+      if (response.ok) {
+        const data = await response.json()
+        setTrialStatus(data)
+      }
+    } catch (error) {
+      console.error('Error fetching trial status:', error)
+    }
+  }
   
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp)
@@ -118,6 +141,61 @@ export default function AdminDashboard() {
       <h2 className="text-2xl font-bold text-gray-900 mb-6">
         Administrationspanel
       </h2>
+      
+      {/* Trial Status Widget */}
+      {trialStatus?.isOnTrial && (
+        <div className={`mb-8 rounded-lg p-6 ${
+          trialStatus.daysRemaining <= 7 ? 'bg-yellow-50 border-2 border-yellow-400' : 
+          trialStatus.daysRemaining <= 3 ? 'bg-red-50 border-2 border-red-400' : 
+          'bg-blue-50 border-2 border-blue-400'
+        }`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className={`text-lg font-semibold ${
+                trialStatus.daysRemaining <= 3 ? 'text-red-900' :
+                trialStatus.daysRemaining <= 7 ? 'text-yellow-900' :
+                'text-blue-900'
+              }`}>
+                {trialStatus.daysRemaining === 0 
+                  ? 'Din prövotid upphör idag!' 
+                  : `${trialStatus.daysRemaining} dagar kvar av prövotiden`}
+              </h3>
+              <p className={`mt-1 text-sm ${
+                trialStatus.daysRemaining <= 3 ? 'text-red-700' :
+                trialStatus.daysRemaining <= 7 ? 'text-yellow-700' :
+                'text-blue-700'
+              }`}>
+                Din prövotid för {trialStatus.plan === 'small_ensemble' ? 'Small Ensemble' : 
+                trialStatus.plan === 'medium_ensemble' ? 'Medium Ensemble' : 'Institution'} planen 
+                upphör {new Date(trialStatus.trialEndsAt).toLocaleDateString('sv-SE')}
+              </p>
+            </div>
+            <div>
+              <Link
+                href="/admin/settings/subscription"
+                className={`inline-flex items-center px-4 py-2 rounded-md text-sm font-medium ${
+                  trialStatus.daysRemaining <= 3 
+                    ? 'bg-red-600 text-white hover:bg-red-700' 
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
+              >
+                Uppgradera nu
+              </Link>
+            </div>
+          </div>
+          {trialStatus.daysRemaining <= 7 && (
+            <div className="mt-4 text-sm">
+              <p className={
+                trialStatus.daysRemaining <= 3 ? 'text-red-700 font-medium' : 'text-yellow-700'
+              }>
+                {trialStatus.daysRemaining <= 3 
+                  ? '⚠️ Efter prövotiden kommer vissa funktioner att begränsas tills du uppgraderar.'
+                  : '💡 Tips: Uppgradera nu för att få 20% rabatt på första månaden!'}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {/* Statistik-kort */}
