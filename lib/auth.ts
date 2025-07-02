@@ -10,11 +10,19 @@ const COOKIE_NAME = 'orchestra-admin-session'
 
 interface TokenPayload {
   authenticated: boolean
+  userId?: string
+  role?: string
+  subdomain?: string
   exp: number
 }
 
-export async function createToken(): Promise<string> {
-  const token = await new SignJWT({ authenticated: true })
+export async function createToken(userId?: string, role?: string, subdomain?: string): Promise<string> {
+  const token = await new SignJWT({ 
+    authenticated: true,
+    userId,
+    role,
+    subdomain
+  })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('24h')
@@ -72,4 +80,15 @@ export async function verifyPassword(password: string): Promise<boolean> {
   // For simplicity, we'll do a direct comparison
   // In a more complex system, you'd hash the stored password
   return password === adminPassword
+}
+
+export async function verifySuperadminPassword(password: string): Promise<boolean> {
+  const superadminPassword = process.env.SUPERADMIN_PASSWORD
+  
+  if (!superadminPassword) {
+    console.error('SUPERADMIN_PASSWORD not set in environment variables')
+    return false
+  }
+  
+  return password === superadminPassword
 }

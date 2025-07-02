@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { NextRequest, NextResponse } from 'next/server'
+import { getPrismaFromRequest } from '@/lib/api-helpers'
 import { generateUniqueId } from '@/lib/id-generator'
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
+    const prisma = getPrismaFromRequest(request)
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
     const instrumentId = searchParams.get('instrumentId')
@@ -76,8 +77,9 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const prisma = getPrismaFromRequest(request)
     const body = await request.json()
     const { firstName, lastName, email, phone, preferredLanguage, localResidence, notes, qualificationIds } = body
     

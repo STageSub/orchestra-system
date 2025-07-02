@@ -1,18 +1,48 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { verifyToken } from '@/lib/auth'
+import { getSubdomain } from '@/lib/database-config'
 
 const COOKIE_NAME = 'orchestra-admin-session'
 
 export async function middleware(request: NextRequest) {
+  const response = NextResponse.next()
+  const hostname = request.headers.get('host') || 'localhost:3001'
+  const subdomain = getSubdomain(hostname)
+  
+  // Add subdomain to request headers for API routes to use
+  response.headers.set('x-subdomain', subdomain)
+  
+  // Handle superadmin routes
+  if (request.nextUrl.pathname.startsWith('/superadmin')) {
+    // Check if user has superadmin role
+    const token = request.cookies.get(COOKIE_NAME)?.value
+    
+    if (!token) {
+      return NextResponse.redirect(new URL('/admin/login', request.url))
+    }
+    
+    try {
+      const payload = await verifyToken(token)
+      
+      if (!payload || payload.role !== 'superadmin') {
+        return NextResponse.redirect(new URL('/admin', request.url))
+      }
+      
+      return response
+    } catch (error) {
+      return NextResponse.redirect(new URL('/admin/login', request.url))
+    }
+  }
+  
   // Only protect admin routes
   if (!request.nextUrl.pathname.startsWith('/admin')) {
-    return NextResponse.next()
+    return response
   }
   
   // Allow access to login page
   if (request.nextUrl.pathname === '/admin/login') {
-    return NextResponse.next()
+    return response
   }
   
   try {
@@ -30,7 +60,11 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/admin/login', request.url))
     }
     
-    return NextResponse.next()
+    // Add user info to headers
+    response.headers.set('x-user-id', payload.userId || '')
+    response.headers.set('x-user-role', payload.role || 'admin')
+    
+    return response
   } catch (error) {
     console.error('Middleware error:', error)
     return NextResponse.redirect(new URL('/admin/login', request.url))
@@ -38,5 +72,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: '/admin/:path*'
+  matcher: ['/admin/:path*', '/superadmin/:path*', '/api/:path*']
 }

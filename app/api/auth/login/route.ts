@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createToken, setAuthCookie, verifyPassword } from '@/lib/auth'
+import { createToken, setAuthCookie, verifyPassword, verifySuperadminPassword } from '@/lib/auth'
+import { getSubdomain } from '@/lib/database-config'
 
 // Rate limiting: Track login attempts
 const loginAttempts = new Map<string, { count: number; resetTime: number }>()
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    const { password } = await request.json()
+    const { password, loginType = 'admin' } = await request.json()
     
     if (!password) {
       return NextResponse.json(
@@ -48,8 +49,21 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Verify password
-    const isValid = await verifyPassword(password)
+    // Get subdomain
+    const hostname = request.headers.get('host') || 'localhost:3001'
+    const subdomain = getSubdomain(hostname)
+    
+    // Verify password based on login type
+    let isValid = false
+    let role = 'admin'
+    
+    if (loginType === 'superadmin') {
+      isValid = await verifySuperadminPassword(password)
+      role = 'superadmin'
+    } else {
+      isValid = await verifyPassword(password)
+      role = 'admin'
+    }
     
     if (!isValid) {
       return NextResponse.json(
@@ -58,14 +72,14 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Create JWT token
-    const token = await createToken()
+    // Create JWT token with role and subdomain
+    const token = await createToken(undefined, role, subdomain)
     
     // Reset login attempts on successful login
     loginAttempts.delete(ip)
     
     // Create response with cookie
-    const response = NextResponse.json({ success: true })
+    const response = NextResponse.json({ success: true, role })
     
     // Set cookie directly in the response
     response.cookies.set('orchestra-admin-session', token, {
