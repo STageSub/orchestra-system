@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Building2, Users, CreditCard, Activity, Database, Settings, LogOut, ChevronDown, BarChart3, ExternalLink, Package } from 'lucide-react'
+import { Activity, Database, Settings, LogOut } from 'lucide-react'
 
 export default function SuperAdminLayout({
   children,
@@ -11,71 +11,19 @@ export default function SuperAdminLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [tenants, setTenants] = useState<any[]>([])
-  const [showTenantSwitcher, setShowTenantSwitcher] = useState(false)
-
-  useEffect(() => {
-    // Check if user is superadmin
-    const checkAuth = async () => {
-      try {
-        const response = await fetch('/api/auth/me')
-        if (!response.ok) {
-          router.push('/admin/login')
-          return
-        }
-        
-        const userData = await response.json()
-        if (userData.role !== 'superadmin') {
-          router.push('/admin')
-          return
-        }
-        
-        setUser(userData)
-      } catch (error) {
-        console.error('Auth check failed:', error)
-        router.push('/admin/login')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    checkAuth()
-    fetchTenants()
-  }, [router])
-
-  const fetchTenants = async () => {
-    try {
-      const response = await fetch('/api/superadmin/tenants')
-      if (response.ok) {
-        const data = await response.json()
-        setTenants(data)
-      }
-    } catch (error) {
-      console.error('Failed to fetch tenants:', error)
-    }
-  }
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const handleLogout = async () => {
+    if (isLoggingOut) return
+    setIsLoggingOut(true)
+    
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
       router.push('/admin/login')
     } catch (error) {
       console.error('Logout failed:', error)
+      setIsLoggingOut(false)
     }
-  }
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-500">Laddar...</div>
-      </div>
-    )
-  }
-
-  if (!user) {
-    return null
   }
 
   return (
@@ -94,59 +42,10 @@ export default function SuperAdminLayout({
             </div>
             
             <div className="flex items-center gap-4">
-              {/* Tenant Switcher */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowTenantSwitcher(!showTenantSwitcher)}
-                  className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 rounded-md hover:bg-gray-200"
-                >
-                  <Building2 className="w-4 h-4" />
-                  <span>Växla Tenant</span>
-                  <ChevronDown className="w-4 h-4" />
-                </button>
-                
-                {showTenantSwitcher && (
-                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-md shadow-lg border z-50">
-                    <div className="p-2 border-b">
-                      <p className="text-sm font-medium text-gray-700 px-2">Logga in som tenant</p>
-                    </div>
-                    <div className="max-h-96 overflow-y-auto">
-                      {tenants.map((tenant) => (
-                        <button
-                          key={tenant.id}
-                          onClick={async () => {
-                            // Create a session for the tenant admin
-                            const response = await fetch(`/api/superadmin/tenants/${tenant.id}/switch`, {
-                              method: 'POST'
-                            })
-                            if (response.ok) {
-                              // Open in new tab
-                              window.open('/admin', '_blank')
-                              setShowTenantSwitcher(false)
-                            } else {
-                              alert('Kunde inte växla till tenant')
-                            }
-                          }}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center justify-between group"
-                        >
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{tenant.name}</p>
-                            <p className="text-xs text-gray-500">{tenant.subdomain}.stagesub.com</p>
-                          </div>
-                          <ExternalLink className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100" />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span>{user.email}</span>
-              </div>
               <button
                 onClick={handleLogout}
-                className="text-gray-500 hover:text-gray-700"
+                disabled={isLoggingOut}
+                className="text-gray-500 hover:text-gray-700 disabled:opacity-50"
               >
                 <LogOut className="w-5 h-5" />
               </button>
@@ -171,47 +70,11 @@ export default function SuperAdminLayout({
               </li>
               <li>
                 <Link
-                  href="/superadmin/tenants"
+                  href="/superadmin/orchestras/new"
                   className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-gray-100 text-gray-700"
                 >
                   <Building2 className="w-5 h-5" />
-                  Tenants
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/superadmin/users"
-                  className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-gray-100 text-gray-700"
-                >
-                  <Users className="w-5 h-5" />
-                  Användare
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/superadmin/usage"
-                  className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-gray-100 text-gray-700"
-                >
-                  <BarChart3 className="w-5 h-5" />
-                  Användning
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/superadmin/subscriptions"
-                  className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-gray-100 text-gray-700"
-                >
-                  <CreditCard className="w-5 h-5" />
-                  Prenumerationer
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/superadmin/migration"
-                  className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-gray-100 text-gray-700"
-                >
-                  <Package className="w-5 h-5" />
-                  Migration
+                  Ny Orkester
                 </Link>
               </li>
               <li>

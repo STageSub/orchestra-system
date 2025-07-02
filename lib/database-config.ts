@@ -6,6 +6,7 @@ const DATABASE_URLS: Record<string, string> = {
   'goteborg': process.env.DATABASE_URL_GOTEBORG || process.env.DATABASE_URL!,
   'malmo': process.env.DATABASE_URL_MALMO || process.env.DATABASE_URL!,
   'stockholm': process.env.DATABASE_URL_STOCKHOLM || process.env.DATABASE_URL!,
+  'uppsala': process.env.DATABASE_URL_UPPSALA || process.env.DATABASE_URL!,
   // Default/admin database
   'admin': process.env.DATABASE_URL!,
   'localhost': process.env.DATABASE_URL!,

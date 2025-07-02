@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { ToastContainer } from '@/components/toast'
 import EventListener from '@/components/event-listener'
 import { LogInitializer } from '@/components/log-initializer'
+import OnboardingWizard from '@/components/onboarding/OnboardingWizard'
 
 const navigation = [
   { name: 'Översikt', href: '/admin' },
@@ -24,6 +25,7 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname()
   const [showSettings, setShowSettings] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
   const settingsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -38,6 +40,49 @@ export default function AdminLayout({
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [])
+
+  // Check if this is first time login
+  useEffect(() => {
+    const checkFirstTimeUser = async () => {
+      try {
+        // Check if onboarding has been completed
+        const hasCompletedOnboarding = localStorage.getItem('onboarding_completed')
+        if (hasCompletedOnboarding) return
+
+        // Check if there are any musicians or projects
+        const [musiciansRes, projectsRes] = await Promise.all([
+          fetch('/api/musicians'),
+          fetch('/api/projects')
+        ])
+
+        if (musiciansRes.ok && projectsRes.ok) {
+          const musicians = await musiciansRes.json()
+          const projects = await projectsRes.json()
+
+          // If no musicians and no projects, show onboarding
+          if (musicians.length === 0 && projects.length === 0) {
+            setShowOnboarding(true)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to check first time user:', error)
+      }
+    }
+
+    checkFirstTimeUser()
+  }, [])
+
+  const handleOnboardingComplete = () => {
+    localStorage.setItem('onboarding_completed', 'true')
+    setShowOnboarding(false)
+    // Redirect to dashboard
+    window.location.href = '/admin'
+  }
+
+  const handleOnboardingSkip = () => {
+    localStorage.setItem('onboarding_completed', 'skipped')
+    setShowOnboarding(false)
+  }
 
 
   return (
@@ -170,6 +215,15 @@ export default function AdminLayout({
       <ToastContainer />
       <EventListener />
       <LogInitializer />
+      
+      {/* Onboarding Wizard */}
+      {showOnboarding && (
+        <OnboardingWizard
+          orchestraName="Din Orkester"
+          onComplete={handleOnboardingComplete}
+          onSkip={handleOnboardingSkip}
+        />
+      )}
     </div>
   )
 }

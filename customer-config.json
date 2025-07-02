@@ -1,0 +1,44 @@
+{
+  "customers": [
+    {
+      "id": "goteborg",
+      "name": "Göteborgs Symfoniker",
+      "subdomain": "goteborg",
+      "databaseUrl": "env:DATABASE_URL_GOTEBORG",
+      "status": "active",
+      "createdAt": "2024-01-01T00:00:00Z",
+      "contactEmail": "admin@goteborgssymfoniker.se",
+      "plan": "enterprise"
+    },
+    {
+      "id": "malmo",
+      "name": "Malmö Symfoniorkester",
+      "subdomain": "malmo",
+      "databaseUrl": "env:DATABASE_URL_MALMO",
+      "status": "active",
+      "createdAt": "2024-01-01T00:00:00Z",
+      "contactEmail": "admin@malmosymfoni.se",
+      "plan": "enterprise"
+    },
+    {
+      "id": "stockholm",
+      "name": "Stockholms Filharmoniker",
+      "subdomain": "stockholm",
+      "databaseUrl": "env:DATABASE_URL_STOCKHOLM",
+      "status": "active",
+      "createdAt": "2024-01-01T00:00:00Z",
+      "contactEmail": "admin@stockholmsfilharmoniker.se",
+      "plan": "enterprise"
+    },
+    {
+      "id": "uppsala",
+      "name": "Uppsala Kammarorkester",
+      "subdomain": "uppsala",
+      "databaseUrl": "env:DATABASE_URL_UPPSALA",
+      "status": "active",
+      "createdAt": "2024-01-01T00:00:00Z",
+      "contactEmail": "admin@uppsalakammar.se",
+      "plan": "medium"
+    }
+  ]
+}
