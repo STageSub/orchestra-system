@@ -185,3 +185,26 @@
 ## Sammanfattning
 
 Dagens arbete har framgångsrikt löst den kritiska data-läckage buggen genom att återgå till separata databaser, samtidigt som vi implementerat ett dynamiskt kundhanterings-system som är redo för framtida skalning. Systemet är nu Edge Runtime-kompatibelt och förberett för automatisk databas-provisionering via Stripe.
+
+### 🚀 Edge Runtime Migration (19:00-20:00)
+
+Efter att ha löst databas-arkitekturen fokuserade vi på deployment-problem:
+
+1. **useSearchParams Suspense Errors**
+   - La till Suspense boundaries för alla sidor som använder useSearchParams
+   - Krävs av Next.js 15 för client-side rendering
+
+2. **Node.js Module Removal**
+   - Alla fs/path imports borttagna
+   - Filhantering migrerad till databas
+   - Edge Runtime fullt kompatibel
+
+3. **Building2 Icon Issues**
+   - Ersatte alla Building2 med Building
+   - Verkar vara bundling-problem med vissa lucide-react ikoner
+
+4. **Middleware Optimization**
+   - Tog bort Prisma imports från middleware
+   - Inlinade enkla funktioner för bättre performance
+
+**Resultat**: ✅ Systemet deployas nu framgångsrikt på Vercel!
