@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { Check, ArrowRight } from 'lucide-react'
-import PublicHeader from '@/components/public-header'
 
 const plans = [
   {
@@ -61,8 +60,6 @@ const plans = [
 export default function PricingPage() {
   return (
     <>
-      <PublicHeader />
-      
       <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
