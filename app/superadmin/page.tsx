@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Building2, Users, CreditCard, Activity, TrendingUp, AlertCircle, Database, Settings } from 'lucide-react'
+import { Users, CreditCard, Activity, TrendingUp, AlertCircle, Database, Settings, Building } from 'lucide-react'
 import CustomerManagement from '@/components/superadmin/CustomerManagement'
 
 interface CustomerStats {
@@ -92,7 +92,7 @@ export default function SuperAdminDashboard() {
                 {stats?.totalCustomers || 0}
               </p>
             </div>
-            <Building2 className="w-10 h-10 text-blue-500" />
+            <Building className="w-10 h-10 text-blue-500" />
           </div>
           <p className="text-sm text-gray-500 mt-2">
             {stats?.activeCustomers || 0} aktiva

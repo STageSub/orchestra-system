@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Edit2, Search, Building2, Shield, Calendar } from 'lucide-react'
+import { Plus, Edit2, Search, Building, Shield, Calendar } from 'lucide-react'
 
 interface User {
   id: string
@@ -190,7 +190,7 @@ export default function UsersPage() {
                 <td className="px-6 py-4 whitespace-nowrap">
                   {user.tenant ? (
                     <div className="flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-gray-400" />
+                      <Building className="w-4 h-4 text-gray-400" />
                       <div>
                         <div className="text-sm text-gray-900">{user.tenant.name}</div>
                         <div className="text-xs text-gray-500">{user.tenant.subdomain}</div>
@@ -249,7 +249,7 @@ export default function UsersPage() {
 
         <div className="bg-white p-4 rounded-lg shadow-sm">
           <div className="flex items-center gap-3">
-            <Building2 className="w-8 h-8 text-blue-500" />
+            <Building className="w-8 h-8 text-blue-500" />
             <div>
               <p className="text-sm text-gray-600">Tenant Admins</p>
               <p className="text-xl font-semibold">

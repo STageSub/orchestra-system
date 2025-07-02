@@ -16,26 +16,30 @@ export default function DatabasesPage() {
 
   useEffect(() => {
     // Get configured customers from the config
-    const customers = getConfiguredCustomers()
-    
-    const dbInfo: DatabaseInfo[] = customers.map(subdomain => ({
-      subdomain,
-      name: subdomain.charAt(0).toUpperCase() + subdomain.slice(1) + ' Symphony Orchestra',
-      status: 'active',
-      hasEnvVar: true
-    }))
+    async function loadCustomers() {
+      const customers = await getConfiguredCustomers()
+      
+      const dbInfo: DatabaseInfo[] = customers.map(subdomain => ({
+        subdomain,
+        name: subdomain.charAt(0).toUpperCase() + subdomain.slice(1) + ' Symphony Orchestra',
+        status: 'active' as const,
+        hasEnvVar: true
+      }))
 
-    // Add Uppsala if not already configured
-    if (!customers.includes('uppsala')) {
-      dbInfo.push({
-        subdomain: 'uppsala',
-        name: 'Uppsala Symphony Orchestra',
-        status: 'pending',
-        hasEnvVar: false
-      })
+      // Add Uppsala if not already configured
+      if (!customers.includes('uppsala')) {
+        dbInfo.push({
+          subdomain: 'uppsala',
+          name: 'Uppsala Symphony Orchestra',
+          status: 'pending' as const,
+          hasEnvVar: false
+        })
+      }
+
+      setDatabases(dbInfo)
     }
-
-    setDatabases(dbInfo)
+    
+    loadCustomers()
   }, [])
 
   return (

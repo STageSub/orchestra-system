@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Activity, Database, Settings, LogOut } from 'lucide-react'
+import { Activity, Database, Settings, LogOut, Building } from 'lucide-react'
 
 export default function SuperAdminLayout({
   children,
@@ -73,7 +73,7 @@ export default function SuperAdminLayout({
                   href="/superadmin/orchestras/new"
                   className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-gray-100 text-gray-700"
                 >
-                  <Building2 className="w-5 h-5" />
+                  <Building className="w-5 h-5" />
                   Ny Orkester
                 </Link>
               </li>
