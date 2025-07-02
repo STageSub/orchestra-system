@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Building2, Users, CreditCard, Activity, TrendingUp, AlertCircle, Database } from 'lucide-react'
+import { Building2, Users, CreditCard, Activity, TrendingUp, AlertCircle, Database, Settings } from 'lucide-react'
+import CustomerManagement from '@/components/superadmin/CustomerManagement'
 
 interface CustomerStats {
   subdomain: string
@@ -26,6 +27,7 @@ interface SuperadminStats {
 export default function SuperAdminDashboard() {
   const [stats, setStats] = useState<SuperadminStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<'overview' | 'customers'>('overview')
 
   useEffect(() => {
     fetchStats()
@@ -51,7 +53,34 @@ export default function SuperAdminDashboard() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-8">Superadmin Översikt</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">Superadmin Dashboard</h1>
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`px-4 py-2 rounded-md transition-colors ${
+              activeTab === 'overview'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Översikt
+          </button>
+          <button
+            onClick={() => setActiveTab('customers')}
+            className={`px-4 py-2 rounded-md transition-colors ${
+              activeTab === 'customers'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Kundhantering
+          </button>
+        </div>
+      </div>
+
+      {activeTab === 'overview' ? (
+        <>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -195,6 +224,10 @@ export default function SuperAdminDashboard() {
           </table>
         </div>
       </div>
+        </>
+      ) : (
+        <CustomerManagement />
+      )}
     </div>
   )
 }

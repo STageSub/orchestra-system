@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getConfiguredCustomers, getPrismaClient } from '@/lib/database-config'
+import { CustomerService } from '@/lib/services/customer-service'
 
 export async function GET(request: NextRequest) {
   try {
-    // Get all configured customers
-    const customers = getConfiguredCustomers()
+    // Get all configured customers with full details
+    const customers = await CustomerService.getCustomers()
     
     let totalMusicians = 0
     let totalProjects = 0
@@ -12,9 +13,9 @@ export async function GET(request: NextRequest) {
     const customerStats = []
     
     // Query each customer database
-    for (const subdomain of customers) {
+    for (const customer of customers) {
       try {
-        const prisma = getPrismaClient(subdomain)
+        const prisma = await getPrismaClient(customer.subdomain)
         
         // Get stats for this customer
         const musicians = await prisma.musician.count({
@@ -41,40 +42,44 @@ export async function GET(request: NextRequest) {
         if (activeProjects > 0) activeCustomers++
         
         customerStats.push({
-          subdomain,
-          name: subdomain.charAt(0).toUpperCase() + subdomain.slice(1),
+          subdomain: customer.subdomain,
+          name: customer.name,
           musicians,
           projects,
           activeProjects,
           lastActivity: lastProject?.createdAt 
             ? new Date(lastProject.createdAt).toLocaleDateString('sv-SE')
             : 'Ingen aktivitet',
-          status: activeProjects > 0 ? 'active' : 'inactive'
+          status: activeProjects > 0 ? 'active' : 'inactive',
+          plan: customer.plan
         })
       } catch (error) {
-        console.error(`Failed to get stats for ${subdomain}:`, error)
+        console.error(`Failed to get stats for ${customer.subdomain}:`, error)
         // Add placeholder data for failed queries
         customerStats.push({
-          subdomain,
-          name: subdomain.charAt(0).toUpperCase() + subdomain.slice(1),
+          subdomain: customer.subdomain,
+          name: customer.name,
           musicians: 0,
           projects: 0,
           activeProjects: 0,
           lastActivity: 'Fel vid hämtning',
-          status: 'inactive'
+          status: 'inactive',
+          plan: customer.plan
         })
       }
     }
     
-    // Calculate revenue based on customer count
+    // Calculate revenue based on customer plans
     const pricing = {
       small: 299,
       medium: 599,
-      large: 999
+      enterprise: 999
     }
     
-    // Simple revenue calculation - you can make this more sophisticated
-    const totalRevenue = customers.length * pricing.small
+    // Calculate actual revenue based on plans
+    const totalRevenue = customers.reduce((sum, customer) => {
+      return sum + (pricing[customer.plan as keyof typeof pricing] || 0)
+    }, 0)
     
     return NextResponse.json({
       totalCustomers: customers.length,

@@ -1,32 +1,47 @@
 import { PrismaClient } from '@prisma/client'
-
-// Map of customer subdomains to database URLs
-const DATABASE_URLS: Record<string, string> = {
-  // Example customers - replace with actual database URLs
-  'goteborg': process.env.DATABASE_URL_GOTEBORG || process.env.DATABASE_URL!,
-  'malmo': process.env.DATABASE_URL_MALMO || process.env.DATABASE_URL!,
-  'stockholm': process.env.DATABASE_URL_STOCKHOLM || process.env.DATABASE_URL!,
-  'uppsala': process.env.DATABASE_URL_UPPSALA || process.env.DATABASE_URL!,
-  // Default/admin database
-  'admin': process.env.DATABASE_URL!,
-  'localhost': process.env.DATABASE_URL!,
-}
+import { CustomerService } from './services/customer-service'
 
 // Cache for Prisma clients
 const prismaClients: Record<string, PrismaClient> = {}
 
-export function getDatabaseUrl(subdomain: string): string {
-  return DATABASE_URLS[subdomain] || process.env.DATABASE_URL!
+// Cache for database URLs to avoid async lookups on every request
+const databaseUrlCache: Record<string, string> = {}
+
+export async function getDatabaseUrl(subdomain: string): Promise<string> {
+  // Check cache first
+  if (databaseUrlCache[subdomain]) {
+    return databaseUrlCache[subdomain]
+  }
+
+  // Special handling for admin and localhost
+  if (subdomain === 'admin' || subdomain === 'localhost') {
+    const url = process.env.DATABASE_URL!
+    databaseUrlCache[subdomain] = url
+    return url
+  }
+
+  // Try to get from CustomerService
+  const customerUrl = await CustomerService.getDatabaseUrl(subdomain)
+  if (customerUrl) {
+    databaseUrlCache[subdomain] = customerUrl
+    return customerUrl
+  }
+
+  // Fallback to default database
+  console.warn(`No database configuration found for subdomain: ${subdomain}`)
+  const defaultUrl = process.env.DATABASE_URL!
+  databaseUrlCache[subdomain] = defaultUrl
+  return defaultUrl
 }
 
-export function getPrismaClient(subdomain: string): PrismaClient {
+export async function getPrismaClient(subdomain: string): Promise<PrismaClient> {
   // Return cached client if exists
   if (prismaClients[subdomain]) {
     return prismaClients[subdomain]
   }
 
   // Create new client for this subdomain
-  const databaseUrl = getDatabaseUrl(subdomain)
+  const databaseUrl = await getDatabaseUrl(subdomain)
   const client = new PrismaClient({
     datasources: {
       db: {
@@ -58,8 +73,13 @@ export function getSubdomain(hostname: string): string {
 }
 
 // List all configured customers
-export function getConfiguredCustomers(): string[] {
-  return Object.keys(DATABASE_URLS).filter(
-    subdomain => subdomain !== 'admin' && subdomain !== 'localhost'
-  )
+export async function getConfiguredCustomers(): Promise<string[]> {
+  const customers = await CustomerService.getCustomers()
+  return customers.map(c => c.subdomain)
+}
+
+// Clear caches when customer config changes
+export function clearCaches(): void {
+  Object.keys(databaseUrlCache).forEach(key => delete databaseUrlCache[key])
+  CustomerService.clearCache()
 }
