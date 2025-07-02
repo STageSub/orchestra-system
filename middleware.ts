@@ -1,7 +1,23 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { verifyToken } from '@/lib/auth'
-import { getSubdomain } from '@/lib/database-config'
+
+// Inline getSubdomain to avoid importing database-config which has Prisma
+function getSubdomain(hostname: string): string {
+  // Handle localhost
+  if (hostname.includes('localhost')) {
+    return 'localhost'
+  }
+
+  // Extract subdomain from hostname
+  const parts = hostname.split('.')
+  if (parts.length >= 3) {
+    return parts[0]
+  }
+
+  // Default to admin for main domain
+  return 'admin'
+}
 
 const COOKIE_NAME = 'orchestra-admin-session'
 
