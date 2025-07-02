@@ -3,8 +3,9 @@
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Mail, ArrowLeft } from 'lucide-react'
+import { Suspense } from 'react'
 
-export default function SignupVerifyPage() {
+function SignupVerifyContent() {
   const searchParams = useSearchParams()
   const email = searchParams.get('email') || ''
 
@@ -62,5 +63,20 @@ export default function SignupVerifyPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SignupVerifyPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Laddar...</p>
+        </div>
+      </div>
+    }>
+      <SignupVerifyContent />
+    </Suspense>
   )
 }
