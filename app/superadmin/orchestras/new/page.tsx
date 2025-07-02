@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, Building } from 'lucide-react'
 
 export default function NewOrchestraPage() {
   const router = useRouter()
@@ -163,7 +163,7 @@ export default function NewOrchestraPage() {
             disabled={isSubmitting}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-300"
           >
-            <Building2 className="w-4 h-4" />
+            <Building className="w-4 h-4" />
             {isSubmitting ? 'Skapar...' : 'Skapa Orkester'}
           </button>
         </div>
