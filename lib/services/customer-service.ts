@@ -1,5 +1,4 @@
-import { readFile, writeFile } from 'fs/promises'
-import { join } from 'path'
+import { prisma } from '@/lib/prisma'
 
 export interface Customer {
   id: string
@@ -16,124 +15,146 @@ export interface CustomerConfig {
   customers: Customer[]
 }
 
-const CONFIG_FILE = join(process.cwd(), 'customer-config.json')
-
-// In-memory cache for performance
-let cachedConfig: CustomerConfig | null = null
-let cacheTimestamp: number = 0
-const CACHE_TTL = 60000 // 1 minute cache
-
 export class CustomerService {
-  private static async loadConfig(): Promise<CustomerConfig> {
-    const now = Date.now()
-    
-    // Return cached config if still valid
-    if (cachedConfig && (now - cacheTimestamp) < CACHE_TTL) {
-      return cachedConfig
-    }
-
-    try {
-      const data = await readFile(CONFIG_FILE, 'utf-8')
-      cachedConfig = JSON.parse(data)
-      cacheTimestamp = now
-      return cachedConfig!
-    } catch (error) {
-      console.error('Failed to load customer config:', error)
-      // Return empty config as fallback
-      return { customers: [] }
-    }
-  }
-
-  private static async saveConfig(config: CustomerConfig): Promise<void> {
-    try {
-      await writeFile(CONFIG_FILE, JSON.stringify(config, null, 2))
-      // Update cache
-      cachedConfig = config
-      cacheTimestamp = Date.now()
-    } catch (error) {
-      console.error('Failed to save customer config:', error)
-      throw new Error('Kunde inte spara kundkonfiguration')
-    }
-  }
-
   static async getCustomers(): Promise<Customer[]> {
-    const config = await this.loadConfig()
-    return config.customers.filter(c => c.status === 'active')
+    const customers = await prisma.customer.findMany({
+      where: { status: 'active' },
+      orderBy: { createdAt: 'desc' }
+    })
+    
+    return customers.map(c => ({
+      ...c,
+      status: c.status as 'active' | 'inactive' | 'pending',
+      plan: c.plan as 'small' | 'medium' | 'enterprise',
+      createdAt: c.createdAt.toISOString()
+    }))
   }
 
   static async getAllCustomers(): Promise<Customer[]> {
-    const config = await this.loadConfig()
-    return config.customers
+    const customers = await prisma.customer.findMany({
+      orderBy: { createdAt: 'desc' }
+    })
+    
+    return customers.map(c => ({
+      ...c,
+      status: c.status as 'active' | 'inactive' | 'pending',
+      plan: c.plan as 'small' | 'medium' | 'enterprise',
+      createdAt: c.createdAt.toISOString()
+    }))
   }
 
   static async getCustomerBySubdomain(subdomain: string): Promise<Customer | null> {
-    const config = await this.loadConfig()
-    return config.customers.find(c => c.subdomain === subdomain) || null
+    const customer = await prisma.customer.findUnique({
+      where: { subdomain }
+    })
+    
+    if (!customer) return null
+    
+    return {
+      ...customer,
+      status: customer.status as 'active' | 'inactive' | 'pending',
+      plan: customer.plan as 'small' | 'medium' | 'enterprise',
+      createdAt: customer.createdAt.toISOString()
+    }
   }
 
   static async getCustomerById(id: string): Promise<Customer | null> {
-    const config = await this.loadConfig()
-    return config.customers.find(c => c.id === id) || null
+    const customer = await prisma.customer.findUnique({
+      where: { id }
+    })
+    
+    if (!customer) return null
+    
+    return {
+      ...customer,
+      status: customer.status as 'active' | 'inactive' | 'pending',
+      plan: customer.plan as 'small' | 'medium' | 'enterprise',
+      createdAt: customer.createdAt.toISOString()
+    }
   }
 
   static async addCustomer(customer: Omit<Customer, 'id' | 'createdAt'>): Promise<Customer> {
-    const config = await this.loadConfig()
-    
     // Check if subdomain already exists
-    if (config.customers.some(c => c.subdomain === customer.subdomain)) {
+    const existing = await prisma.customer.findUnique({
+      where: { subdomain: customer.subdomain }
+    })
+    
+    if (existing) {
       throw new Error('Subdomänen finns redan')
     }
 
-    const newCustomer: Customer = {
-      ...customer,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString()
-    }
-
-    config.customers.push(newCustomer)
-    await this.saveConfig(config)
+    const newCustomer = await prisma.customer.create({
+      data: {
+        name: customer.name,
+        subdomain: customer.subdomain,
+        databaseUrl: customer.databaseUrl,
+        status: customer.status,
+        contactEmail: customer.contactEmail,
+        plan: customer.plan
+      }
+    })
     
-    return newCustomer
+    return {
+      ...newCustomer,
+      status: newCustomer.status as 'active' | 'inactive' | 'pending',
+      plan: newCustomer.plan as 'small' | 'medium' | 'enterprise',
+      createdAt: newCustomer.createdAt.toISOString()
+    }
   }
 
   static async updateCustomer(id: string, updates: Partial<Customer>): Promise<Customer> {
-    const config = await this.loadConfig()
-    const index = config.customers.findIndex(c => c.id === id)
-    
-    if (index === -1) {
-      throw new Error('Kunden hittades inte')
-    }
-
-    // Don't allow changing id or createdAt
-    delete updates.id
-    delete updates.createdAt
-
-    // Check subdomain uniqueness if being changed
-    if (updates.subdomain && updates.subdomain !== config.customers[index].subdomain) {
-      if (config.customers.some(c => c.subdomain === updates.subdomain)) {
-        throw new Error('Subdomänen finns redan')
+    try {
+      // Check subdomain uniqueness if being changed
+      if (updates.subdomain) {
+        const existing = await prisma.customer.findFirst({
+          where: { 
+            subdomain: updates.subdomain,
+            NOT: { id }
+          }
+        })
+        
+        if (existing) {
+          throw new Error('Subdomänen finns redan')
+        }
       }
-    }
 
-    config.customers[index] = {
-      ...config.customers[index],
-      ...updates
+      const updatedCustomer = await prisma.customer.update({
+        where: { id },
+        data: {
+          name: updates.name,
+          subdomain: updates.subdomain,
+          databaseUrl: updates.databaseUrl,
+          status: updates.status,
+          contactEmail: updates.contactEmail,
+          plan: updates.plan
+        }
+      })
+      
+      return {
+        ...updatedCustomer,
+        status: updatedCustomer.status as 'active' | 'inactive' | 'pending',
+        plan: updatedCustomer.plan as 'small' | 'medium' | 'enterprise',
+        createdAt: updatedCustomer.createdAt.toISOString()
+      }
+    } catch (error: any) {
+      if (error.code === 'P2025') {
+        throw new Error('Kunden hittades inte')
+      }
+      throw error
     }
-
-    await this.saveConfig(config)
-    return config.customers[index]
   }
 
   static async deleteCustomer(id: string): Promise<void> {
-    const config = await this.loadConfig()
-    const index = config.customers.findIndex(c => c.id === id)
-    
-    if (index === -1) {
-      throw new Error('Kunden hittades inte')
+    try {
+      await prisma.customer.delete({
+        where: { id }
+      })
+    } catch (error: any) {
+      if (error.code === 'P2025') {
+        throw new Error('Kunden hittades inte')
+      }
+      throw error
     }
-
-    config.customers.splice(index, 1)
-    await this.saveConfig(config)
   }
 
   static async getDatabaseUrl(subdomain: string): Promise<string | null> {
@@ -147,11 +168,5 @@ export class CustomerService {
     }
 
     return customer.databaseUrl
-  }
-
-  // Clear cache if needed (e.g., after direct file modification)
-  static clearCache(): void {
-    cachedConfig = null
-    cacheTimestamp = 0
   }
 }

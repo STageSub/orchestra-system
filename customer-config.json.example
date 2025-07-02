@@ -1,0 +1,14 @@
+{
+  "customers": [
+    {
+      "id": "example",
+      "name": "Example Orchestra",
+      "subdomain": "example",
+      "databaseUrl": "env:DATABASE_URL_EXAMPLE",
+      "status": "active",
+      "createdAt": "2024-01-01T00:00:00Z",
+      "contactEmail": "admin@example.com",
+      "plan": "medium"
+    }
+  ]
+}

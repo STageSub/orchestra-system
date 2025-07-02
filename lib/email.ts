@@ -1,7 +1,6 @@
 import { Resend } from 'resend'
 import { prisma } from '@/lib/prisma'
-import { readFile } from 'fs/promises'
-import path from 'path'
+import { getFile } from '@/lib/file-handler-db'
 import { getLogStorage } from '@/lib/log-storage'
 
 // Initialize log storage for email module
@@ -247,16 +246,38 @@ async function getProjectFilesForEmail(
     
     for (const file of files) {
       try {
-        const filePath = path.join(process.cwd(), 'public', file.fileUrl)
-        const fileBuffer = await readFile(filePath)
-        const base64Content = fileBuffer.toString('base64')
-        
-        attachments.push({
-          filename: file.originalFileName || file.fileName, // Use original filename with extension if available
-          content: base64Content
-        })
-        
-        console.log(`Prepared attachment: ${file.originalFileName || file.fileName}`)
+        // Check if this is a new database-stored file
+        if (file.fileUrl.startsWith('/api/files/')) {
+          const fileId = file.fileUrl.replace('/api/files/', '')
+          const storedFile = await getFile(fileId)
+          
+          if (storedFile) {
+            attachments.push({
+              filename: file.originalFileName || file.fileName,
+              content: storedFile.content.toString('base64')
+            })
+            console.log(`Prepared attachment from DB: ${file.originalFileName || file.fileName}`)
+          }
+        } else {
+          // Legacy: Try to fetch from API endpoint for backward compatibility
+          console.log(`Attempting to fetch legacy file: ${file.fileUrl}`)
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+          const response = await fetch(`${baseUrl}${file.fileUrl}`)
+          
+          if (response.ok) {
+            const buffer = await response.arrayBuffer()
+            const base64Content = Buffer.from(buffer).toString('base64')
+            
+            attachments.push({
+              filename: file.originalFileName || file.fileName,
+              content: base64Content
+            })
+            
+            console.log(`Prepared attachment via HTTP: ${file.originalFileName || file.fileName}`)
+          } else {
+            console.error(`Failed to fetch file ${file.fileName} via HTTP:`, response.status)
+          }
+        }
       } catch (error) {
         console.error(`Failed to read file ${file.fileName}:`, error)
         // Continue with other files even if one fails

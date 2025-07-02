@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile, readFile } from 'fs/promises'
-import { join } from 'path'
+import { prisma } from '@/lib/prisma'
 
-// This is a simplified version that stores orchestra configs in a JSON file
+// This is a simplified version that stores orchestra configs in the database
 // In production, you would:
 // 1. Create actual PostgreSQL database via Supabase API
 // 2. Run Prisma migrations
@@ -19,24 +18,23 @@ interface OrchestraConfig {
   status: 'pending' | 'active' | 'inactive'
 }
 
-const CONFIG_FILE = join(process.cwd(), 'orchestra-config.json')
-
-async function getOrchestraConfigs(): Promise<OrchestraConfig[]> {
-  try {
-    const data = await readFile(CONFIG_FILE, 'utf-8')
-    return JSON.parse(data)
-  } catch {
-    return []
-  }
-}
-
-async function saveOrchestraConfigs(configs: OrchestraConfig[]) {
-  await writeFile(CONFIG_FILE, JSON.stringify(configs, null, 2))
-}
-
 export async function GET() {
   try {
-    const configs = await getOrchestraConfigs()
+    const orchestras = await prisma.orchestra.findMany({
+      orderBy: { createdAt: 'desc' }
+    })
+    
+    const configs: OrchestraConfig[] = orchestras.map(o => ({
+      id: o.id,
+      name: o.name,
+      subdomain: o.subdomain,
+      contactName: o.contactName,
+      contactEmail: o.contactEmail,
+      databaseUrl: o.databaseUrl || undefined,
+      createdAt: o.createdAt.toISOString(),
+      status: o.status as 'pending' | 'active' | 'inactive'
+    }))
+    
     return NextResponse.json(configs)
   } catch (error) {
     console.error('Failed to get orchestra configs:', error)
@@ -60,8 +58,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if subdomain already exists
-    const configs = await getOrchestraConfigs()
-    if (configs.some(c => c.subdomain === subdomain)) {
+    const existing = await prisma.orchestra.findUnique({
+      where: { subdomain }
+    })
+    
+    if (existing) {
       return NextResponse.json(
         { error: 'Subdomänen finns redan' },
         { status: 400 }
@@ -69,19 +70,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new orchestra config
-    const newOrchestra: OrchestraConfig = {
-      id: Date.now().toString(),
-      name,
-      subdomain,
-      contactName,
-      contactEmail,
-      createdAt: new Date().toISOString(),
-      status: 'active' // Changed to active for demo
-    }
-
-    // Save to config file
-    configs.push(newOrchestra)
-    await saveOrchestraConfigs(configs)
+    const newOrchestra = await prisma.orchestra.create({
+      data: {
+        name,
+        subdomain,
+        contactName,
+        contactEmail,
+        status: 'active' // Changed to active for demo
+      }
+    })
 
     // Simulate database provisioning
     // In production, this would:
@@ -102,7 +99,15 @@ export async function POST(request: NextRequest) {
       
       return NextResponse.json({
         success: true,
-        orchestra: newOrchestra,
+        orchestra: {
+          id: newOrchestra.id,
+          name: newOrchestra.name,
+          subdomain: newOrchestra.subdomain,
+          contactName: newOrchestra.contactName,
+          contactEmail: newOrchestra.contactEmail,
+          createdAt: newOrchestra.createdAt.toISOString(),
+          status: newOrchestra.status as 'pending' | 'active' | 'inactive'
+        },
         databaseName: `orchestra_${subdomain}`,
         message: 'Orkester skapad och databas provisionerad!',
         setupComplete: true
@@ -111,7 +116,15 @@ export async function POST(request: NextRequest) {
       // Fallback to manual setup
       return NextResponse.json({
         success: true,
-        orchestra: newOrchestra,
+        orchestra: {
+          id: newOrchestra.id,
+          name: newOrchestra.name,
+          subdomain: newOrchestra.subdomain,
+          contactName: newOrchestra.contactName,
+          contactEmail: newOrchestra.contactEmail,
+          createdAt: newOrchestra.createdAt.toISOString(),
+          status: newOrchestra.status as 'pending' | 'active' | 'inactive'
+        },
         databaseName: `orchestra_${subdomain}`,
         message: 'Orkester skapad! Databas konfigureras automatiskt inom 5 minuter.',
         setupComplete: false

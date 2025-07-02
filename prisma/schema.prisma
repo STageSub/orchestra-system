@@ -8,24 +8,24 @@ datasource db {
 }
 
 model Musician {
-  id               Int                     @id @default(autoincrement())
-  musicianId       String                  @unique @default(cuid())
-  firstName        String
-  lastName         String
-  email            String                  @unique
-  phone            String?
-  preferredLanguage String?                @default("sv")
-  localResidence   Boolean                 @default(false)
-  notes            String?                 @db.Text
-  isActive         Boolean                 @default(true)
-  isArchived       Boolean                 @default(false)
-  archivedAt       DateTime?
-  restoredAt       DateTime?
-  createdAt        DateTime                @default(now())
-  updatedAt        DateTime                @updatedAt
-  qualifications   MusicianQualification[]
-  rankings         Ranking[]
-  requests         Request[]
+  id                Int                     @id @default(autoincrement())
+  musicianId        String                  @unique @default(cuid())
+  firstName         String
+  lastName          String
+  email             String                  @unique
+  phone             String?
+  preferredLanguage String?                 @default("sv")
+  localResidence    Boolean                 @default(false)
+  notes             String?                 @db.Text
+  isActive          Boolean                 @default(true)
+  isArchived        Boolean                 @default(false)
+  archivedAt        DateTime?
+  restoredAt        DateTime?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  qualifications    MusicianQualification[]
+  rankings          Ranking[]
+  requests          Request[]
 }
 
 model Instrument {
@@ -89,39 +89,40 @@ model Ranking {
 }
 
 model Project {
-  id                Int              @id @default(autoincrement())
-  projectId         String           @unique @default(cuid())
+  id                Int             @id @default(autoincrement())
+  projectId         String          @unique @default(cuid())
   name              String
   startDate         DateTime
   weekNumber        Int
   rehearsalSchedule String?
   concertInfo       String?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
   notes             String?
   projectFiles      ProjectFile[]
   projectNeeds      ProjectNeed[]
   groupEmailLogs    GroupEmailLog[]
+  fileStorage       FileStorage[]
 }
 
 model ProjectNeed {
-  id                  Int           @id @default(autoincrement())
-  projectNeedId       String        @unique @default(cuid())
-  projectId           Int
-  positionId          Int
-  quantity            Int           @default(1)
-  rankingListId       Int
-  requestStrategy     String
-  maxRecipients       Int?
-  responseTimeHours   Int?          @default(24)
-  requireLocalResidence Boolean     @default(false)
-  archivedAt          DateTime?
-  status              String        @default("active")
-  projectFiles        ProjectFile[]
-  position            Position      @relation(fields: [positionId], references: [id], onDelete: Cascade)
-  project             Project       @relation(fields: [projectId], references: [id])
-  rankingList         RankingList   @relation(fields: [rankingListId], references: [id], onDelete: Cascade)
-  requests            Request[]
+  id                    Int           @id @default(autoincrement())
+  projectNeedId         String        @unique @default(cuid())
+  projectId             Int
+  positionId            Int
+  quantity              Int           @default(1)
+  rankingListId         Int
+  requestStrategy       String
+  maxRecipients         Int?
+  responseTimeHours     Int?          @default(24)
+  requireLocalResidence Boolean       @default(false)
+  archivedAt            DateTime?
+  status                String        @default("active")
+  projectFiles          ProjectFile[]
+  position              Position      @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  project               Project       @relation(fields: [projectId], references: [id])
+  rankingList           RankingList   @relation(fields: [rankingListId], references: [id], onDelete: Cascade)
+  requests              Request[]
 }
 
 model Request {
@@ -176,8 +177,8 @@ model ProjectFile {
   projectFileId    String       @unique @default(cuid())
   projectId        Int
   fileName         String
-  originalFileName String?      // New: peter.pdf
-  mimeType         String?      // New: application/pdf
+  originalFileName String? // New: peter.pdf
+  mimeType         String? // New: application/pdf
   fileUrl          String
   fileType         String
   uploadedAt       DateTime     @default(now())
@@ -233,10 +234,47 @@ model GroupEmailLog {
   projectId   Int?
   subject     String
   message     String
-  recipients  Json     // Array of {email, name}
+  recipients  Json // Array of {email, name}
   sentCount   Int
   failedCount Int
-  filters     Json?    // {instruments: [], positions: []}
+  filters     Json? // {instruments: [], positions: []}
   createdAt   DateTime @default(now())
   project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+}
+
+model Customer {
+  id           String   @id @default(cuid())
+  name         String
+  subdomain    String   @unique
+  databaseUrl  String
+  status       String   @default("active") // active, inactive, pending
+  contactEmail String
+  plan         String   @default("small") // small, medium, enterprise
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Orchestra {
+  id           String   @id @default(cuid())
+  name         String
+  subdomain    String   @unique
+  contactName  String
+  contactEmail String
+  databaseUrl  String?
+  status       String   @default("pending") // pending, active, inactive
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model FileStorage {
+  id           String   @id @default(cuid())
+  fileName     String
+  originalName String
+  mimeType     String
+  size         Int
+  content      Bytes // Store file content as binary
+  projectId    Int?
+  needId       Int?
+  createdAt    DateTime @default(now())
+  project      Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }

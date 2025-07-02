@@ -53,3 +53,9 @@ public/uploads/projects/*
 # migration files
 exports/
 test-db.js
+
+# Customer configuration (contains sensitive data)
+customer-config.json
+
+# Orchestra configuration (created by superadmin)
+orchestra-config.json

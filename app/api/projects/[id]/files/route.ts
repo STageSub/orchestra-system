@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateUniqueId } from '@/lib/id-generator'
-import { saveFile, generateFileName, isValidFileType, isValidFileSize } from '@/lib/file-handler'
-
-// Use Node.js runtime for file uploads
-export const runtime = 'nodejs'
+import { saveFile, generateFileName, isValidFileType, isValidFileSize } from '@/lib/file-handler-db'
 
 // Increase body size limit for file uploads
 export const maxDuration = 60 // 60 seconds timeout
@@ -139,7 +136,14 @@ export async function POST(
       projectNeedId ? parseInt(projectNeedId) : undefined
     )
     
-    const fileUrl = await saveFile(buffer, generatedFileName)
+    const fileUrl = await saveFile(
+      buffer, 
+      generatedFileName,
+      file.name,
+      file.type || 'application/octet-stream',
+      projectId,
+      projectNeedId ? parseInt(projectNeedId) : undefined
+    )
     
     // Generera unikt ID
     const projectFileId = await generateUniqueId('projectFile')
@@ -150,6 +154,8 @@ export async function POST(
         projectFileId,
         projectId,
         fileName,
+        originalFileName: file.name,
+        mimeType: file.type || 'application/octet-stream',
         fileUrl,
         fileType,
         projectNeedId: projectNeedId ? parseInt(projectNeedId) : null,

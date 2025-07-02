@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateUniqueId } from '@/lib/id-generator'
-import { saveFile, generateFileName, isValidFileType, isValidFileSize } from '@/lib/file-handler'
+import { saveFile, generateFileName, isValidFileType, isValidFileSize } from '@/lib/file-handler-db'
 
 // Alternative approach using JSON with base64 encoding
 export async function POST(
@@ -60,7 +60,14 @@ export async function POST(
       projectNeedId ? parseInt(projectNeedId) : undefined
     )
     
-    const fileUrl = await saveFile(buffer, generatedFileName)
+    const fileUrl = await saveFile(
+      buffer, 
+      generatedFileName,
+      originalFileName,
+      mimeType || fileType || 'application/octet-stream',
+      projectId,
+      projectNeedId ? parseInt(projectNeedId) : undefined
+    )
     
     // Generate unique ID
     const projectFileId = await generateUniqueId('projectFile')
