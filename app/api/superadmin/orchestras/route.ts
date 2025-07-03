@@ -54,8 +54,7 @@ export async function POST(request: NextRequest) {
   let createdUser: { id: string } | null = null
   
   try {
-    const prisma = await getPrisma()
-  const prisma = await getPrismaForUser(request)
+    const prisma = await getPrismaForUser(request)
     const { name, subdomain, contactName, contactEmail } = await request.json()
 
     // Validate input

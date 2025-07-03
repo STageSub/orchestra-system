@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPrismaForUser } from '@/lib/auth-prisma'
-import { getPrisma } from '@/lib/prisma'
 import { PrismaClient } from '@prisma/client'
 import { getSupabaseManagement } from '@/lib/supabase-management'
 import { hashPassword } from '@/lib/auth-db'
 
 export async function POST(request: NextRequest) {
   try {
-    const prisma = await getPrisma()
-  const prisma = await getPrismaForUser(request)
+    const prisma = await getPrismaForUser(request)
     const { subdomain, orchestraName } = await request.json()
 
     if (!subdomain || !orchestraName) {

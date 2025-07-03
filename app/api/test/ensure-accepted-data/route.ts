@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { getPrismaForUser } from '@/lib/auth-prisma'
-import { getPrisma } from '@/lib/prisma'
 
 export async function GET(request: Request) {
   if (process.env.NODE_ENV !== 'development') {
@@ -14,8 +13,7 @@ export async function GET(request: Request) {
   const projectId = parseInt(url.searchParams.get('projectId') || '4')
 
   try {
-    const prisma = await getPrisma()
-  const prisma = await getPrismaForUser(request)
+    const prisma = await getPrismaForUser(request)
     console.log('[ENSURE DATA] Checking project:', projectId)
 
     // 1. Check if project exists

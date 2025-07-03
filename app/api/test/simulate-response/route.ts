@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { getPrismaForUser } from '@/lib/auth-prisma'
-import { getPrisma } from '@/lib/prisma'
 import { handleDeclinedRequest } from '@/lib/request-handlers'
 import { generateUniqueId } from '@/lib/id-generator'
 

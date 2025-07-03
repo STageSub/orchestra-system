@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { getPrismaForUser } from '@/lib/auth-prisma'
-import { getPrisma } from '@/lib/prisma'
 import { getRecipientsForNeed } from '@/lib/recipient-selection'
 
 export async function POST(request: Request) {
@@ -12,8 +11,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const prisma = await getPrisma()
-  const prisma = await getPrismaForUser(request)
+    const prisma = await getPrismaForUser(request)
     const { needId } = await request.json()
 
     const need = await prisma.projectNeed.findUnique({
