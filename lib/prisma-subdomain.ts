@@ -7,6 +7,12 @@ export async function getPrismaFromHeaders(headers: Headers): Promise<PrismaClie
   return await getPrismaClient(subdomain)
 }
 
+// Helper to get Prisma client from a standard Request object (for API routes)
+export async function getPrismaForRequest(request: Request): Promise<PrismaClient> {
+  const subdomain = request.headers.get('x-subdomain') || 'localhost'
+  return await getPrismaClient(subdomain)
+}
+
 // Export a default client for non-request contexts (like scripts)
 // Note: This is initialized lazily on first use
 let defaultPrisma: PrismaClient | null = null

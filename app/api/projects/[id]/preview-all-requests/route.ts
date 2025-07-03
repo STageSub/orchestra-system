@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 import { getRecipientsForProject } from '@/lib/recipient-selection'
 
 export async function GET(
@@ -9,6 +9,7 @@ export async function GET(
   const { id: projectId } = await params
 
   try {
+    const prisma = await getPrismaForUser(request)
     // Get project details
     const project = await prisma.project.findUnique({
       where: { id: parseInt(projectId) },
@@ -28,7 +29,7 @@ export async function GET(
     const result = await getRecipientsForProject(parseInt(projectId), {
       dryRun: true,
       includeDetails: true // Detta säkerställer att vi får allMusiciansWithStatus
-    })
+    }, prisma)
 
     return NextResponse.json({
       project: {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 
 export async function GET(
   request: Request,
@@ -14,6 +14,7 @@ export async function GET(
   }
 
   try {
+  const prisma = await getPrismaForUser(request)
     const { projectId } = await context.params
     const projectIdNum = parseInt(projectId)
 

@@ -1,0 +1,65 @@
+{
+  "exportDate": "2025-07-03T14:52:34.025Z",
+  "orchestras": [
+    {
+      "id": "cmcnbutg10000smyy9bg24gqt",
+      "name": "SCO",
+      "subdomain": "sco",
+      "contactName": "SCO",
+      "contactEmail": "Sco@stagesub.com",
+      "databaseUrl": "postgresql://postgres.tckcuexsdzovsqaqiqkr:Kurdistan12@aws-0-eu-north-1.pooler.supabase.com:6543/postgres?pgbouncer=true",
+      "status": "active",
+      "createdAt": "2025-07-03T11:53:53.810Z",
+      "updatedAt": "2025-07-03T13:10:31.738Z"
+    },
+    {
+      "id": "cmcndgrlg0003smjayd5wv928",
+      "name": "Orchestra SCOSO",
+      "subdomain": "scosco",
+      "contactName": "sco",
+      "contactEmail": "sco@stagesub.com",
+      "databaseUrl": "postgresql://postgres.hqzrqnsvhyfypqklgoas:7N7AgCT*%23Shs_KrYP3_2-sdfDM%3D%2Bp7V%25@aws-0-eu-north-1.pooler.supabase.com:6543/postgres?pgbouncer=true",
+      "status": "active",
+      "createdAt": "2025-07-03T12:38:57.461Z",
+      "updatedAt": "2025-07-03T14:02:30.709Z"
+    }
+  ],
+  "users": [
+    {
+      "id": "cmcnekydm0002smc5kmkda3ua",
+      "username": "superadmin",
+      "email": "superadmin@stagesub.com",
+      "passwordHash": "$2b$10$3vKtMGfvyPelvFwmHVnxju0q/QAwBYJKsw1u4py4d5w1uSrIu3Xvy",
+      "role": "superadmin",
+      "orchestraId": null,
+      "active": true,
+      "lastLogin": null,
+      "createdAt": "2025-07-03T13:10:12.490Z",
+      "updatedAt": "2025-07-03T13:10:12.490Z"
+    },
+    {
+      "id": "cmcndgw2a0005smjahy4l9vaq",
+      "username": "scosco-admin",
+      "email": "sco@stagesub.com",
+      "passwordHash": "$2b$10$uSyI9PhbSOLHBQx01KC5XuzyrhH7djO.X1VbfS9lnBpd6LqBIHLay",
+      "role": "admin",
+      "orchestraId": "cmcndgrlg0003smjayd5wv928",
+      "active": true,
+      "lastLogin": "2025-07-03T13:33:31.030Z",
+      "createdAt": "2025-07-03T12:39:03.251Z",
+      "updatedAt": "2025-07-03T13:33:31.030Z"
+    },
+    {
+      "id": "cmcnekxmp0001smc58n1g4faa",
+      "username": "sco-admin",
+      "email": "admin@sco.stagesub.com",
+      "passwordHash": "$2b$10$RpiEjXLjXf85wHiW5TTmbO3WUaQtfRSJjwKlCTHIZkWWBoTnBC.YC",
+      "role": "admin",
+      "orchestraId": "cmcnbutg10000smyy9bg24gqt",
+      "active": true,
+      "lastLogin": "2025-07-03T14:10:14.853Z",
+      "createdAt": "2025-07-03T13:10:11.520Z",
+      "updatedAt": "2025-07-03T14:10:14.854Z"
+    }
+  ]
+}

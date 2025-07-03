@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getRecipientsForNeed } from '@/lib/recipient-selection'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 
 export async function GET(
   request: Request,
@@ -8,11 +9,12 @@ export async function GET(
   const { id: projectId, needId } = await params
 
   try {
+    const prisma = await getPrismaForUser(request)
     // Use unified function with preview mode
     const result = await getRecipientsForNeed(parseInt(needId), {
       dryRun: true,
       includeDetails: true
-    })
+    }, prisma)
 
     const need = result.needs[0]
 

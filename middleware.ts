@@ -4,13 +4,19 @@ import { verifyToken } from '@/lib/auth'
 
 // Inline getSubdomain to avoid importing database-config which has Prisma
 function getSubdomain(hostname: string): string {
-  // Handle localhost
+  // Extract subdomain from hostname
+  const parts = hostname.split('.')
+  
+  // Handle localhost with subdomain (e.g., goteborg.localhost:3000)
   if (hostname.includes('localhost')) {
+    if (parts.length >= 2) {
+      // Return the subdomain part (e.g., 'goteborg' from 'goteborg.localhost:3000')
+      return parts[0]
+    }
     return 'localhost'
   }
 
-  // Extract subdomain from hostname
-  const parts = hostname.split('.')
+  // Handle production domains (e.g., goteborg.stagesub.com)
   if (parts.length >= 3) {
     return parts[0]
   }
@@ -22,12 +28,19 @@ function getSubdomain(hostname: string): string {
 const COOKIE_NAME = 'orchestra-admin-session'
 
 export async function middleware(request: NextRequest) {
-  const response = NextResponse.next()
   const hostname = request.headers.get('host') || 'localhost:3001'
   const subdomain = getSubdomain(hostname)
   
-  // Add subdomain to request headers for API routes to use
-  response.headers.set('x-subdomain', subdomain)
+  // Clone the request headers
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-subdomain', subdomain)
+  
+  // Create response with modified request
+  const response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    }
+  })
   
   // Handle superadmin routes
   if (request.nextUrl.pathname.startsWith('/superadmin')) {

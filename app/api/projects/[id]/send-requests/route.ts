@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getRecipientsForNeed, getRecipientsForProject } from '@/lib/recipient-selection'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 
 export async function POST(
   request: NextRequest,
@@ -12,6 +13,7 @@ export async function POST(
   const { projectNeedId } = body
 
   try {
+    const prisma = await getPrismaForUser(request)
     let totalSent = 0
     const results = []
 
@@ -20,7 +22,7 @@ export async function POST(
       const result = await getRecipientsForNeed(projectNeedId, {
         dryRun: false,
         includeDetails: false
-      })
+      }, prisma)
 
       totalSent = result.totalToSend
       if (result.needs.length > 0) {
@@ -36,7 +38,7 @@ export async function POST(
       const result = await getRecipientsForProject(parseInt(id), {
         dryRun: false,
         includeDetails: false
-      })
+      }, prisma)
 
       totalSent = result.totalToSend
       result.needs.forEach(need => {

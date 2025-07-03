@@ -1,5 +1,11 @@
 import { PrismaClient } from '@prisma/client'
+import { getPrisma as getDynamicPrisma } from './prisma-dynamic'
 
+// Re-export the dynamic getPrisma function
+export { getPrisma } from './prisma-dynamic'
+
+// Keep the old prisma export for backward compatibility during migration
+// This will always point to the main database (Neon)
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
@@ -17,8 +23,6 @@ const prismaClientSingleton = () => {
     errorFormat: 'pretty',
   })
 }
-
-// Removed global declaration - already handled by globalForPrisma
 
 export const prisma = globalForPrisma.prisma ?? prismaClientSingleton()
 

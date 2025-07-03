@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 import { generateUniqueId } from '@/lib/id-generator'
 
 export async function GET(request: Request) {
   try {
+    const prisma = await getPrismaForUser(request)
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
     const instrumentId = searchParams.get('instrumentId')
@@ -78,6 +79,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const prisma = await getPrismaForUser(request)
     const body = await request.json()
     const { firstName, lastName, email, phone, preferredLanguage, localResidence, notes, qualificationIds } = body
     
@@ -108,7 +110,7 @@ export async function POST(request: Request) {
     }
     
     // Generate unique musician ID
-    const musicianId = await generateUniqueId('musician')
+    const musicianId = await generateUniqueId('musician', prisma)
     
     // Create musician with qualifications
     const musician = await prisma.musician.create({

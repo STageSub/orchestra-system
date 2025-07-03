@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const prisma = await getPrismaForUser(request)
     const { id } = await params
     const body = await request.json()
     const { rankings } = body

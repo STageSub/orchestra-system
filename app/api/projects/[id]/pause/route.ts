@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 
 export async function POST(
   request: NextRequest,
@@ -8,6 +8,7 @@ export async function POST(
   const { id } = await params
 
   try {
+    const prisma = await getPrismaForUser(request)
     const { pause } = await request.json()
 
     // Get all needs for this project

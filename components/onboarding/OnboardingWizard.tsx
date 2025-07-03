@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CheckCircle, Users, Calendar, Settings, ArrowRight, X } from 'lucide-react'
+import { CheckCircle, Users, Calendar, Settings, X } from 'lucide-react'
 import WelcomeStep from './steps/WelcomeStep'
 import AddMusiciansStep from './steps/AddMusiciansStep'
 import CreateProjectStep from './steps/CreateProjectStep'

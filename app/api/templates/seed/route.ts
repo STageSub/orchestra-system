@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 import { generateUniqueId } from '@/lib/id-generator'
 
 const defaultTemplates = [
@@ -141,6 +141,7 @@ Orchestra Administration`,
 
 export async function POST() {
   try {
+    const prisma = await getPrismaForUser(request)
     // Get existing templates
     const existingTemplates = await prisma.emailTemplate.findMany({
       select: { type: true }
@@ -162,7 +163,7 @@ export async function POST() {
 
     // Create missing templates
     for (const template of templatesToCreate) {
-      const templateId = await generateUniqueId('template')
+      const templateId = await generateUniqueId('emailTemplate', prisma)
       
       await prisma.emailTemplate.create({
         data: {

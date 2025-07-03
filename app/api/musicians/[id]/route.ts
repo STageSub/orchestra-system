@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 
 export async function GET(
   request: Request,
@@ -7,6 +7,7 @@ export async function GET(
 ) {
   const { id } = await params
   try {
+    const prisma = await getPrismaForUser(request)
     const musician = await prisma.musician.findUnique({
       where: { id: parseInt(id) },
       include: {
@@ -63,6 +64,7 @@ export async function PUT(
 ) {
   const { id } = await params
   try {
+    const prisma = await getPrismaForUser(request)
     const body = await request.json()
     const { firstName, lastName, email, phone, preferredLanguage, localResidence, notes, qualificationIds, isActive, isArchived } = body
 
@@ -193,6 +195,7 @@ export async function DELETE(
 ) {
   const { id } = await params
   try {
+    const prisma = await getPrismaForUser(request)
     // Soft delete - archive the musician
     await prisma.musician.update({
       where: { id: parseInt(id) },

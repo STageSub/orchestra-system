@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string; musicianId: string }> }
 ) {
   try {
+    const prisma = await getPrismaForUser(request)
     const { id, musicianId } = await params
     
     // Find the ranking entry

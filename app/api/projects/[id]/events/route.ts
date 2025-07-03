@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const prisma = await getPrismaForUser(request)
     const { id } = await context.params
     const searchParams = request.nextUrl.searchParams
     const since = searchParams.get('since')

@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 
 export async function GET(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const prisma = await getPrismaForUser(request)
     const { id } = await context.params
     
     const project = await prisma.project.findUnique({
@@ -93,6 +94,7 @@ export async function PUT(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const prisma = await getPrismaForUser(request)
     const { id } = await context.params
     const body = await request.json()
     const { name, startDate, weekNumber, rehearsalSchedule, concertInfo, notes } = body
@@ -124,6 +126,7 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const prisma = await getPrismaForUser(request)
     const { id } = await context.params
     
     // First check if the project has any requests

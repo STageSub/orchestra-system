@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 import { generateUniqueId } from '@/lib/id-generator'
 
 export async function POST(request: Request) {
   try {
+    const prisma = await getPrismaForUser(request)
     const body = await request.json()
     const { positionId, listType, description } = body
     
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
     }
     
     // Generera unikt ID
-    const rankingListId = await generateUniqueId('rankingList')
+    const rankingListId = await generateUniqueId('rankingList', prisma)
     
     // Skapa rankningslista
     const rankingList = await prisma.rankingList.create({

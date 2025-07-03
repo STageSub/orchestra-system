@@ -1,21 +1,32 @@
-import { prisma } from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
 
-export async function generateRequestToken(requestId: number, responseTimeHours: number): Promise<string> {
+export async function generateRequestToken(requestId: number, responseTimeHours: number, prisma: PrismaClient): Promise<string> {
+  console.log('=== generateRequestToken Debug ===')
+  console.log('Request ID:', requestId)
+  console.log('Response time hours:', responseTimeHours)
+  
   // Token expires exactly when response time runs out
   const expiresAt = new Date()
   expiresAt.setTime(expiresAt.getTime() + (responseTimeHours * 60 * 60 * 1000))
+  console.log('Token expires at:', expiresAt.toISOString())
 
+  // Use the orchestra database to keep tokens with their requests
   const token = await prisma.requestToken.create({
     data: {
       requestId,
       expiresAt
     }
   })
+  
+  console.log('Token created:', token.token)
+  console.log('Token ID:', token.id)
+  console.log('=== Token Creation Complete ===')
 
   return token.token
 }
 
-export async function validateToken(token: string) {
+export async function validateToken(token: string, prisma: PrismaClient) {
+  // Use the orchestra database passed as parameter
   const requestToken = await prisma.requestToken.findUnique({
     where: { token },
     include: {
@@ -56,15 +67,16 @@ export async function validateToken(token: string) {
   return { valid: true, data: requestToken } as const
 }
 
-export async function markTokenAsUsed(token: string) {
+export async function markTokenAsUsed(token: string, prisma: PrismaClient) {
+  // Use the orchestra database passed as parameter
   await prisma.requestToken.update({
     where: { token },
     data: { usedAt: new Date() }
   })
 }
 
-export async function getOrCreateTokenForRequest(requestId: number): Promise<string> {
-  // Check if there's an existing valid token
+export async function getOrCreateTokenForRequest(requestId: number, prisma: PrismaClient): Promise<string> {
+  // Check if there's an existing valid token in orchestra database
   const existingToken = await prisma.requestToken.findFirst({
     where: {
       requestId,
@@ -90,5 +102,5 @@ export async function getOrCreateTokenForRequest(requestId: number): Promise<str
   }
 
   // Create new token with correct expiry time
-  return generateRequestToken(requestId, request.projectNeed.responseTimeHours)
+  return generateRequestToken(requestId, request.projectNeed.responseTimeHours, prisma)
 }

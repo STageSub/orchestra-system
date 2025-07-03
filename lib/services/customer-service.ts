@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/prisma'
 
 export interface Customer {
   id: string

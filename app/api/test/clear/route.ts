@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/prisma'
 
 export async function DELETE() {
   if (process.env.NODE_ENV !== 'development') {
@@ -10,6 +10,7 @@ export async function DELETE() {
   }
 
   try {
+    const prisma = await getPrisma()
     await prisma.$transaction([
       prisma.communicationLog.deleteMany({}),
       prisma.requestToken.deleteMany({}),

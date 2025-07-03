@@ -34,7 +34,31 @@ export default function NewOrchestraPage() {
       }
 
       const result = await response.json()
-      alert(`Orkester skapad! Databas: ${result.databaseName}`)
+      
+      let message = result.message || 'Orkester skapad!'
+      
+      if (result.adminCredentials) {
+        message += '\n\n=== ADMIN INLOGGNING ===\n'
+        message += `Användarnamn: ${result.adminCredentials.username}\n`
+        message += `Lösenord: ${result.adminCredentials.password}\n`
+        message += `E-post: ${result.adminCredentials.email}\n`
+      }
+      
+      if (result.migrationInstructions) {
+        message += '\n\n=== MIGRATIONER KRÄVS ===\n'
+        message += 'Kör följande kommando för att skapa tabeller:\n\n'
+        message += result.migrationInstructions.command + '\n'
+        
+        if (result.migrationInstructions.projectId) {
+          message += `\nSupabase projekt-ID: ${result.migrationInstructions.projectId}\n`
+        }
+        
+        message += '\nOBS: Orkestern kan inte användas förrän migrationer har körts!'
+      }
+      
+      message += '\n\nVIKTIGT: Spara dessa uppgifter säkert!'
+      
+      alert(message)
       router.push('/superadmin')
     } catch (err: any) {
       setError(err.message)
@@ -96,7 +120,7 @@ export default function NewOrchestraPage() {
                 onChange={(e) => setFormData({ ...formData, subdomain: e.target.value })}
                 className="flex-1 rounded-l-md border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                 placeholder="uppsala"
-                pattern="[a-z0-9-]+"
+                pattern="[a-z0-9\-]+"
               />
               <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
                 .stagesub.com
@@ -164,16 +188,10 @@ export default function NewOrchestraPage() {
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-300"
           >
             <Building className="w-4 h-4" />
-            {isSubmitting ? 'Skapar...' : 'Skapa Orkester'}
+            {isSubmitting ? 'Skapar orkester och databas...' : 'Skapa Orkester'}
           </button>
         </div>
 
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <p className="text-sm text-blue-800">
-            <strong>OBS:</strong> För närvarande måste databasen skapas manuellt i Supabase/PostgreSQL.
-            Detta formulär förbereder konfigurationen för den nya orkestern.
-          </p>
-        </div>
       </form>
     </div>
   )

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Users, CreditCard, Activity, TrendingUp, AlertCircle, Database, Settings, Building } from 'lucide-react'
 import CustomerManagement from '@/components/superadmin/CustomerManagement'
+import OrchestraManagement from '@/components/superadmin/OrchestraManagement'
 
 interface CustomerStats {
   subdomain: string
@@ -27,7 +28,7 @@ interface SuperadminStats {
 export default function SuperAdminDashboard() {
   const [stats, setStats] = useState<SuperadminStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'customers'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'customers' | 'orchestras'>('overview')
 
   useEffect(() => {
     fetchStats()
@@ -75,6 +76,16 @@ export default function SuperAdminDashboard() {
             }`}
           >
             Kundhantering
+          </button>
+          <button
+            onClick={() => setActiveTab('orchestras')}
+            className={`px-4 py-2 rounded-md transition-colors ${
+              activeTab === 'orchestras'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Orkestrar
           </button>
         </div>
       </div>
@@ -225,8 +236,10 @@ export default function SuperAdminDashboard() {
         </div>
       </div>
         </>
-      ) : (
+      ) : activeTab === 'customers' ? (
         <CustomerManagement />
+      ) : (
+        <OrchestraManagement />
       )}
     </div>
   )

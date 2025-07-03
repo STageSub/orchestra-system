@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createToken, setAuthCookie, verifyPassword, verifySuperadminPassword } from '@/lib/auth'
+import { authenticateUser, createToken as createDbToken } from '@/lib/auth-db'
 import { getSubdomain } from '@/lib/database-config'
 
 // Rate limiting: Track login attempts
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    const { password, loginType = 'admin' } = await request.json()
+    const { username, password, loginType = 'admin' } = await request.json()
     
     if (!password) {
       return NextResponse.json(
@@ -53,27 +54,46 @@ export async function POST(request: NextRequest) {
     const hostname = request.headers.get('host') || 'localhost:3001'
     const subdomain = getSubdomain(hostname)
     
-    // Verify password based on login type
-    let isValid = false
+    let token: string
     let role = 'admin'
     
-    if (loginType === 'superadmin') {
-      isValid = await verifySuperadminPassword(password)
-      role = 'superadmin'
+    // Check if using new database authentication (username provided)
+    if (username) {
+      // New authentication system
+      const user = await authenticateUser(username, password)
+      
+      if (!user) {
+        return NextResponse.json(
+          { error: 'Fel användarnamn eller lösenord' },
+          { status: 401 }
+        )
+      }
+      
+      // Create JWT token with user info
+      token = await createDbToken(user, subdomain)
+      role = user.role
     } else {
-      isValid = await verifyPassword(password)
-      role = 'admin'
+      // Old authentication system (password only)
+      let isValid = false
+      
+      if (loginType === 'superadmin') {
+        isValid = await verifySuperadminPassword(password)
+        role = 'superadmin'
+      } else {
+        isValid = await verifyPassword(password)
+        role = 'admin'
+      }
+      
+      if (!isValid) {
+        return NextResponse.json(
+          { error: 'Fel lösenord' },
+          { status: 401 }
+        )
+      }
+      
+      // Create JWT token with role and subdomain
+      token = await createToken(undefined, role, subdomain)
     }
-    
-    if (!isValid) {
-      return NextResponse.json(
-        { error: 'Fel lösenord' },
-        { status: 401 }
-      )
-    }
-    
-    // Create JWT token with role and subdomain
-    const token = await createToken(undefined, role, subdomain)
     
     // Reset login attempts on successful login
     loginAttempts.delete(ip)

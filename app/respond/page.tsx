@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation'
 function RespondContent() {
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
+  const org = searchParams.get('org')
   const presetResponse = searchParams.get('response') as 'accepted' | 'declined' | null
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -46,8 +47,9 @@ function RespondContent() {
 
   const validateToken = async () => {
     try {
-      console.log('Validating token:', token)
-      const response = await fetch(`/api/respond?token=${token}`)
+      console.log('Validating token:', token, 'org:', org)
+      const url = org ? `/api/respond?token=${token}&org=${org}` : `/api/respond?token=${token}`
+      const response = await fetch(url)
       const data = await response.json()
 
       if (!response.ok) {
@@ -87,7 +89,7 @@ function RespondContent() {
       const res = await fetch('/api/respond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, response })
+        body: JSON.stringify({ token, response, org })
       })
 
       console.log('=== RESPOND FRONTEND - API Response ===')

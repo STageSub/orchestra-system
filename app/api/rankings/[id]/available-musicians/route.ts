@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const prisma = await getPrismaForUser(request)
     const { id } = await params;
     // Hämta rankningslistan för att få position
     const rankingList = await prisma.rankingList.findUnique({

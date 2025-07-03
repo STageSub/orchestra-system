@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const prisma = await getPrismaForUser(request)
     // Initialize stats object
     const stats = {
       totalMusicians: 0,

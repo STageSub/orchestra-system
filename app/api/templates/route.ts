@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 import { generateUniqueId } from '@/lib/id-generator'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const prisma = await getPrismaForUser(request)
     const templates = await prisma.emailTemplate.findMany({
       orderBy: { type: 'asc' }
     })
@@ -20,6 +21,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const prisma = await getPrismaForUser(request)
     const body = await request.json()
     const { type, subject, body: templateBody, variables } = body
     
@@ -36,7 +38,7 @@ export async function POST(request: Request) {
     }
     
     // Generate unique template ID
-    const emailTemplateId = await generateUniqueId('emailTemplate')
+    const emailTemplateId = await generateUniqueId('emailTemplate', prisma)
     
     const template = await prisma.emailTemplate.create({
       data: {

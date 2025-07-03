@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/prisma'
 import { formatHoursToReadable } from '@/lib/utils'
 
 export async function POST(request: Request) {
@@ -11,6 +11,7 @@ export async function POST(request: Request) {
   }
 
   try {
+    const prisma = await getPrisma()
     const { requestId, type } = await request.json()
 
     const req = await prisma.request.findUnique({
@@ -68,7 +69,13 @@ export async function POST(request: Request) {
 
     const tokenString = token?.token || 'test-token'
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    const responseUrl = `${appUrl}/respond?token=${tokenString}`
+    
+    // Get subdomain from the prisma client to include in response URL
+    const { getSubdomainFromPrismaClient } = await import('@/lib/database-config')
+    const subdomain = getSubdomainFromPrismaClient(prisma)
+    const responseUrl = subdomain 
+      ? `${appUrl}/respond?token=${tokenString}&org=${subdomain}`
+      : `${appUrl}/respond?token=${tokenString}`
 
     const variables: Record<string, string> = {
       musician_name: `${musician.firstName} ${musician.lastName}`,

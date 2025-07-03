@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
 import { generateRequestToken } from '@/lib/request-tokens'
 import { sendRequestEmail } from '@/lib/email'
 import { generateUniqueId } from '@/lib/id-generator'
@@ -83,7 +83,8 @@ interface MusicianConflictInfo {
 // Helper function to analyze conflicts across all needs
 async function analyzeConflictsForProject(
   projectId: number, 
-  includeDetails: boolean = false
+  includeDetails: boolean = false,
+  prisma: PrismaClient
 ): Promise<Map<number, MusicianConflictInfo>> {
   const projectNeeds = await prisma.projectNeed.findMany({
     where: { 
@@ -150,7 +151,8 @@ async function analyzeConflictsForProject(
 async function getAllMusiciansWithStatus(
   need: any,
   projectId: number,
-  plannedRequests?: Map<number, { needId: number; position: string }>
+  plannedRequests?: Map<number, { needId: number; position: string }>,
+  prisma: PrismaClient
 ): Promise<RecipientInfo[]> {
   if (!need.rankingList?.rankings) {
     return []
@@ -260,7 +262,8 @@ async function getAvailableMusiciansForNeed(
   need: any,
   excludedMusicianIds: Set<number>,
   conflicts: Map<number, MusicianConflictInfo>,
-  conflictStrategy: string
+  conflictStrategy: string,
+  prisma: PrismaClient
 ): Promise<RecipientInfo[]> {
   // Start with musicians from ranking list
   if (!need.rankingList?.rankings) {
@@ -362,7 +365,8 @@ function calculateMusiciansToContact(
 // Main function to get recipients for a single need
 export async function getRecipientsForNeed(
   needId: number,
-  options: GetRecipientsOptions = {}
+  options: GetRecipientsOptions = {},
+  prisma: PrismaClient
 ): Promise<RecipientResult> {
   const { dryRun = true, includeDetails = false } = options
 
@@ -429,14 +433,15 @@ export async function getRecipientsForNeed(
   const excludedMusicianIds = new Set(projectRequests.map(r => r.musicianId))
 
   // Analyze conflicts if needed
-  const conflicts = await analyzeConflictsForProject(need.projectId, includeDetails)
+  const conflicts = await analyzeConflictsForProject(need.projectId, includeDetails, prisma)
 
   // Get available musicians
   const availableMusicians = await getAvailableMusiciansForNeed(
     need,
     excludedMusicianIds,
     conflicts,
-    conflictStrategy
+    conflictStrategy,
+    prisma
   )
 
   // Calculate who to contact
@@ -455,7 +460,7 @@ export async function getRecipientsForNeed(
   // Get all musicians with status if requested
   let allMusiciansWithStatus: RecipientInfo[] | undefined
   if (includeDetails) {
-    allMusiciansWithStatus = await getAllMusiciansWithStatus(need, need.projectId)
+    allMusiciansWithStatus = await getAllMusiciansWithStatus(need, need.projectId, undefined, prisma)
   }
 
   // Prepare the need result
@@ -483,7 +488,7 @@ export async function getRecipientsForNeed(
   if (!dryRun && musiciansToContact.length > 0) {
     const results = await Promise.allSettled(
       musiciansToContact.map(musician => 
-        createAndSendRequest(need.id, musician.id)
+        createAndSendRequest(need.id, musician.id, prisma)
       )
     )
 
@@ -539,7 +544,8 @@ export async function getRecipientsForNeed(
 // Function to get recipients for all needs in a project
 export async function getRecipientsForProject(
   projectId: number,
-  options: GetRecipientsOptions = {}
+  options: GetRecipientsOptions = {},
+  prisma: PrismaClient
 ): Promise<RecipientResult> {
   const { dryRun = true, includeDetails = false } = options
 
@@ -620,7 +626,7 @@ export async function getRecipientsForProject(
   const excludedMusicianIds = new Set(projectRequests.map(r => r.musicianId))
 
   // Analyze conflicts across all needs
-  const conflicts = await analyzeConflictsForProject(projectId, includeDetails)
+  const conflicts = await analyzeConflictsForProject(projectId, includeDetails, prisma)
 
   const needResults: NeedRecipientResult[] = []
   let totalToSend = 0
@@ -642,7 +648,8 @@ export async function getRecipientsForProject(
       need,
       excludedMusicianIds,
       conflicts,
-      conflictStrategy
+      conflictStrategy,
+      prisma
     )
 
     // Calculate who to contact
@@ -662,7 +669,7 @@ export async function getRecipientsForProject(
       // Get all musicians with status if requested
       let allMusiciansWithStatus: RecipientInfo[] | undefined
       if (includeDetails) {
-        allMusiciansWithStatus = await getAllMusiciansWithStatus(need, projectId, plannedRequests)
+        allMusiciansWithStatus = await getAllMusiciansWithStatus(need, projectId, plannedRequests, prisma)
       }
 
       needResults.push({
@@ -701,7 +708,7 @@ export async function getRecipientsForProject(
       if (!dryRun) {
         const results = await Promise.allSettled(
           musiciansToContact.map(musician => 
-            createAndSendRequest(need.id, musician.id)
+            createAndSendRequest(need.id, musician.id, prisma)
           )
         )
 
@@ -761,9 +768,9 @@ export async function getRecipientsForProject(
 }
 
 // Helper function to create and send a request (reused from request-strategies)
-async function createAndSendRequest(projectNeedId: number, musicianId: number): Promise<boolean> {
+async function createAndSendRequest(projectNeedId: number, musicianId: number, prisma: PrismaClient): Promise<boolean> {
   try {
-    const requestId = await generateUniqueId('request')
+    const requestId = await generateUniqueId('request', prisma)
 
     // Create request
     const request = await prisma.request.create({
@@ -780,10 +787,10 @@ async function createAndSendRequest(projectNeedId: number, musicianId: number): 
     })
 
     // Generate token
-    const token = await generateRequestToken(request.id, request.projectNeed.responseTimeHours)
+    const token = await generateRequestToken(request.id, request.projectNeed.responseTimeHours, prisma)
 
     // Send email
-    await sendRequestEmail(request, token)
+    await sendRequestEmail(request, token, prisma)
 
     return true
   } catch (error) {

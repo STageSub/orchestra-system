@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 import { CustomerService } from '@/lib/services/customer-service'
 import { clearCaches } from '@/lib/database-config'
 
 // GET /api/superadmin/customers - List all customers
 export async function GET(request: NextRequest) {
   try {
+  const prisma = await getPrismaForUser(request)
     const customers = await CustomerService.getAllCustomers()
     
     // Add additional computed fields

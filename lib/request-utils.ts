@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/prisma'
 import { generateUniqueId } from '@/lib/id-generator'
 import { sendRequestEmail, sendReminderEmail } from '@/lib/email-service'
 import { formatHoursToReadable } from '@/lib/utils'

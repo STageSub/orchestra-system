@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 import { generateUniqueId } from '@/lib/id-generator'
 
 export async function GET(request: Request) {
   try {
+    const prisma = await getPrismaForUser(request)
     const { searchParams } = new URL(request.url)
     const includeArchived = searchParams.get('includeArchived') === 'true'
     
@@ -86,11 +87,12 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const prisma = await getPrismaForUser(request)
     const body = await request.json()
     const { name, displayOrder, positions } = body
     
     // Generera unikt ID
-    const instrumentId = await generateUniqueId('instrument')
+    const instrumentId = await generateUniqueId('instrument', prisma)
     
     // Skapa instrument med positioner
     const instrument = await prisma.instrument.create({
@@ -101,7 +103,7 @@ export async function POST(request: Request) {
         positions: {
           create: await Promise.all(
             positions?.map(async (pos: any, index: number) => ({
-              positionId: await generateUniqueId('position'),
+              positionId: await generateUniqueId('position', prisma),
               name: pos.name,
               hierarchyLevel: pos.hierarchyLevel || index + 1
             })) || []

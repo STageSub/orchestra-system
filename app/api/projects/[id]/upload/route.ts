@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 import { generateUniqueId } from '@/lib/id-generator'
 import { saveFile, generateFileName, isValidFileType, isValidFileSize } from '@/lib/file-handler-db'
 
@@ -9,6 +9,7 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const prisma = await getPrismaForUser(request)
     const { id } = await context.params
     const projectId = parseInt(id)
     
@@ -70,7 +71,7 @@ export async function POST(
     )
     
     // Generate unique ID
-    const projectFileId = await generateUniqueId('projectFile')
+    const projectFileId = await generateUniqueId('projectFile', prisma)
     
     // Save to database
     const projectFile = await prisma.projectFile.create({

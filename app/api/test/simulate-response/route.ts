@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
+import { getPrisma } from '@/lib/prisma'
 import { handleDeclinedRequest } from '@/lib/request-handlers'
+import { generateUniqueId } from '@/lib/id-generator'
 
 export async function POST(request: Request) {
   if (process.env.NODE_ENV !== 'development') {
@@ -11,6 +13,7 @@ export async function POST(request: Request) {
   }
 
   try {
+    const prisma = await getPrismaForUser(request)
     const { requestId, response } = await request.json()
 
     const req = await prisma.request.findUnique({
@@ -78,8 +81,10 @@ export async function POST(request: Request) {
 
           // Log cancellations
           for (const pendingReq of pendingRequests) {
+            const communicationLogId = await generateUniqueId('communicationLog', prisma)
             await prisma.communicationLog.create({
               data: {
+                communicationLogId,
                 requestId: pendingReq.id,
                 type: 'position_filled_notification',
                 timestamp: new Date()
@@ -94,8 +99,10 @@ export async function POST(request: Request) {
       await handleDeclinedRequest(requestId)
     }
 
+    const communicationLogId = await generateUniqueId('communicationLog', prisma)
     await prisma.communicationLog.create({
       data: {
+        communicationLogId,
         requestId,
         type: 'response_simulated',
         timestamp: new Date()

@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer'
-import { prisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/prisma'
 
 interface EmailOptions {
   to: string
@@ -36,6 +36,7 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
   }
 
   try {
+    const prisma = await getPrisma()
     // Create transporter with SMTP settings
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -66,6 +67,7 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
 
 export async function getEmailTemplate(type: string, language: 'sv' | 'en' = 'sv'): Promise<{ subject: string; body: string } | null> {
   try {
+    const prisma = await getPrisma()
     // Add language suffix for non-Swedish templates
     const templateType = language === 'en' ? `${type}_en` : type
     

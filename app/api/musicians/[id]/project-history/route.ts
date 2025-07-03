@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 
 export async function GET(
   request: Request,
@@ -8,6 +8,7 @@ export async function GET(
   const { id } = await params
   
   try {
+    const prisma = await getPrismaForUser(request)
     // Fetch all requests for this musician
     const requests = await prisma.request.findMany({
       where: { musicianId: parseInt(id) },

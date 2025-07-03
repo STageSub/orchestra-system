@@ -202,7 +202,7 @@ export default function AdminDashboard() {
                     href="/admin/activities"
                     className="text-sm font-medium text-blue-600 hover:text-blue-800"
                   >
-                    Visa alla aktiviteter →
+                    Visa alla aktiviteter &rarr;
                   </Link>
                 </div>
               )}

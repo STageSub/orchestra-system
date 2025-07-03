@@ -264,6 +264,7 @@ model Orchestra {
   status       String   @default("pending") // pending, active, inactive
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  users        User[]
 }
 
 model FileStorage {
@@ -277,4 +278,22 @@ model FileStorage {
   needId       Int?
   createdAt    DateTime @default(now())
   project      Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  username      String    @unique
+  email         String    @unique
+  passwordHash  String
+  role          String    @default("user") // superadmin, admin, user, viewer
+  orchestraId   String?
+  orchestra     Orchestra? @relation(fields: [orchestraId], references: [id], onDelete: Cascade)
+  active        Boolean   @default(true)
+  lastLogin     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@index([orchestraId])
+  @@index([username])
+  @@index([email])
 }

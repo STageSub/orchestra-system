@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 import { deleteFile } from '@/lib/file-handler-db'
 
 export async function DELETE(
@@ -7,6 +7,7 @@ export async function DELETE(
   context: { params: Promise<{ id: string; fileId: string }> }
 ) {
   try {
+    const prisma = await getPrismaForUser(request)
     const { fileId } = await context.params
     
     // Hämta fil för att få URL

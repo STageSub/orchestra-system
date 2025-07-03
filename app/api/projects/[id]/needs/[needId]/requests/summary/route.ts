@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 
 export async function GET(
   request: Request,
@@ -8,6 +8,7 @@ export async function GET(
   const { needId } = await params
 
   try {
+    const prisma = await getPrismaForUser(request)
     const need = await prisma.projectNeed.findUnique({
       where: { id: parseInt(needId) },
       include: {

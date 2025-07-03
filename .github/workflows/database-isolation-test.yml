@@ -1,0 +1,117 @@
+name: Database Isolation Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Kör varje dag kl 08:00 UTC (10:00 svensk tid)
+    - cron: '0 8 * * *'
+  workflow_dispatch: # Tillåt manuell körning
+
+jobs:
+  test-isolation:
+    name: Verify Database Isolation
+    runs-on: ubuntu-latest
+    
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      SUPABASE_MANAGEMENT_TOKEN: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+      SUPABASE_ORGANIZATION_ID: ${{ secrets.SUPABASE_ORGANIZATION_ID }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Generate Prisma client
+        run: npx prisma generate
+      
+      - name: Run Database Isolation Monitor
+        run: |
+          echo "🔍 Running database isolation check..."
+          npx tsx scripts/monitor-database-isolation.ts
+        continue-on-error: true
+        id: isolation-check
+      
+      - name: Run Verify Database Isolation
+        run: |
+          echo "🧪 Verifying database isolation..."
+          npx tsx scripts/verify-database-isolation.ts
+        continue-on-error: true
+        id: verify-isolation
+      
+      - name: Test Database Connections
+        run: |
+          echo "🔌 Testing individual database connections..."
+          npx tsx scripts/test-database-isolation.ts
+        continue-on-error: true
+        id: connection-test
+      
+      - name: Generate Report
+        if: always()
+        run: |
+          echo "## 📊 Database Isolation Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.isolation-check.outcome }}" == "success" ]; then
+            echo "✅ **Isolation Monitor**: All orchestras have separate databases" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Isolation Monitor**: Database sharing detected!" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ steps.verify-isolation.outcome }}" == "success" ]; then
+            echo "✅ **Isolation Verification**: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Isolation Verification**: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ steps.connection-test.outcome }}" == "success" ]; then
+            echo "✅ **Connection Test**: All databases accessible" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️  **Connection Test**: Some issues detected" >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: Fail if isolation broken
+        if: steps.isolation-check.outcome == 'failure' || steps.verify-isolation.outcome == 'failure'
+        run: |
+          echo "❌ Database isolation is broken! This is a critical security issue."
+          echo "Multiple orchestras are sharing the same database."
+          echo "Immediate action required!"
+          exit 1
+      
+      - name: Notify on failure
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 CRITICAL: Database Isolation Broken',
+              body: `## Database Isolation Test Failed
+              
+              The automated database isolation test has detected that multiple orchestras are sharing the same database.
+              
+              **This is a critical security issue that needs immediate attention!**
+              
+              ### Actions Required:
+              1. Run \`npx tsx scripts/verify-database-isolation.ts\` locally
+              2. Identify which orchestras are sharing databases
+              3. Migrate affected orchestras to separate databases
+              4. Re-run the isolation test to verify fix
+              
+              [View workflow run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+              labels: ['critical', 'security', 'database']
+            });
+            
+            console.log(`Created issue #${issue.data.number}`);

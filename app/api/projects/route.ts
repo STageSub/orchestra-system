@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 import { generateUniqueId } from '@/lib/id-generator'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const prisma = await getPrismaForUser(request)
     const projects = await prisma.project.findMany({
       include: {
         _count: {
@@ -74,11 +75,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const prisma = await getPrismaForUser(request)
     const body = await request.json()
     const { name, startDate, weekNumber, rehearsalSchedule, concertInfo, notes } = body
     
     // Generate unique project ID
-    const projectId = await generateUniqueId('project')
+    const projectId = await generateUniqueId('project', prisma)
     
     const project = await prisma.project.create({
       data: {

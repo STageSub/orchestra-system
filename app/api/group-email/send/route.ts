@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendEmail } from '@/lib/email'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 
 export async function POST(request: NextRequest) {
   try {
+    const prisma = await getPrismaForUser(request)
     const { recipients, subject, message, metadata } = await request.json()
 
     // Validate input

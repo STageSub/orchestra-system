@@ -1,6 +1,6 @@
 'use client'
 
-import { Users, Calendar, Send, Music } from 'lucide-react'
+import { Users, Calendar, Send, Music, ArrowRight } from 'lucide-react'
 
 interface WelcomeStepProps {
   orchestraName: string

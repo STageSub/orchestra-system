@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/prisma'
 
 export async function GET() {
   if (process.env.NODE_ENV !== 'development') {
@@ -10,6 +10,7 @@ export async function GET() {
   }
 
   try {
+    const prisma = await getPrisma()
     const stats = await prisma.request.groupBy({
       by: ['status'],
       _count: true

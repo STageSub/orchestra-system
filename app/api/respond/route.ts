@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
+import { getPrisma } from '@/lib/prisma'
 import { sendConfirmationEmail, sendPositionFilledEmail } from '@/lib/email'
 import { ensureLogStorage } from '@/lib/server-init'
+import { generateUniqueId } from '@/lib/id-generator'
 
 // Initialize log storage for this API route
 ensureLogStorage()
@@ -9,6 +11,7 @@ ensureLogStorage()
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const token = searchParams.get('token')
+  const org = searchParams.get('org')
   
   if (!token) {
     return NextResponse.json(
@@ -18,6 +21,16 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    console.log('=== RESPOND API GET - Debug Info ===')
+    console.log('Token:', token)
+    console.log('Org parameter:', org)
+    
+    // Use orchestra-specific database if org parameter is provided
+    const { getPrismaClient } = await import('@/lib/database-config')
+    const prisma = org ? await getPrismaClient(org) : await getPrisma()
+    
+    console.log('Using database for org:', org || 'default (getPrisma)')
+    
     // Find token and validate
     const requestToken = await prisma.requestToken.findUnique({
       where: { token },
@@ -41,6 +54,36 @@ export async function GET(request: NextRequest) {
     })
 
     if (!requestToken) {
+      console.error('=== TOKEN NOT FOUND ===')
+      console.error('Searched for token:', token)
+      console.error('In database for org:', org || 'default')
+      
+      // Try to count tokens in this database for debugging
+      try {
+        const tokenCount = await prisma.requestToken.count()
+        console.error('Total tokens in database:', tokenCount)
+        
+        // List recent tokens for debugging
+        const recentTokens = await prisma.requestToken.findMany({
+          take: 5,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            token: true,
+            createdAt: true,
+            requestId: true,
+            expiresAt: true
+          }
+        })
+        
+        console.error('Recent tokens in database:')
+        recentTokens.forEach(t => {
+          console.error(`  - ${t.token.substring(0, 20)}... (Request: ${t.requestId}, Created: ${t.createdAt.toISOString()})`)
+        })
+        
+      } catch (e) {
+        console.error('Could not count/list tokens:', e)
+      }
+      
       return NextResponse.json(
         { error: 'Ogiltig eller utgången token' },
         { status: 404 }
@@ -108,9 +151,10 @@ export async function POST(request: NextRequest) {
     console.error('=== RESPOND API - Request Body ===')
     console.error('Full body:', JSON.stringify(body, null, 2))
     
-    const { token, response } = body
+    const { token, response, org } = body
     console.log('Token:', token ? `${token.substring(0, 20)}...` : 'MISSING')
     console.log('Response:', response)
+    console.log('Orchestra:', org || 'Not provided')
 
     if (!token || !response || !['accepted', 'declined'].includes(response)) {
       console.error('=== RESPOND API - Validation Failed ===')
@@ -122,6 +166,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+    
+    // Use orchestra-specific database if org parameter is provided
+    const { getPrismaClient } = await import('@/lib/database-config')
+    const prisma = org ? await getPrismaClient(org) : await getPrisma()
     
     console.log('=== RESPOND API - Starting Transaction ===')
 
@@ -219,8 +267,10 @@ export async function POST(request: NextRequest) {
 
       // Log the response
       console.log('=== RESPOND API - Creating Communication Log ===')
+      const communicationLogId = await generateUniqueId('communicationLog', prisma)
       const commLog = await tx.communicationLog.create({
         data: {
+          communicationLogId,
           requestId: requestToken.request.id,
           type: 'response_received',
           timestamp: new Date()
@@ -292,7 +342,7 @@ export async function POST(request: NextRequest) {
               })
               
               if (fullRequest) {
-                await sendPositionFilledEmail(fullRequest)
+                await sendPositionFilledEmail(fullRequest, prisma)
               }
             }
           }
@@ -324,7 +374,7 @@ export async function POST(request: NextRequest) {
         console.log('Importing handleDeclinedRequest...')
         const { handleDeclinedRequest } = await import('@/lib/request-handlers')
         console.log('Calling handleDeclinedRequest outside transaction...')
-        await handleDeclinedRequest(result.request.id)
+        await handleDeclinedRequest(result.request.id, prisma)
         console.log('✅ Successfully handled declined request post-transaction')
       } catch (declineError) {
         // Log error but don't fail the response - the decline is still recorded
@@ -352,7 +402,7 @@ export async function POST(request: NextRequest) {
           console.error('- Project name:', result.request.projectNeed.project?.name)
         }
         console.error('🔥 CALLING sendConfirmationEmail NOW...')
-        await sendConfirmationEmail(result.request)
+        await sendConfirmationEmail(result.request, prisma)
         console.error('✅🔥 Confirmation email sent successfully post-transaction 🔥✅')
       } catch (emailError) {
         // Log error but don't fail the response - the acceptance is still recorded

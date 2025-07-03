@@ -1,0 +1,202 @@
+import { SignJWT, jwtVerify } from 'jose'
+import { cookies } from 'next/headers'
+import bcrypt from 'bcryptjs'
+import { neonPrisma } from '@/lib/prisma-dynamic'
+
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || 'default-secret-change-in-production'
+)
+
+const COOKIE_NAME = 'orchestra-admin-session'
+
+interface TokenPayload {
+  authenticated: boolean
+  userId: string
+  username: string
+  role: string
+  orchestraId?: string
+  subdomain?: string
+  exp: number
+}
+
+interface User {
+  id: string
+  username: string
+  email: string
+  passwordHash: string
+  role: string
+  orchestraId?: string | null
+  active: boolean
+}
+
+export async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 10)
+}
+
+export async function verifyPasswordHash(password: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(password, hash)
+}
+
+export async function createToken(user: User, subdomain?: string): Promise<string> {
+  const token = await new SignJWT({ 
+    authenticated: true,
+    userId: user.id,
+    username: user.username,
+    role: user.role,
+    orchestraId: user.orchestraId || undefined,
+    subdomain
+  })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('24h')
+    .sign(JWT_SECRET)
+  
+  return token
+}
+
+export async function verifyToken(token: string): Promise<TokenPayload | null> {
+  try {
+    const { payload } = await jwtVerify(token, JWT_SECRET)
+    return payload as TokenPayload
+  } catch (error) {
+    return null
+  }
+}
+
+export async function setAuthCookie(token: string) {
+  const cookieStore = await cookies()
+  cookieStore.set(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 24, // 24 hours
+    path: '/'
+  })
+}
+
+export async function getAuthCookie(): Promise<string | undefined> {
+  const cookieStore = await cookies()
+  return cookieStore.get(COOKIE_NAME)?.value
+}
+
+export async function removeAuthCookie() {
+  const cookieStore = await cookies()
+  cookieStore.delete(COOKIE_NAME)
+}
+
+export async function getCurrentUser(): Promise<User | null> {
+  const token = await getAuthCookie()
+  if (!token) return null
+  
+  const payload = await verifyToken(token)
+  if (!payload || !payload.userId) return null
+  
+  try {
+    // Always use neonPrisma for User table (auth database)
+    const user = await neonPrisma.user.findUnique({
+      where: { id: payload.userId }
+    })
+    
+    if (!user || !user.active) return null
+    
+    return user
+  } catch (error) {
+    // If User table doesn't exist yet, return null
+    console.error('Error fetching user:', error)
+    return null
+  }
+}
+
+export async function isAuthenticated(): Promise<boolean> {
+  const user = await getCurrentUser()
+  return user !== null
+}
+
+export async function authenticateUser(username: string, password: string): Promise<User | null> {
+  try {
+    // Always use neonPrisma for authentication (User table is in main database)
+    const user = await neonPrisma.user.findUnique({
+      where: { username }
+    })
+    
+    if (!user || !user.active) {
+      return null
+    }
+    
+    const passwordValid = await verifyPasswordHash(password, user.passwordHash)
+    if (!passwordValid) {
+      return null
+    }
+    
+    // Update last login
+    await neonPrisma.user.update({
+      where: { id: user.id },
+      data: { lastLogin: new Date() }
+    })
+    
+    return user
+  } catch (error) {
+    console.error('Authentication error:', error)
+    return null
+  }
+}
+
+// Backward compatibility functions
+export async function verifyPassword(password: string): Promise<boolean> {
+  const adminPassword = process.env.ADMIN_PASSWORD
+  
+  if (!adminPassword) {
+    console.error('ADMIN_PASSWORD not set in environment variables')
+    return false
+  }
+  
+  return password === adminPassword
+}
+
+export async function verifySuperadminPassword(password: string): Promise<boolean> {
+  const superadminPassword = process.env.SUPERADMIN_PASSWORD
+  
+  if (!superadminPassword) {
+    console.error('SUPERADMIN_PASSWORD not set in environment variables')
+    return false
+  }
+  
+  return password === superadminPassword
+}
+
+// Migration helper to create initial superadmin user
+export async function createSuperadminUser(): Promise<void> {
+  try {
+    // Always use neonPrisma for User table operations
+    const existingSuperadmin = await neonPrisma.user.findFirst({
+      where: { role: 'superadmin' }
+    })
+    
+    if (existingSuperadmin) {
+      console.log('Superadmin user already exists')
+      return
+    }
+    
+    const superadminPassword = process.env.SUPERADMIN_PASSWORD
+    if (!superadminPassword) {
+      console.error('SUPERADMIN_PASSWORD not set, cannot create superadmin user')
+      return
+    }
+    
+    const passwordHash = await hashPassword(superadminPassword)
+    
+    await neonPrisma.user.create({
+      data: {
+        username: 'superadmin',
+        email: 'superadmin@stagesub.com',
+        passwordHash,
+        role: 'superadmin',
+        active: true
+      }
+    })
+    
+    console.log('Superadmin user created successfully')
+  } catch (error) {
+    console.error('Error creating superadmin user:', error)
+  }
+}

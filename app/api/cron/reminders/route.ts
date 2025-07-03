@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { sendReminders, handleTimeouts } from '@/lib/request-handlers'
+import { neonPrisma } from '@/lib/prisma-dynamic'
+import { getPrismaClient } from '@/lib/database-config'
 
 export async function GET(request: Request) {
   // Verify cron secret to prevent unauthorized calls
@@ -12,32 +14,61 @@ export async function GET(request: Request) {
   }
 
   try {
-    console.log('Running reminder and timeout checks...')
+    console.log('Running reminder and timeout checks for all orchestras...')
     
-    // Run both checks in parallel
-    const [remindersResult, timeoutsResult] = await Promise.allSettled([
-      sendReminders(),
-      handleTimeouts()
-    ])
-
-    const response = {
+    // Get all active orchestras from Neon
+    const orchestras = await neonPrisma.orchestra.findMany({
+      where: { status: 'active' },
+      select: { subdomain: true, name: true }
+    })
+    
+    console.log(`Found ${orchestras.length} active orchestras`)
+    
+    const results = {
       timestamp: new Date().toISOString(),
-      reminders: remindersResult.status === 'fulfilled' ? 'success' : 'failed',
-      timeouts: timeoutsResult.status === 'fulfilled' ? 'success' : 'failed',
-      errors: [] as string[]
+      orchestras: {} as Record<string, { reminders: string; timeouts: string; errors: string[] }>
+    }
+    
+    // Process each orchestra
+    for (const orchestra of orchestras) {
+      console.log(`Processing ${orchestra.name} (${orchestra.subdomain})...`)
+      
+      try {
+        // Get the orchestra-specific prisma client
+        const orchestraPrisma = await getPrismaClient(orchestra.subdomain)
+        
+        // Run both checks in parallel for this orchestra
+        const [remindersResult, timeoutsResult] = await Promise.allSettled([
+          sendReminders(orchestraPrisma),
+          handleTimeouts(orchestraPrisma)
+        ])
+        
+        results.orchestras[orchestra.subdomain] = {
+          reminders: remindersResult.status === 'fulfilled' ? 'success' : 'failed',
+          timeouts: timeoutsResult.status === 'fulfilled' ? 'success' : 'failed',
+          errors: []
+        }
+        
+        if (remindersResult.status === 'rejected') {
+          console.error(`Reminder check failed for ${orchestra.subdomain}:`, remindersResult.reason)
+          results.orchestras[orchestra.subdomain].errors.push(`Reminders: ${remindersResult.reason}`)
+        }
+        
+        if (timeoutsResult.status === 'rejected') {
+          console.error(`Timeout check failed for ${orchestra.subdomain}:`, timeoutsResult.reason)
+          results.orchestras[orchestra.subdomain].errors.push(`Timeouts: ${timeoutsResult.reason}`)
+        }
+      } catch (error) {
+        console.error(`Failed to process orchestra ${orchestra.subdomain}:`, error)
+        results.orchestras[orchestra.subdomain] = {
+          reminders: 'failed',
+          timeouts: 'failed',
+          errors: [`Orchestra processing failed: ${String(error)}`]
+        }
+      }
     }
 
-    if (remindersResult.status === 'rejected') {
-      console.error('Reminder check failed:', remindersResult.reason)
-      response.errors.push(`Reminders: ${remindersResult.reason}`)
-    }
-
-    if (timeoutsResult.status === 'rejected') {
-      console.error('Timeout check failed:', timeoutsResult.reason)
-      response.errors.push(`Timeouts: ${timeoutsResult.reason}`)
-    }
-
-    return NextResponse.json(response)
+    return NextResponse.json(results)
   } catch (error) {
     console.error('Cron job error:', error)
     return NextResponse.json(

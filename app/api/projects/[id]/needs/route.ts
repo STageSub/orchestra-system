@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 import { generateUniqueId } from '@/lib/id-generator'
 
 export async function GET(
@@ -7,6 +7,7 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const prisma = await getPrismaForUser(request)
     const { id } = await context.params
     
     const needs = await prisma.projectNeed.findMany({
@@ -53,6 +54,7 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const prisma = await getPrismaForUser(request)
     const { id } = await context.params
     const body = await request.json()
     const { positionId, rankingListId, quantity, requestStrategy, maxRecipients, responseTimeHours, requireLocalResidence } = body
@@ -148,7 +150,7 @@ export async function POST(
     }
     
     // Generate unique project need ID
-    const projectNeedId = await generateUniqueId('projectNeed')
+    const projectNeedId = await generateUniqueId('projectNeed', prisma)
     
     const need = await prisma.projectNeed.create({
       data: {

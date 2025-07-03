@@ -1,5 +1,5 @@
 import { Resend } from 'resend'
-import { prisma } from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
 import { getFile } from '@/lib/file-handler-db'
 import { getLogStorage } from '@/lib/log-storage'
 
@@ -112,6 +112,7 @@ export async function sendTemplatedEmail(
   type: string,
   to: string,
   variables: TemplateVariables,
+  prisma: PrismaClient,
   attachments?: Array<{ filename: string; content: string }>,
   language: 'sv' | 'en' = 'sv'
 ) {
@@ -140,7 +141,7 @@ export async function sendTemplatedEmail(
     })
     if (fallbackTemplate) {
       console.log('Using fallback Swedish template')
-      return sendTemplatedEmail(type, to, variables, attachments, 'sv')
+      return sendTemplatedEmail(type, to, variables, prisma, attachments, 'sv')
     }
     throw new Error(`Email template '${templateType}' not found`)
   }
@@ -222,7 +223,8 @@ interface RequestWithRelations {
 async function getProjectFilesForEmail(
   projectId: number,
   projectNeedId: number | null,
-  sendTiming: string
+  sendTiming: string,
+  prisma: PrismaClient
 ): Promise<Array<{ filename: string; content: string }>> {
   console.log(`Fetching files for project ${projectId}, need ${projectNeedId}, timing ${sendTiming}`)
   
@@ -293,7 +295,8 @@ async function getProjectFilesForEmail(
 
 export async function sendRequestEmail(
   request: RequestWithRelations,
-  token: string
+  token: string,
+  prisma: PrismaClient
 ) {
   console.log('\n=== SEND REQUEST EMAIL - START ===')
   console.log('Request ID:', request.id)
@@ -305,9 +308,16 @@ export async function sendRequestEmail(
   }
   console.log('Token:', token.substring(0, 20) + '...')
   
+  // Get subdomain from the prisma client
+  const { getSubdomainFromPrismaClient } = await import('@/lib/database-config')
+  const subdomain = getSubdomainFromPrismaClient(prisma)
+  
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-  const responseUrl = `${appUrl}/respond?token=${token}`
+  const responseUrl = subdomain 
+    ? `${appUrl}/respond?token=${token}&org=${subdomain}`
+    : `${appUrl}/respond?token=${token}`
   console.log('Response URL:', responseUrl)
+  console.log('Orchestra subdomain:', subdomain)
   
   const musician = await prisma.musician.findUnique({
     where: { id: request.musicianId },
@@ -373,10 +383,11 @@ export async function sendRequestEmail(
   const attachments = await getProjectFilesForEmail(
     projectNeed.project.id,
     projectNeed.id,
-    'on_request'
+    'on_request',
+    prisma
   )
   
-  await sendTemplatedEmail('request', musician.email, variables, attachments, language)
+  await sendTemplatedEmail('request', musician.email, variables, prisma, attachments, language)
   console.log('✅ Request email sent successfully')
 
   // Log the communication
@@ -390,7 +401,7 @@ export async function sendRequestEmail(
   console.log('=== SEND REQUEST EMAIL - END ===\n')
 }
 
-export async function sendReminderEmail(request: RequestWithRelations, token: string) {
+export async function sendReminderEmail(request: RequestWithRelations, token: string, prisma: PrismaClient) {
   // Check if we're in test mode with mocked email
   if (global.sendReminderEmail && process.env.NODE_ENV === 'test') {
     return global.sendReminderEmail(request, token)
@@ -415,8 +426,14 @@ export async function sendReminderEmail(request: RequestWithRelations, token: st
     throw new Error('Missing data for reminder email')
   }
 
+  // Get subdomain from the prisma client
+  const { getSubdomainFromPrismaClient } = await import('@/lib/database-config')
+  const subdomain = getSubdomainFromPrismaClient(prisma)
+  
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-  const responseUrl = `${appUrl}/respond?token=${token}`
+  const responseUrl = subdomain 
+    ? `${appUrl}/respond?token=${token}&org=${subdomain}`
+    : `${appUrl}/respond?token=${token}`
 
   const variables: TemplateVariables = {
     musician_name: `${musician.firstName} ${musician.lastName}`,
@@ -431,7 +448,7 @@ export async function sendReminderEmail(request: RequestWithRelations, token: st
   }
 
   const language = (musician.preferredLanguage || 'sv') as 'sv' | 'en'
-  await sendTemplatedEmail('reminder', musician.email, variables, undefined, language)
+  await sendTemplatedEmail('reminder', musician.email, variables, prisma, undefined, language)
 
   // Update reminder sent timestamp
   await prisma.request.update({
@@ -449,7 +466,7 @@ export async function sendReminderEmail(request: RequestWithRelations, token: st
   })
 }
 
-export async function sendConfirmationEmail(request: RequestWithRelations) {
+export async function sendConfirmationEmail(request: RequestWithRelations, prisma: PrismaClient) {
   // Force log storage initialization
   const logStorage = getLogStorage()
   
@@ -515,7 +532,8 @@ export async function sendConfirmationEmail(request: RequestWithRelations) {
   const attachments = await getProjectFilesForEmail(
     projectNeed.project.id,
     projectNeed.id,
-    'on_accept'
+    'on_accept',
+    prisma
   )
   
   const variables: TemplateVariables = {
@@ -550,7 +568,7 @@ export async function sendConfirmationEmail(request: RequestWithRelations) {
   console.error('- to:', musician.email)
   console.error('- attachments:', attachments.length)
   console.error('- language:', language)
-  await sendTemplatedEmail('confirmation', musician.email, variables, attachments, language)
+  await sendTemplatedEmail('confirmation', musician.email, variables, prisma, attachments, language)
   console.error('✅ Confirmation email sent successfully')
 
   // Update confirmation sent flag (skip for test requests)
@@ -586,7 +604,7 @@ export async function sendConfirmationEmail(request: RequestWithRelations) {
   }
 }
 
-export async function sendPositionFilledEmail(request: RequestWithRelations) {
+export async function sendPositionFilledEmail(request: RequestWithRelations, prisma: PrismaClient) {
   // Check if we're in test mode with mocked email
   if (global.sendPositionFilledEmail && process.env.NODE_ENV === 'test') {
     return global.sendPositionFilledEmail(request)
@@ -631,7 +649,7 @@ export async function sendPositionFilledEmail(request: RequestWithRelations) {
   }
 
   const language = (musician.preferredLanguage || 'sv') as 'sv' | 'en'
-  await sendTemplatedEmail('position_filled', musician.email, variables, undefined, language)
+  await sendTemplatedEmail('position_filled', musician.email, variables, prisma, undefined, language)
 
   // Log the communication
   await prisma.communicationLog.create({

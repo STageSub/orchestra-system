@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 import { getConfiguredCustomers, getPrismaClient } from '@/lib/database-config'
 import { CustomerService } from '@/lib/services/customer-service'
 
 export async function GET(request: NextRequest) {
   try {
+  const prisma = await getPrismaForUser(request)
     // Get all configured customers with full details
     const customers = await CustomerService.getCustomers()
     

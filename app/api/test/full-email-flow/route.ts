@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
+import { getPrisma } from '@/lib/prisma'
 import { sendRequests } from '@/lib/request-sender'
 import { getLogStorage } from '@/lib/log-storage'
 
@@ -14,6 +15,8 @@ export async function POST(request: Request) {
   let acceptResponse: any = null
   
   try {
+    const prisma = await getPrisma()
+  const prisma = await getPrismaForUser(request)
     console.error('\n\n🚀🚀🚀 FULL EMAIL FLOW TEST - START 🚀🚀🚀')
     console.error('Time:', new Date().toISOString())
     

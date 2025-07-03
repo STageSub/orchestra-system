@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/prisma'
 
 // Generate unique filename
 export function generateFileName(originalName: string, projectId: number, projectNeedId?: number): string {
@@ -46,6 +46,7 @@ export async function saveFile(
 // Delete file from database
 export async function deleteFile(fileId: string): Promise<void> {
   try {
+    const prisma = await getPrisma()
     // Extract ID from URL if needed
     const id = fileId.startsWith('/api/files/') 
       ? fileId.replace('/api/files/', '')
@@ -68,6 +69,7 @@ export async function getFile(fileId: string): Promise<{
   mimeType: string
 } | null> {
   try {
+    const prisma = await getPrisma()
     const file = await prisma.fileStorage.findUnique({
       where: { id: fileId }
     })

@@ -23,7 +23,7 @@ async function main() {
 
   // 1. Create ID sequences
   console.log('Creating ID sequences...')
-  const sequences = ['musician', 'instrument', 'position', 'project', 'template']
+  const sequences = ['musician', 'instrument', 'position', 'project', 'template', 'rankingList']
   
   for (const entityType of sequences) {
     await prisma.idSequence.create({
@@ -34,57 +34,178 @@ async function main() {
     })
   }
 
-  // 2. Create basic instruments
-  console.log('Creating instruments...')
-  const instruments = [
-    { name: 'Violin', displayOrder: 1 },
-    { name: 'Viola', displayOrder: 2 },
-    { name: 'Cello', displayOrder: 3 },
-    { name: 'Kontrabas', displayOrder: 4 },
-    { name: 'Flöjt', displayOrder: 5 },
-    { name: 'Oboe', displayOrder: 6 },
-    { name: 'Klarinett', displayOrder: 7 },
-    { name: 'Fagott', displayOrder: 8 },
-    { name: 'Valthorn', displayOrder: 9 },
-    { name: 'Trumpet', displayOrder: 10 },
-    { name: 'Trombon', displayOrder: 11 },
-    { name: 'Tuba', displayOrder: 12 },
-    { name: 'Slagverk', displayOrder: 13 },
-    { name: 'Harpa', displayOrder: 14 },
+  // 2. Create instruments with positions and ranking lists
+  console.log('Creating instruments, positions, and ranking lists...')
+  
+  const instrumentsData = [
+    {
+      name: 'Violin',
+      displayOrder: 1,
+      positions: [
+        { name: 'Förste konsertmästare', hierarchyLevel: 1 },
+        { name: 'Andre konsertmästare', hierarchyLevel: 2 },
+        { name: 'Stämledare violin 2', hierarchyLevel: 3 },
+        { name: 'Tutti violin 1', hierarchyLevel: 4 },
+        { name: 'Tutti violin 2', hierarchyLevel: 5 }
+      ]
+    },
+    {
+      name: 'Viola',
+      displayOrder: 2,
+      positions: [
+        { name: 'Stämledare', hierarchyLevel: 1 },
+        { name: 'Alternerande stämledare', hierarchyLevel: 2 },
+        { name: 'Tutti', hierarchyLevel: 3 }
+      ]
+    },
+    {
+      name: 'Cello',
+      displayOrder: 3,
+      positions: [
+        { name: 'Solocellist', hierarchyLevel: 1 },
+        { name: 'Alternerande stämledare', hierarchyLevel: 2 },
+        { name: 'Tutti', hierarchyLevel: 3 }
+      ]
+    },
+    {
+      name: 'Kontrabas',
+      displayOrder: 4,
+      positions: [
+        { name: 'Stämledare', hierarchyLevel: 1 },
+        { name: 'Tutti', hierarchyLevel: 2 }
+      ]
+    },
+    {
+      name: 'Flöjt',
+      displayOrder: 5,
+      positions: [
+        { name: 'Soloflöjt', hierarchyLevel: 1 },
+        { name: 'Stämledare flöjt 2', hierarchyLevel: 2 },
+        { name: 'Piccolaflöjt', hierarchyLevel: 3 }
+      ]
+    },
+    {
+      name: 'Oboe',
+      displayOrder: 6,
+      positions: [
+        { name: 'Solooboe', hierarchyLevel: 1 },
+        { name: 'Stämledare oboe 2', hierarchyLevel: 2 },
+        { name: 'Engelskt horn', hierarchyLevel: 3 }
+      ]
+    },
+    {
+      name: 'Klarinett',
+      displayOrder: 7,
+      positions: [
+        { name: 'Soloklarinett', hierarchyLevel: 1 },
+        { name: 'Stämledare klarinett 2', hierarchyLevel: 2 },
+        { name: 'Essklarinett', hierarchyLevel: 3 },
+        { name: 'Basklarinett', hierarchyLevel: 4 }
+      ]
+    },
+    {
+      name: 'Fagott',
+      displayOrder: 8,
+      positions: [
+        { name: 'Solofagott', hierarchyLevel: 1 },
+        { name: 'Stämledare fagott 2', hierarchyLevel: 2 },
+        { name: 'Kontrafagott', hierarchyLevel: 3 }
+      ]
+    },
+    {
+      name: 'Valthorn',
+      displayOrder: 9,
+      positions: [
+        { name: 'Solovalthorn', hierarchyLevel: 1 },
+        { name: 'Stämledare valthorn 2', hierarchyLevel: 2 },
+        { name: 'Valthorn 3', hierarchyLevel: 3 },
+        { name: 'Valthorn 4', hierarchyLevel: 4 }
+      ]
+    },
+    {
+      name: 'Trumpet',
+      displayOrder: 10,
+      positions: [
+        { name: 'Solotrumpet', hierarchyLevel: 1 },
+        { name: 'Stämledare trumpet 2', hierarchyLevel: 2 },
+        { name: 'Trumpet 3', hierarchyLevel: 3 },
+        { name: 'Kornet', hierarchyLevel: 4 }
+      ]
+    },
+    {
+      name: 'Trombon',
+      displayOrder: 11,
+      positions: [
+        { name: 'Solotrombon', hierarchyLevel: 1 },
+        { name: 'Trombon 2', hierarchyLevel: 2 },
+        { name: 'Bastrombon', hierarchyLevel: 3 }
+      ]
+    },
+    {
+      name: 'Tuba',
+      displayOrder: 12,
+      positions: [
+        { name: 'Solotuba', hierarchyLevel: 1 }
+      ]
+    },
+    {
+      name: 'Slagverk',
+      displayOrder: 13,
+      positions: [
+        { name: 'Soloslagverk', hierarchyLevel: 1 },
+        { name: 'Slagverk 2', hierarchyLevel: 2 },
+        { name: 'Puka', hierarchyLevel: 3 }
+      ]
+    },
+    {
+      name: 'Harpa',
+      displayOrder: 14,
+      positions: [
+        { name: 'Soloharpa', hierarchyLevel: 1 },
+        { name: 'Harpa 2', hierarchyLevel: 2 }
+      ]
+    }
   ]
 
-  for (const inst of instruments) {
+  let totalPositions = 0
+  let totalRankingLists = 0
+
+  for (const instrumentData of instrumentsData) {
     const instrumentId = await generateUniqueId('instrument', prisma)
-    await prisma.instrument.create({
+    const instrument = await prisma.instrument.create({
       data: {
-        ...inst,
-        instrumentId
+        instrumentId,
+        name: instrumentData.name,
+        displayOrder: instrumentData.displayOrder
       }
     })
-  }
 
-  // 3. Create basic positions for violin as example
-  console.log('Creating positions...')
-  const violin = await prisma.instrument.findFirst({ where: { name: 'Violin' } })
-  
-  if (violin) {
-    const positions = [
-      { name: 'Konsertmästare', hierarchyLevel: 1 },
-      { name: 'Alternerande konsertmästare', hierarchyLevel: 2 },
-      { name: 'Förste konsertmästare', hierarchyLevel: 3 },
-      { name: 'Andre konsertmästare', hierarchyLevel: 4 },
-      { name: 'Tutti', hierarchyLevel: 5 },
-    ]
-
-    for (const pos of positions) {
+    for (const positionData of instrumentData.positions) {
       const positionId = await generateUniqueId('position', prisma)
-      await prisma.position.create({
+      const position = await prisma.position.create({
         data: {
-          ...pos,
           positionId,
-          instrumentId: violin.id
+          name: positionData.name,
+          hierarchyLevel: positionData.hierarchyLevel,
+          instrumentId: instrument.id
         }
       })
+      totalPositions++
+
+      // Create A, B, C ranking lists for each position
+      const listTypes = ['A', 'B', 'C'] as const
+      for (const listType of listTypes) {
+        const rankingListId = await generateUniqueId('rankingList', prisma)
+        await prisma.rankingList.create({
+          data: {
+            rankingListId,
+            listType: listType,
+            description: `${listType}-lista för ${position.name} (${instrument.name})`,
+            positionId: position.id
+          }
+        })
+        totalRankingLists++
+      }
     }
   }
 
@@ -159,6 +280,77 @@ Orkesteradministrationen`
     })
   }
 
+  // Create English email templates
+  console.log('Creating English email templates...')
+  const englishTemplates = [
+    {
+      type: 'request_en',
+      subject: 'Substitute Request: {{projectName}}',
+      body: `Hello {{firstName}},
+
+We are looking for a {{instrumentName}} ({{positionName}}) for {{projectName}}.
+
+Start date: {{startDate}}
+
+Please respond within {{responseTime}} by clicking the link below:
+{{responseUrl}}
+
+Best regards,
+Orchestra Administration`
+    },
+    {
+      type: 'reminder_en',
+      subject: 'Reminder: Substitute Request {{projectName}}',
+      body: `Hello {{firstName}},
+
+This is a reminder about our substitute request for {{projectName}}.
+
+Please respond as soon as possible by clicking the link below:
+{{responseUrl}}
+
+Best regards,
+Orchestra Administration`
+    },
+    {
+      type: 'confirmation_en',
+      subject: 'Confirmation: {{projectName}}',
+      body: `Hello {{firstName}},
+
+Thank you for accepting the position as {{instrumentName}} ({{positionName}}) for {{projectName}}.
+
+Start date: {{startDate}}
+
+We will send you more information closer to the project start.
+
+Best regards,
+Orchestra Administration`
+    },
+    {
+      type: 'position_filled_en',
+      subject: 'Position Filled: {{projectName}}',
+      body: `Hello {{firstName}},
+
+Thank you for your interest in {{projectName}}.
+
+The position for {{instrumentName}} ({{positionName}}) has now been filled.
+
+We hope to contact you for future opportunities.
+
+Best regards,
+Orchestra Administration`
+    }
+  ]
+
+  for (const template of englishTemplates) {
+    const emailTemplateId = await generateUniqueId('template', prisma)
+    await prisma.emailTemplate.create({
+      data: {
+        ...template,
+        emailTemplateId
+      }
+    })
+  }
+
   // 5. Create settings
   console.log('Creating settings...')
   await prisma.settings.create({
@@ -171,10 +363,12 @@ Orkesteradministrationen`
 
   console.log('✅ Orchestra database seeded successfully!')
   console.log('📊 Summary:')
-  console.log(`- ${instruments.length} instruments created`)
-  console.log(`- ${templates.length} email templates created`)
+  console.log(`- ${instrumentsData.length} instruments created`)
+  console.log(`- ${totalPositions} positions created`)
+  console.log(`- ${totalRankingLists} ranking lists created (A, B, C for each position)`)
+  console.log(`- ${templates.length + englishTemplates.length} email templates created (${templates.length} Swedish + ${englishTemplates.length} English)`)
   console.log('- Basic settings configured')
-  console.log('\n🎉 Your new orchestra is ready to use!')
+  console.log('\n🎉 Your new orchestra is ready to use with complete instrument setup!')
 }
 
 main()

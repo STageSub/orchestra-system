@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 import { checkDatabaseHealth, getConnectionStats } from '@/lib/db-health'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const subdomain = request.headers.get('x-subdomain') || 'unknown'
+    const host = request.headers.get('host') || 'unknown'
+    const prisma = await getPrismaForUser(request)
     // Basic health check
     const healthResult = await checkDatabaseHealth()
     
@@ -41,6 +44,8 @@ export async function GET() {
     
     return NextResponse.json({
       status: healthResult.status === 'healthy' ? 'ok' : 'degraded',
+      subdomain,
+      host,
       database: {
         status: healthResult.status,
         latency: `${healthResult.latency}ms`,

@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 
 export async function GET(
   request: Request,
   context: { params: Promise<{ id: string; needId: string }> }
 ) {
   try {
+    const prisma = await getPrismaForUser(request)
     const { needId } = await context.params
     
     const need = await prisma.projectNeed.findUnique({
@@ -49,6 +50,7 @@ export async function DELETE(
   context: { params: Promise<{ id: string; needId: string }> }
 ) {
   try {
+    const prisma = await getPrismaForUser(request)
     const { needId } = await context.params
     
     // Check if the need has any requests
@@ -104,6 +106,7 @@ export async function PUT(
   context: { params: Promise<{ id: string; needId: string }> }
 ) {
   try {
+    const prisma = await getPrismaForUser(request)
     const { needId } = await context.params
     const body = await request.json()
     

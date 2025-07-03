@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 import { generateUniqueId } from '@/lib/id-generator'
 
 export async function POST(
@@ -7,6 +7,7 @@ export async function POST(
   context: { params: Promise<{ id: string; needId: string }> }
 ) {
   try {
+    const prisma = await getPrismaForUser(request)
     const { id, needId } = await context.params
     const projectId = parseInt(id)
     const projectNeedId = parseInt(needId)
@@ -25,7 +26,7 @@ export async function POST(
     const createdFiles = []
     
     for (const file of files) {
-      const projectFileId = await generateUniqueId('projectFile')
+      const projectFileId = await generateUniqueId('projectFile', prisma)
       
       const newFile = await prisma.projectFile.create({
         data: {
