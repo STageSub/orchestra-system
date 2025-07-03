@@ -16,9 +16,9 @@ interface OrchestraConfig {
   status: 'pending' | 'active' | 'inactive'
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const prisma = await getPrisma()
+    const prisma = await getPrismaForUser(request)
     const orchestras = await prisma.orchestra.findMany({
       orderBy: { createdAt: 'desc' }
     })

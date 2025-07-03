@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPrismaForUser } from '@/lib/auth-prisma'
-import { getPrisma } from '@/lib/prisma'
+// import { getPrisma } from '@/lib/prisma' - Not needed, using getPrismaClient directly
 import { sendConfirmationEmail, sendPositionFilledEmail } from '@/lib/email'
 import { ensureLogStorage } from '@/lib/server-init'
 import { generateUniqueId } from '@/lib/id-generator'
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     
     // Use orchestra-specific database if org parameter is provided
     const { getPrismaClient } = await import('@/lib/database-config')
-    const prisma = org ? await getPrismaClient(org) : await getPrisma()
+    const prisma = org ? await getPrismaClient(org) : await getPrismaForUser(request)
     
     console.log('Using database for org:', org || 'default (getPrisma)')
     
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
     
     // Use orchestra-specific database if org parameter is provided
     const { getPrismaClient } = await import('@/lib/database-config')
-    const prisma = org ? await getPrismaClient(org) : await getPrisma()
+    const prisma = org ? await getPrismaClient(org) : await getPrismaForUser(request)
     
     console.log('=== RESPOND API - Starting Transaction ===')
 

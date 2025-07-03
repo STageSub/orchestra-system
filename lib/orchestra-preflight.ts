@@ -41,7 +41,8 @@ export async function runOrchestraPreflightChecks(
   }
   
   // Kontrollera om den redan finns
-  const existingOrchestra = await prisma.orchestra.findUnique({
+  const prismaForCheck = await getPrisma()
+  const existingOrchestra = await prismaForCheck.orchestra.findUnique({
     where: { subdomain }
   })
   

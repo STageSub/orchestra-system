@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPrismaForUser } from '@/lib/auth-prisma'
-import { getPrisma } from '@/lib/prisma'
+// import { getPrisma } from '@/lib/prisma' - Not needed, using getPrismaForUser
 import { PrismaClient } from '@prisma/client'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const prisma = await getPrisma()
   try {
     const prisma = await getPrismaForUser(request)
     const { id } = await params
@@ -81,7 +80,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const prisma = await getPrisma()
+  const prisma = await getPrismaForUser(request)
   try {
     const { id } = await params
     

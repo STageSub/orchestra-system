@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getPrisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 import { formatHoursToReadable } from '@/lib/utils'
 
 export async function POST(request: Request) {
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const prisma = await getPrisma()
+    const prisma = await getPrismaForUser(request)
     const { requestId, type } = await request.json()
 
     const req = await prisma.request.findUnique({

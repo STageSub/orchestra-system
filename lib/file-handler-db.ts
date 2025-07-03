@@ -27,6 +27,7 @@ export async function saveFile(
   projectId?: number,
   needId?: number
 ): Promise<string> {
+  const prisma = await getPrisma()
   const fileRecord = await prisma.fileStorage.create({
     data: {
       fileName,

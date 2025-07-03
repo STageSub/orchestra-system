@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { getPrisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 
-export async function GET() {
+export async function GET(request: Request) {
   if (process.env.NODE_ENV !== 'development') {
     return NextResponse.json(
       { error: 'This endpoint is only available in development' },
@@ -10,7 +10,7 @@ export async function GET() {
   }
 
   try {
-    const prisma = await getPrisma()
+    const prisma = await getPrismaForUser(request)
     const stats = await prisma.request.groupBy({
       by: ['status'],
       _count: true

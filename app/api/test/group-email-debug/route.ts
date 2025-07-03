@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getPrismaForUser } from '@/lib/auth-prisma'
-import { getPrisma } from '@/lib/prisma'
+// import { getPrisma } from '@/lib/prisma' - Not needed, using getPrismaForUser
 
 export async function GET(request: Request) {
   if (process.env.NODE_ENV !== 'development') {
@@ -14,8 +14,7 @@ export async function GET(request: Request) {
   const projectId = url.searchParams.get('projectId') || '4'
 
   try {
-    const prisma = await getPrisma()
-  const prisma = await getPrismaForUser(request)
+    const prisma = await getPrismaForUser(request)
     console.log('[GROUP EMAIL DEBUG] Starting debug for project:', projectId)
 
     // 1. Check if project exists

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { getPrisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 
-export async function DELETE() {
+export async function DELETE(request: Request) {
   if (process.env.NODE_ENV !== 'development') {
     return NextResponse.json(
       { error: 'This endpoint is only available in development' },
@@ -10,7 +10,7 @@ export async function DELETE() {
   }
 
   try {
-    const prisma = await getPrisma()
+    const prisma = await getPrismaForUser(request)
     await prisma.$transaction([
       prisma.communicationLog.deleteMany({}),
       prisma.requestToken.deleteMany({}),

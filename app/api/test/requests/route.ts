@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { getPrisma } from '@/lib/prisma'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 
-export async function GET() {
+export async function GET(request: Request) {
   // Only allow in development
   if (process.env.NODE_ENV !== 'development') {
     return NextResponse.json(
@@ -11,7 +11,7 @@ export async function GET() {
   }
 
   try {
-    const prisma = await getPrisma()
+    const prisma = await getPrismaForUser(request)
     const projects = await prisma.project.findMany({
       where: {
         projectNeeds: {
