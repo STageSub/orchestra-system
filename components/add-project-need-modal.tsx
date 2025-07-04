@@ -344,7 +344,9 @@ export default function AddProjectNeedModal({
                     onClick={() => setShowCreateCustomListModal(true)}
                     className="text-sm font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap"
                   >
-                    {existingCustomListForPosition ? 'Ändra befintlig lista' : 'Skapa ny lista'}
+                    {(existingCustomListForPosition && 
+                     (formData.rankingListId === existingCustomListForPosition.toString() || 
+                      customList)) ? 'Ändra befintlig lista' : 'Skapa ny lista'}
                   </button>
                 )}
               </div>
