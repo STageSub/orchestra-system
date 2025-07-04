@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client-central'
+import { PrismaClient } from '../node_modules/.prisma/client-central'
 
 declare global {
   var prismaCentral: PrismaClient | undefined

@@ -355,4 +355,4 @@ main()
     console.error('❌ Error seeding data:', e)
     await prisma.$disconnect()
     process.exit(1)
-  })
+  })}
