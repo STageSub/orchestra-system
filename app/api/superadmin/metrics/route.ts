@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
-import { getDynamicPrisma } from '@/lib/database-connection'
+import { getPrismaClient } from '@/lib/database-config'
 
 const prisma = new PrismaClient()
 
@@ -37,7 +37,7 @@ export async function GET() {
         }
 
         // Get Prisma client for this orchestra
-        const orchestraPrisma = getDynamicPrisma(orchestra.databaseUrl)
+        const orchestraPrisma = await getPrismaClient(orchestra.subdomain)
 
         // Fetch metrics from orchestra database
         const musicians = await orchestraPrisma.musician.count()
