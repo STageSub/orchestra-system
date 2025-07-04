@@ -1,48 +1,77 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Users, CreditCard, Activity, TrendingUp, AlertCircle, Database, Settings, Building } from 'lucide-react'
+import { Users, CreditCard, Activity, Database, Building } from 'lucide-react'
 import CustomerManagement from '@/components/superadmin/CustomerManagement'
 import OrchestraManagement from '@/components/superadmin/OrchestraManagement'
 
-interface CustomerStats {
-  subdomain: string
+interface OrchestraData {
+  id: string
+  orchestraId: string
   name: string
-  musicians: number
-  projects: number
-  activeProjects: number
-  lastActivity: string
-  status: 'active' | 'inactive'
+  subdomain: string
+  status: string
+  subscription: {
+    plan: string
+    status: string
+    pricePerMonth: number
+  } | null
+  metrics: {
+    totalMusicians: number
+    activeMusicians: number
+    totalProjects: number
+    activeProjects: number
+    totalRequests: number
+    acceptedRequests: number
+    createdAt: string
+  }[]
 }
 
-interface SuperadminStats {
-  totalCustomers: number
-  activeCustomers: number
-  totalMusicians: number
-  totalProjects: number
-  totalRevenue: number
-  growthRate: number
-  customers: CustomerStats[]
+interface MetricsData {
+  orchestras: OrchestraData[]
+  metrics: {
+    totalMusicians: number
+    activeMusicians: number
+    totalProjects: number
+    activeProjects: number
+    totalRequests: number
+    acceptedRequests: number
+  }
+  revenue: {
+    mrr: number
+    currency: string
+  }
+  recentEvents: {
+    id: string
+    type: string
+    severity: string
+    title: string
+    description: string
+    createdAt: string
+    orchestra?: {
+      name: string
+    }
+  }[]
 }
 
 export default function SuperAdminDashboard() {
-  const [stats, setStats] = useState<SuperadminStats | null>(null)
+  const [metricsData, setMetricsData] = useState<MetricsData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'overview' | 'customers' | 'orchestras'>('overview')
 
   useEffect(() => {
-    fetchStats()
+    fetchMetrics()
   }, [])
 
-  const fetchStats = async () => {
+  const fetchMetrics = async () => {
     try {
-      const response = await fetch('/api/superadmin/stats')
+      const response = await fetch('/api/superadmin/metrics')
       if (response.ok) {
         const data = await response.json()
-        setStats(data)
+        setMetricsData(data)
       }
     } catch (error) {
-      console.error('Failed to fetch stats:', error)
+      console.error('Failed to fetch metrics:', error)
     } finally {
       setIsLoading(false)
     }
@@ -98,15 +127,15 @@ export default function SuperAdminDashboard() {
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Totalt antal kunder</p>
+              <p className="text-sm font-medium text-gray-600">Totalt antal orkestrar</p>
               <p className="text-2xl font-semibold text-gray-900 mt-2">
-                {stats?.totalCustomers || 0}
+                {metricsData?.orchestras.length || 0}
               </p>
             </div>
             <Building className="w-10 h-10 text-blue-500" />
           </div>
           <p className="text-sm text-gray-500 mt-2">
-            {stats?.activeCustomers || 0} aktiva
+            {metricsData?.orchestras.filter(o => o.status === 'active').length || 0} aktiva
           </p>
         </div>
 
@@ -115,12 +144,14 @@ export default function SuperAdminDashboard() {
             <div>
               <p className="text-sm font-medium text-gray-600">Totalt antal musiker</p>
               <p className="text-2xl font-semibold text-gray-900 mt-2">
-                {stats?.totalMusicians || 0}
+                {metricsData?.metrics.totalMusicians || 0}
               </p>
             </div>
             <Users className="w-10 h-10 text-green-500" />
           </div>
-          <p className="text-sm text-gray-500 mt-2">Över alla kunder</p>
+          <p className="text-sm text-gray-500 mt-2">
+            {metricsData?.metrics.activeMusicians || 0} aktiva
+          </p>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-sm border">
@@ -128,25 +159,30 @@ export default function SuperAdminDashboard() {
             <div>
               <p className="text-sm font-medium text-gray-600">Totalt antal projekt</p>
               <p className="text-2xl font-semibold text-gray-900 mt-2">
-                {stats?.totalProjects || 0}
+                {metricsData?.metrics.totalProjects || 0}
               </p>
             </div>
             <Activity className="w-10 h-10 text-purple-500" />
           </div>
-          <p className="text-sm text-gray-500 mt-2">Över alla kunder</p>
+          <p className="text-sm text-gray-500 mt-2">
+            {metricsData?.metrics.activeProjects || 0} aktiva
+          </p>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Månadsintäkter</p>
+              <p className="text-sm font-medium text-gray-600">Månadsintäkter (MRR)</p>
               <p className="text-2xl font-semibold text-gray-900 mt-2">
-                ${stats?.totalRevenue || 0}
+                {new Intl.NumberFormat('sv-SE', { 
+                  style: 'currency', 
+                  currency: metricsData?.revenue.currency || 'SEK' 
+                }).format(metricsData?.revenue.mrr || 0)}
               </p>
             </div>
             <CreditCard className="w-10 h-10 text-orange-500" />
           </div>
-          <p className="text-sm text-gray-500 mt-2">Baserat på kunder</p>
+          <p className="text-sm text-gray-500 mt-2">Månatlig återkommande intäkt</p>
         </div>
       </div>
 
@@ -183,42 +219,42 @@ export default function SuperAdminDashboard() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {stats?.customers.map((customer) => (
-                <tr key={customer.subdomain}>
+              {metricsData?.orchestras.map((orchestra) => (
+                <tr key={orchestra.subdomain}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <Database className="w-8 h-8 text-gray-400 mr-3" />
                       <div>
                         <div className="text-sm font-medium text-gray-900">
-                          {customer.name}
+                          {orchestra.name}
                         </div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{customer.subdomain}.stagesub.com</div>
+                    <div className="text-sm text-gray-900">{orchestra.subdomain}.stagesub.com</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {customer.musicians}
+                    {orchestra.metrics[0]?.totalMusicians || 0}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {customer.projects} ({customer.activeProjects} aktiva)
+                    {orchestra.metrics[0]?.totalProjects || 0} ({orchestra.metrics[0]?.activeProjects || 0} aktiva)
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      customer.status === 'active' 
+                      orchestra.status === 'active' 
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-gray-100 text-gray-800'
                     }`}>
-                      {customer.status === 'active' ? 'Aktiv' : 'Inaktiv'}
+                      {orchestra.status === 'active' ? 'Aktiv' : 'Inaktiv'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {customer.lastActivity}
+                    {orchestra.metrics[0] ? new Date(orchestra.metrics[0].createdAt).toLocaleDateString('sv-SE') : 'Ingen aktivitet'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <a
-                      href={`https://${customer.subdomain}.stagesub.com/admin`}
+                      href={`https://${orchestra.subdomain}.stagesub.com/admin`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:text-blue-900 mr-4"
@@ -233,6 +269,41 @@ export default function SuperAdminDashboard() {
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Recent Events */}
+      <div className="bg-white rounded-lg shadow-sm border mt-8">
+        <div className="px-6 py-4 border-b">
+          <h2 className="text-lg font-semibold text-gray-900">Senaste händelser</h2>
+        </div>
+        <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
+          {metricsData?.recentEvents.map((event) => (
+            <div key={event.id} className="px-6 py-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{event.title}</p>
+                  <p className="text-sm text-gray-500 mt-1">{event.description}</p>
+                  {event.orchestra && (
+                    <p className="text-xs text-gray-400 mt-1">{event.orchestra.name}</p>
+                  )}
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                    event.severity === 'error' ? 'bg-red-100 text-red-800' :
+                    event.severity === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-blue-100 text-blue-800'
+                  }`}>
+                    {event.severity === 'error' ? 'Fel' :
+                     event.severity === 'warning' ? 'Varning' : 'Info'}
+                  </span>
+                  <p className="text-xs text-gray-400 mt-2">
+                    {new Date(event.createdAt).toLocaleDateString('sv-SE')}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
         </>
