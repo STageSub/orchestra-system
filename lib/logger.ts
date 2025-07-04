@@ -58,44 +58,53 @@ class Logger {
       // Store in memory for development
       this.addToMemory(logEntry)
 
-      // Store in database - make this fire-and-forget to prevent blocking
+      // Store in database
       // Determine which database to write to based on user's orchestra
-      (async () => {
-        try {
-          let prisma
-          
-          // If request is provided, use getPrismaForUser to get the correct database
-          if (request) {
-            console.log('[Logger] Using getPrismaForUser for database selection')
-            prisma = await getPrismaForUser(request)
-          } else {
-            // Fallback to central database for system logs without user context
-            console.log('[Logger] No request provided, using neonPrisma')
-            prisma = neonPrisma
-          }
-          
-          console.log('[Logger] Writing log to database...')
-          await prisma.systemLog.create({
-            data: {
-              level,
-              category,
-              message,
-              metadata: context?.metadata ? JSON.parse(JSON.stringify(context.metadata)) : undefined,
-              userId: context?.userId,
-              orchestraId: context?.orchestraId,
-              subdomain: context?.subdomain,
-              ip: context?.ip,
-              userAgent: context?.userAgent,
-              requestId: context?.requestId,
-              duration: context?.duration
-            }
-          })
-          console.log('[Logger] Log written successfully')
-        } catch (dbError) {
-          // Always log database errors for debugging
-          console.error('[Logger] Failed to write log to database:', dbError)
+      try {
+        let prisma
+        
+        // If request is provided, use getPrismaForUser to get the correct database
+        if (request) {
+          console.log('[Logger] Using getPrismaForUser for database selection')
+          prisma = await getPrismaForUser(request)
+        } else {
+          // Fallback to central database for system logs without user context
+          console.log('[Logger] No request provided, using neonPrisma')
+          prisma = neonPrisma
         }
-      })()
+        
+        console.log('[Logger] Writing log to database...', {
+          level,
+          category,
+          message,
+          hasMetadata: !!context?.metadata
+        })
+        
+        await prisma.systemLog.create({
+          data: {
+            level,
+            category,
+            message,
+            metadata: context?.metadata ? JSON.parse(JSON.stringify(context.metadata)) : undefined,
+            userId: context?.userId,
+            orchestraId: context?.orchestraId,
+            subdomain: context?.subdomain,
+            ip: context?.ip,
+            userAgent: context?.userAgent,
+            requestId: context?.requestId,
+            duration: context?.duration
+          }
+        })
+        console.log('[Logger] Log written successfully')
+      } catch (dbError) {
+        // Always log database errors for debugging
+        console.error('[Logger] Failed to write log to database:', dbError)
+        console.error('[Logger] Error details:', {
+          errorName: dbError instanceof Error ? dbError.name : 'Unknown',
+          errorMessage: dbError instanceof Error ? dbError.message : String(dbError),
+          stack: dbError instanceof Error ? dbError.stack : undefined
+        })
+      }
     } catch (error) {
       // Catch any errors in the entire logging process
       // This prevents logger from ever throwing and breaking the app
