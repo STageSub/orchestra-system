@@ -60,9 +60,9 @@ export default function SuccessModal({
             <div className="mt-4">
               <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-green-500 animate-shrink"
+                  className="h-full bg-green-500"
                   style={{
-                    animation: `shrink ${autoCloseDelay}ms linear forwards`
+                    animation: `grow ${autoCloseDelay}ms linear forwards`
                   }}
                 />
               </div>
@@ -73,9 +73,9 @@ export default function SuccessModal({
       </div>
       
       <style jsx>{`
-        @keyframes shrink {
-          from { width: 100%; }
-          to { width: 0%; }
+        @keyframes grow {
+          from { width: 0%; }
+          to { width: 100%; }
         }
       `}</style>
     </div>
