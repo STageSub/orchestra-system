@@ -94,7 +94,7 @@ export default function CustomerManagement() {
                   Orkester
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Subdomän
+                  ID
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Plan
@@ -132,7 +132,7 @@ export default function CustomerManagement() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{orchestra.subdomain}.stagesub.com</div>
+                      <div className="text-sm text-gray-900">{orchestra.orchestraId}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {orchestra.subscription && (
@@ -177,7 +177,7 @@ export default function CustomerManagement() {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          onClick={() => window.open(`https://${orchestra.subdomain}.stagesub.com/admin`, '_blank')}
+                          onClick={() => window.open(`/admin?orchestra=${orchestra.orchestraId}`, '_blank')}
                           className="text-blue-600 hover:text-blue-900"
                           title="Öppna orchestra admin"
                         >
