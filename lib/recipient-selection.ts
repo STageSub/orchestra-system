@@ -29,8 +29,9 @@ export interface NeedRecipientResult {
   }
   strategy: 'sequential' | 'parallel' | 'first_come'
   maxRecipients: number | null
-  listType?: string // NY: Vilken lista (A, B, C)
-  rankingListId?: number // NY: ID för rankningslistan
+  listType?: string // NY: Vilken lista (A, B, C) eller custom list name
+  rankingListId?: number // NY: ID för rankningslistan (standard lists only)
+  customRankingListId?: number // NY: ID för custom ranking list
   musiciansToContact: RecipientInfo[]
   nextInQueue: RecipientInfo[]
   allMusiciansWithStatus?: RecipientInfo[] // NY: Alla musiker med status
@@ -105,6 +106,15 @@ async function analyzeConflictsForProject(
             }
           }
         }
+      },
+      customRankingList: {
+        include: {
+          customRankings: {
+            include: {
+              musician: true
+            }
+          }
+        }
       }
     }
   })
@@ -112,28 +122,38 @@ async function analyzeConflictsForProject(
   const musicianConflicts = new Map<number, MusicianConflictInfo>()
 
   projectNeeds.forEach(need => {
-    if (need.rankingList?.rankings) {
-      need.rankingList.rankings.forEach(ranking => {
-        const musicianId = ranking.musicianId
-        
-        if (!musicianConflicts.has(musicianId)) {
-          musicianConflicts.set(musicianId, {
-            musicianId,
-            positions: []
-          })
-        }
-        
-        musicianConflicts.get(musicianId)!.positions.push({
-          needId: need.id,
-          positionId: need.position.id,
-          positionName: need.position.name,
-          instrumentName: need.position.instrument.name,
-          hierarchyLevel: need.position.hierarchyLevel,
-          ranking: ranking.rank,
-          listType: need.rankingList.listType
-        })
-      })
+    // Get rankings from either standard or custom list
+    let rankings: any[] = []
+    let listIdentifier = ''
+    
+    if (need.customRankingList?.customRankings) {
+      rankings = need.customRankingList.customRankings
+      listIdentifier = need.customRankingList.name
+    } else if (need.rankingList?.rankings) {
+      rankings = need.rankingList.rankings
+      listIdentifier = need.rankingList.listType
     }
+    
+    rankings.forEach(ranking => {
+      const musicianId = ranking.musicianId
+      
+      if (!musicianConflicts.has(musicianId)) {
+        musicianConflicts.set(musicianId, {
+          musicianId,
+          positions: []
+        })
+      }
+      
+      musicianConflicts.get(musicianId)!.positions.push({
+        needId: need.id,
+        positionId: need.position.id,
+        positionName: need.position.name,
+        instrumentName: need.position.instrument.name,
+        hierarchyLevel: need.position.hierarchyLevel,
+        ranking: ranking.rank,
+        listType: listIdentifier
+      })
+    })
   })
 
   // Return only musicians with conflicts
@@ -184,8 +204,11 @@ async function getAllMusiciansWithStatus(
     requestsByMusicianId.set(req.musicianId, req)
   })
 
+  // Get rankings from either standard or custom list
+  const rankings = need.customRankingList?.customRankings || need.rankingList?.rankings || []
+  
   // Map all musicians with their status
-  return need.rankingList.rankings.map((r: any) => {
+  return rankings.map((r: any) => {
     const existingRequest = requestsByMusicianId.get(r.musicianId)
     const plannedRequest = plannedRequests?.get(r.musicianId)
     const baseInfo: RecipientInfo = {
@@ -265,12 +288,20 @@ async function getAvailableMusiciansForNeed(
   conflictStrategy: string,
   prisma: PrismaClient
 ): Promise<RecipientInfo[]> {
-  // Start with musicians from ranking list
-  if (!need.rankingList?.rankings) {
+  // Get musicians from either ranking list or custom ranking list
+  let rankings: any[] = []
+  
+  if (need.customRankingList?.customRankings) {
+    // Use custom ranking list
+    rankings = need.customRankingList.customRankings
+  } else if (need.rankingList?.rankings) {
+    // Use standard ranking list
+    rankings = need.rankingList.rankings
+  } else {
     return []
   }
 
-  let availableMusicians = need.rankingList.rankings
+  let availableMusicians = rankings
     .filter((r: any) => {
       // Filter out already contacted musicians (project-wide)
       if (excludedMusicianIds.has(r.musicianId)) {
@@ -391,6 +422,18 @@ export async function getRecipientsForNeed(
           }
         }
       },
+      customRankingList: {
+        include: {
+          customRankings: {
+            include: {
+              musician: true
+            },
+            orderBy: {
+              rank: 'asc'
+            }
+          }
+        }
+      },
       requests: {
         include: {
           musician: true
@@ -475,8 +518,9 @@ export async function getRecipientsForNeed(
     },
     strategy: need.requestStrategy as 'sequential' | 'parallel' | 'first_come',
     maxRecipients: need.maxRecipients,
-    listType: need.rankingList?.listType, // Lägg till vilken lista
-    rankingListId: need.rankingList?.id, // Lägg till ranking list ID
+    listType: need.customRankingList ? need.customRankingList.name : need.rankingList?.listType, // Use custom list name if available
+    rankingListId: need.customRankingList ? null : need.rankingList?.id, // Only set for standard lists
+    customRankingListId: need.customRankingList?.id, // Add custom list ID
     musiciansToContact,
     nextInQueue,
     allMusiciansWithStatus,

@@ -36,6 +36,7 @@ interface PreviewData {
     totalAvailable: number
     listType?: string
     rankingListId?: number
+    customRankingListId?: number
   }
   canSend: boolean
 }
@@ -165,6 +166,10 @@ export default function SendRequestsPreviewModal({
                       listType={previewData.preview.listType || ''}
                       positionName={previewData.need.position.split(' - ')[1] || ''}
                     />
+                  ) : previewData.preview.customRankingListId ? (
+                    <div className="text-xs">
+                      Anpassad lista: {previewData.preview.listType}
+                    </div>
                   ) : (
                     <div className="text-xs">
                       Rankningslista {previewData.preview.listType}
@@ -174,7 +179,10 @@ export default function SendRequestsPreviewModal({
                 delay={700}
               >
                 <span className="font-medium cursor-help border-b border-dashed border-gray-400">
-                  Lista {previewData.preview.listType}
+                  {previewData.preview.customRankingListId ? 
+                    previewData.preview.listType : 
+                    `Lista ${previewData.preview.listType}`
+                  }
                 </span>
               </Tooltip>
               <span className="mx-1">•</span>
@@ -198,7 +206,10 @@ export default function SendRequestsPreviewModal({
             {previewData.preview.allMusiciansWithStatus && previewData.preview.allMusiciansWithStatus.length > 0 && (
               <div>
                 <h4 className="font-medium text-gray-900 mb-3">
-                  Alla musiker på rankningslistan (Lista {previewData.preview.listType}):
+                  Alla musiker på rankningslistan ({previewData.preview.customRankingListId ? 
+                    previewData.preview.listType : 
+                    `Lista ${previewData.preview.listType}`
+                  }):
                 </h4>
                 <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 max-h-64 overflow-y-auto">
                   <div className="space-y-1">
