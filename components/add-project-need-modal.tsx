@@ -24,6 +24,8 @@ interface RankingList {
   availableMusiciansCount?: number
   totalActiveMusicians?: number
   isUsedInProject?: boolean
+  isCustomList?: boolean
+  customListId?: number
 }
 
 interface AddProjectNeedModalProps {
@@ -193,13 +195,17 @@ export default function AddProjectNeedModal({
     setLoading(true)
 
     try {
+      // Check if the selected ranking list is actually a custom list
+      const selectedList = rankingLists.find(l => l.id === parseInt(formData.rankingListId))
+      const isCustomListFromDropdown = selectedList?.isCustomList || false
+      
       const response = await fetch(`/api/projects/${projectId}/needs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           positionId: formData.positionId,
-          rankingListId: formData.customRankingListId ? null : formData.rankingListId,
-          customRankingListId: formData.customRankingListId || null,
+          rankingListId: (formData.customRankingListId || isCustomListFromDropdown) ? null : formData.rankingListId,
+          customRankingListId: formData.customRankingListId || (isCustomListFromDropdown ? formData.rankingListId : null),
           quantity: formData.quantity,
           requestStrategy: formData.requestStrategy,
           maxRecipients: formData.maxRecipients || null,
@@ -310,7 +316,10 @@ export default function AddProjectNeedModal({
                         value={list.id}
                         disabled={list.isUsedInProject || (list.availableMusiciansCount !== undefined && list.availableMusiciansCount === 0)}
                       >
-                        {list.listType}-lista{list.description ? ` (${list.description})` : ''}
+                        {list.isCustomList ? 
+                          `Anpassad: ${list.description}` : 
+                          `${list.listType}-lista${list.description ? ` (${list.description})` : ''}`
+                        }
                         {list.availableMusiciansCount !== undefined && ` (${list.availableMusiciansCount} tillgängliga)`}
                         {list.isUsedInProject ? ' (Redan använd)' : ''}
                         {list.availableMusiciansCount === 0 ? ' (Inga tillgängliga)' : ''}

@@ -40,7 +40,14 @@ interface ProjectNeed {
   maxRecipients: number | null
   responseTimeHours: number | null
   position: Position
-  rankingList: RankingList
+  rankingList?: RankingList | null
+  customRankingList?: {
+    id: number
+    customListId: string
+    name: string
+    projectId: number
+    positionId: number
+  } | null
   needStatus?: string
   _count?: {
     requests: number

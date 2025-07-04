@@ -20,7 +20,12 @@ interface ProjectNeed {
   rankingList: {
     id: number
     listType: string
-  }
+  } | null
+  customRankingList?: {
+    id: number
+    name: string
+    customListId: string
+  } | null
   _count?: {
     requests: number
   }
@@ -156,7 +161,7 @@ export default function EditProjectNeedModal({
             <strong>Position:</strong> {need.position.instrument.name} - {need.position.name}
           </p>
           <p className="text-sm text-gray-700">
-            <strong>Lista:</strong> {need.rankingList.listType}
+            <strong>Lista:</strong> {need.rankingList?.listType || (need.customRankingList ? `Anpassad: ${need.customRankingList.name}` : 'N/A')}
           </p>
           <p className="text-sm text-gray-700">
             <strong>Strategi:</strong> {

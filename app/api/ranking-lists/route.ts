@@ -92,7 +92,51 @@ export async function GET(request: Request) {
       rankingLists = enhancedLists
     }
     
-    return NextResponse.json(rankingLists)
+    // Check if customRankingList table exists and include custom lists
+    let customLists = []
+    let hasCustomListTable = false
+    
+    try {
+      await prisma.$queryRaw`SELECT 1 FROM "CustomRankingList" LIMIT 1`
+      hasCustomListTable = true
+    } catch (error) {
+      // Table doesn't exist yet, skip custom lists
+    }
+    
+    if (hasCustomListTable && projectId && positionId) {
+      // Fetch custom lists for this project and position
+      const projectCustomLists = await prisma.customRankingList.findMany({
+        where: {
+          projectId: parseInt(projectId),
+          positionId: parseInt(positionId)
+        },
+        include: {
+          _count: {
+            select: {
+              customRankings: true
+            }
+          }
+        }
+      })
+      
+      // Transform custom lists to match ranking list format
+      customLists = projectCustomLists.map(customList => ({
+        id: customList.id,
+        listType: 'custom',
+        description: customList.name,
+        positionId: customList.positionId,
+        position: rankingLists[0]?.position, // Use position from standard lists
+        availableMusiciansCount: customList._count.customRankings,
+        totalActiveMusicians: customList._count.customRankings,
+        isCustomList: true,
+        customListId: customList.id
+      }))
+    }
+    
+    // Combine standard and custom lists
+    const allLists = [...rankingLists, ...customLists]
+    
+    return NextResponse.json(allLists)
   } catch (error) {
     console.error('Error fetching ranking lists:', error)
     return NextResponse.json(

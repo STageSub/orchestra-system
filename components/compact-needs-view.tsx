@@ -321,7 +321,7 @@ export default function CompactNeedsView({
                               delay={700}
                             >
                               <span className="cursor-help border-b border-dashed border-gray-400 whitespace-nowrap">
-                                Lista {need.rankingList?.listType}
+                                Lista {need.rankingList?.listType || 'Anpassad'}
                               </span>
                             </Tooltip>
                           )}

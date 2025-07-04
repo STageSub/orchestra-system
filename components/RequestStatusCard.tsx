@@ -48,7 +48,12 @@ interface RequestNeed {
   rankingList: {
     id: number
     listType: string
-  }
+  } | null
+  customRankingList?: {
+    id: number
+    name: string
+    customListId: string
+  } | null
   requestStrategy: string
   maxRecipients: number | null
   responseTimeHours: number | null
@@ -224,7 +229,7 @@ export default function RequestStatusCard({ need, projectId, onRequestsSent }: R
               )}
             </div>
             <p className="text-sm text-gray-600 mt-1">
-              Lista {need.rankingList.listType} • {getStrategyLabel(need.requestStrategy)}
+              Lista {need.rankingList?.listType || (need.customRankingList ? need.customRankingList.name : 'N/A')} • {getStrategyLabel(need.requestStrategy)}
               {need.maxRecipients && ` • Max ${need.maxRecipients} mottagare`}
             </p>
           </div>

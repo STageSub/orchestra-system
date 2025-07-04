@@ -18,6 +18,13 @@ interface RankingList {
   description: string | null
 }
 
+interface CustomRankingList {
+  id: number
+  name: string
+  customListId: string
+  projectId: number
+}
+
 interface ProjectNeed {
   id: number
   projectNeedId: string
@@ -26,7 +33,8 @@ interface ProjectNeed {
   maxRecipients: number | null
   responseTimeHours: number | null
   position: Position
-  rankingList: RankingList
+  rankingList: RankingList | null
+  customRankingList?: CustomRankingList | null
   _count?: {
     requests: number
   }
@@ -298,7 +306,7 @@ export default function NeedsTableView({
                             {need.status ? `${need.status.acceptedCount}/${need.quantity}` : `0/${need.quantity}`}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                            {need.rankingList.listType}
+                            {need.rankingList?.listType || (need.customRankingList ? 'Anpassad' : 'N/A')}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                             <div>
