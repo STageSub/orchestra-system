@@ -174,7 +174,7 @@ async function getAllMusiciansWithStatus(
   plannedRequests?: Map<number, { needId: number; position: string }>,
   prisma: PrismaClient
 ): Promise<RecipientInfo[]> {
-  if (!need.rankingList?.rankings) {
+  if (!need.rankingList?.rankings && !need.customRankingList?.customRankings) {
     return []
   }
 
