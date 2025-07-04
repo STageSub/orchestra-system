@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPrismaForUser } from '@/lib/auth-prisma'
 import { generateUniqueId } from '@/lib/id-generator'
-import { logger } from '@/lib/logger'
+import { apiLogger } from '@/lib/logger'
 
 export async function POST(
   request: NextRequest,
@@ -173,7 +173,7 @@ export async function POST(
       }
     })
 
-    logger.info('api', 'Created custom ranking list', {
+    apiLogger.info(request, 'api', 'Created custom ranking list', {
       projectId,
       positionId,
       customListId: customList.id,

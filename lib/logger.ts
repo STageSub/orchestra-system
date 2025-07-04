@@ -1,5 +1,5 @@
-import { neonPrisma, getPrisma, getCurrentSubdomain } from '@/lib/prisma-dynamic'
-import { getPrismaClient } from '@/lib/database-config'
+import { neonPrisma } from '@/lib/prisma-dynamic'
+import { getPrismaForUser } from '@/lib/auth-prisma'
 import { NextRequest } from 'next/server'
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
@@ -34,7 +34,8 @@ class Logger {
     level: LogLevel,
     category: LogCategory,
     message: string,
-    context?: LogContext
+    context?: LogContext,
+    request?: NextRequest
   ) {
     try {
       const logEntry = {
@@ -58,23 +59,17 @@ class Logger {
       this.addToMemory(logEntry)
 
       // Store in database - make this fire-and-forget to prevent blocking
-      // Determine which database to write to based on subdomain
+      // Determine which database to write to based on user's orchestra
       (async () => {
         try {
           let prisma
           
-          // If subdomain is provided in context, use that orchestra's database
-          if (context?.subdomain && context.subdomain !== 'admin') {
-            prisma = await getPrismaClient(context.subdomain)
+          // If request is provided, use getPrismaForUser to get the correct database
+          if (request) {
+            prisma = await getPrismaForUser(request)
           } else {
-            // Try to get current subdomain from auth context
-            const currentSubdomain = await getCurrentSubdomain()
-            if (currentSubdomain && currentSubdomain !== 'admin') {
-              prisma = await getPrismaClient(currentSubdomain)
-            } else {
-              // Fallback to central database for superadmin logs
-              prisma = neonPrisma
-            }
+            // Fallback to central database for system logs without user context
+            prisma = neonPrisma
           }
           
           await prisma.systemLog.create({
@@ -128,20 +123,20 @@ class Logger {
   }
 
   // Convenience methods
-  debug(category: LogCategory, message: string, context?: LogContext) {
-    return this.log('debug', category, message, context)
+  debug(category: LogCategory, message: string, context?: LogContext, request?: NextRequest) {
+    return this.log('debug', category, message, context, request)
   }
 
-  info(category: LogCategory, message: string, context?: LogContext) {
-    return this.log('info', category, message, context)
+  info(category: LogCategory, message: string, context?: LogContext, request?: NextRequest) {
+    return this.log('info', category, message, context, request)
   }
 
-  warn(category: LogCategory, message: string, context?: LogContext) {
-    return this.log('warn', category, message, context)
+  warn(category: LogCategory, message: string, context?: LogContext, request?: NextRequest) {
+    return this.log('warn', category, message, context, request)
   }
 
-  error(category: LogCategory, message: string, context?: LogContext) {
-    return this.log('error', category, message, context)
+  error(category: LogCategory, message: string, context?: LogContext, request?: NextRequest) {
+    return this.log('error', category, message, context, request)
   }
 
   // Get logs from memory (for development)
@@ -164,6 +159,34 @@ class Logger {
 // Export singleton instance
 export const logger = Logger.getInstance()
 
+// Helper function for API routes to log with request context
+export function logWithRequest(
+  request: NextRequest,
+  level: LogLevel,
+  category: LogCategory,
+  message: string,
+  additionalContext?: Partial<LogContext>
+) {
+  const context: LogContext = {
+    ...logger.extractRequestContext(request),
+    ...additionalContext
+  }
+  
+  return logger.log(level, category, message, context, request)
+}
+
+// Convenience object for API routes
+export const apiLogger = {
+  info: (request: NextRequest, category: LogCategory, message: string, context?: Partial<LogContext>) =>
+    logWithRequest(request, 'info', category, message, context),
+  error: (request: NextRequest, category: LogCategory, message: string, context?: Partial<LogContext>) =>
+    logWithRequest(request, 'error', category, message, context),
+  warn: (request: NextRequest, category: LogCategory, message: string, context?: Partial<LogContext>) =>
+    logWithRequest(request, 'warn', category, message, context),
+  debug: (request: NextRequest, category: LogCategory, message: string, context?: Partial<LogContext>) =>
+    logWithRequest(request, 'debug', category, message, context)
+}
+
 // Helper function to get logs from database
 export async function getSystemLogs(options: {
   limit?: number
@@ -175,7 +198,7 @@ export async function getSystemLogs(options: {
   search?: string
   userId?: string
   orchestraId?: string
-  subdomain?: string
+  request?: NextRequest
 }) {
   const {
     limit = 50,
@@ -187,22 +210,17 @@ export async function getSystemLogs(options: {
     search,
     userId,
     orchestraId,
-    subdomain
+    request
   } = options
 
   // Get the correct prisma instance for the orchestra
   let prisma
-  if (subdomain && subdomain !== 'admin') {
-    prisma = await getPrismaClient(subdomain)
+  if (request) {
+    // Use the same logic as writing - get database based on user's orchestra
+    prisma = await getPrismaForUser(request)
   } else {
-    // Try to get from auth context
-    const currentSubdomain = await getCurrentSubdomain()
-    if (currentSubdomain && currentSubdomain !== 'admin') {
-      prisma = await getPrismaClient(currentSubdomain)
-    } else {
-      // Superadmin sees logs from central database
-      prisma = neonPrisma
-    }
+    // Fallback to central database
+    prisma = neonPrisma
   }
 
   const where: any = {}
@@ -239,21 +257,16 @@ export async function getSystemLogs(options: {
 }
 
 // Helper to clean old logs
-export async function cleanOldLogs(daysToKeep: number = 30, subdomain?: string) {
+export async function cleanOldLogs(daysToKeep: number = 30, request?: NextRequest) {
   const cutoffDate = new Date()
   cutoffDate.setDate(cutoffDate.getDate() - daysToKeep)
 
   // Get the correct prisma instance
   let prisma
-  if (subdomain && subdomain !== 'admin') {
-    prisma = await getPrismaClient(subdomain)
+  if (request) {
+    prisma = await getPrismaForUser(request)
   } else {
-    const currentSubdomain = await getCurrentSubdomain()
-    if (currentSubdomain && currentSubdomain !== 'admin') {
-      prisma = await getPrismaClient(currentSubdomain)
-    } else {
-      prisma = neonPrisma
-    }
+    prisma = neonPrisma
   }
 
   const result = await prisma.systemLog.deleteMany({
