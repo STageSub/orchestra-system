@@ -248,7 +248,7 @@ export default function CreateCustomListModal({
       <div className="min-h-screen p-4 flex items-center justify-center">
         <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[calc(100vh-2rem)] flex flex-col">
         {/* Header */}
-        <div className="bg-white shadow-sm border-b px-6 py-4">
+        <div className="bg-white shadow-sm border-b px-6 py-4 sticky top-0 z-20">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
@@ -300,12 +300,17 @@ export default function CreateCustomListModal({
 
           <div className="grid grid-cols-3 gap-6 h-full">
             {/* Left column - New list */}
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-4 py-3 border-b bg-gray-50 sticky top-0 z-10">
-                <h2 className="font-semibold text-gray-900">
-                  {listName || `V. ${project?.weekNumber}`} {project?.name}
-                </h2>
-                <p className="text-sm text-gray-600 mt-1">
+            <div className="bg-white rounded-lg shadow ring-2 ring-blue-500">
+              <div className="px-4 py-3 border-b bg-gray-50">
+                <div className="flex items-center justify-between mb-1">
+                  <h2 className="font-semibold text-gray-900">
+                    {listName || `V. ${project?.weekNumber}`} {project?.name}
+                  </h2>
+                  <span className="text-xs font-medium px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                    Din nya lista
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600">
                   {newListMusicians.length} musiker • Dra för att ändra ordning
                 </p>
               </div>
@@ -319,9 +324,14 @@ export default function CreateCustomListModal({
                       className="p-4"
                     >
                       {newListMusicians.length === 0 ? (
-                        <p className="text-sm text-gray-500 text-center py-8">
-                          Dra musiker hit för att bygga din lista
-                        </p>
+                        <div className="text-center py-8">
+                          <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
+                          </svg>
+                          <p className="text-sm text-gray-500">
+                            Dra musiker hit för att bygga din lista
+                          </p>
+                        </div>
                       ) : (
                         newListMusicians.map((musician, index) => (
                           <Draggable
@@ -372,7 +382,7 @@ export default function CreateCustomListModal({
             {/* Middle column - Existing lists */}
             {!isEditMode && (
               <div className="bg-white rounded-lg shadow">
-                <div className="px-4 py-3 border-b bg-gray-50 sticky top-0 z-10">
+                <div className="px-4 py-3 border-b bg-gray-50">
                   <h2 className="font-semibold text-gray-900 mb-2">Befintliga listor</h2>
                   <select
                     value={selectedList?.id || ''}
@@ -457,7 +467,7 @@ export default function CreateCustomListModal({
 
             {/* Right column - All qualified musicians */}
             <div className={`bg-white rounded-lg shadow ${isEditMode ? 'col-span-2' : ''}`}>
-              <div className="px-4 py-3 border-b bg-gray-50 sticky top-0 z-10">
+              <div className="px-4 py-3 border-b bg-gray-50">
                 <h2 className="font-semibold text-gray-900 mb-2">Alla kvalificerade musiker</h2>
                 <div className="relative">
                   <input
