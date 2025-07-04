@@ -10,7 +10,6 @@ export default function OrchestraManagement() {
 
   const handleProvision = async (formData: {
     name: string
-    subdomain: string
     email: string
     plan: string
   }) => {
@@ -92,15 +91,11 @@ export default function OrchestraManagement() {
           </div>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Göteborg</span>
+              <span className="text-sm text-gray-600">SCO Admin</span>
               <CheckCircle className="w-4 h-4 text-green-500" />
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Stockholm</span>
-              <CheckCircle className="w-4 h-4 text-green-500" />
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Malmö</span>
+              <span className="text-sm text-gray-600">SCOSO Admin</span>
               <CheckCircle className="w-4 h-4 text-green-500" />
             </div>
           </div>
@@ -141,7 +136,6 @@ export default function OrchestraManagement() {
                 const formData = new FormData(e.currentTarget)
                 handleProvision({
                   name: formData.get('name') as string,
-                  subdomain: formData.get('subdomain') as string,
                   email: formData.get('email') as string,
                   plan: formData.get('plan') as string
                 })
@@ -158,22 +152,6 @@ export default function OrchestraManagement() {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Subdomän</label>
-                    <div className="mt-1 flex rounded-md shadow-sm">
-                      <input
-                        type="text"
-                        name="subdomain"
-                        className="flex-1 rounded-none rounded-l-md border-gray-300"
-                        placeholder="exempel"
-                        pattern="[a-z0-9-]+"
-                        required
-                      />
-                      <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
-                        .stagesub.com
-                      </span>
-                    </div>
-                  </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Admin e-post</label>

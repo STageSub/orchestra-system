@@ -36,8 +36,14 @@ export async function GET() {
           continue
         }
 
-        // Get Prisma client for this orchestra
-        const orchestraPrisma = await getPrismaClient(orchestra.subdomain)
+        // Create Prisma client directly with database URL
+        const orchestraPrisma = new PrismaClient({
+          datasources: {
+            db: {
+              url: orchestra.databaseUrl,
+            },
+          },
+        })
 
         // Fetch metrics from orchestra database
         const musicians = await orchestraPrisma.musician.count()
@@ -87,6 +93,9 @@ export async function GET() {
             createdAt: new Date().toISOString()
           }]
         })
+        
+        // Disconnect the orchestra prisma client
+        await orchestraPrisma.$disconnect()
       } catch (error) {
         console.error(`Error fetching metrics for ${orchestra.subdomain}:`, error)
         // Add orchestra without metrics

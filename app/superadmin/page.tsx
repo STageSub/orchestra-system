@@ -199,7 +199,7 @@ export default function SuperAdminDashboard() {
                   Kund
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Subdomän
+                  ID
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Musiker
@@ -220,7 +220,7 @@ export default function SuperAdminDashboard() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {metricsData?.orchestras.map((orchestra) => (
-                <tr key={orchestra.subdomain}>
+                <tr key={orchestra.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <Database className="w-8 h-8 text-gray-400 mr-3" />
@@ -232,7 +232,7 @@ export default function SuperAdminDashboard() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{orchestra.subdomain}.stagesub.com</div>
+                    <div className="text-sm text-gray-900">{orchestra.orchestraId}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {orchestra.metrics[0]?.totalMusicians || 0}
@@ -253,14 +253,12 @@ export default function SuperAdminDashboard() {
                     {orchestra.metrics[0] ? new Date(orchestra.metrics[0].createdAt).toLocaleDateString('sv-SE') : 'Ingen aktivitet'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <a
-                      href={`https://${orchestra.subdomain}.stagesub.com/admin`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button 
+                      onClick={() => window.open(`/admin?orchestra=${orchestra.orchestraId}`, '_blank')}
                       className="text-blue-600 hover:text-blue-900 mr-4"
                     >
                       Öppna
-                    </a>
+                    </button>
                     <button className="text-gray-600 hover:text-gray-900">
                       Hantera
                     </button>
