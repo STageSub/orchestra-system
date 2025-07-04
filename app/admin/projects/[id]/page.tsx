@@ -127,6 +127,7 @@ export default function ProjectDetailPage({
   const [successMessage, setSuccessMessage] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [customListsCount, setCustomListsCount] = useState(0)
   
   // Use project events hook for toast notifications
   useProjectEvents(project?.id || 0)
@@ -159,6 +160,7 @@ export default function ProjectDetailPage({
     if (paramsId) {
       fetchProject()
       fetchProjectFiles()
+      fetchCustomListsCount()
     }
   }, [paramsId])
 
@@ -348,6 +350,20 @@ export default function ProjectDetailPage({
       }
     } catch (error) {
       console.error('Error fetching files:', error)
+    }
+  }
+  
+  const fetchCustomListsCount = async () => {
+    if (!paramsId) return
+    
+    try {
+      const response = await fetch(`/api/projects/${paramsId}/custom-lists/all`)
+      if (response.ok) {
+        const data = await response.json()
+        setCustomListsCount(data.customLists?.length || 0)
+      }
+    } catch (error) {
+      console.error('Error fetching custom lists count:', error)
     }
   }
   
@@ -850,6 +866,27 @@ export default function ProjectDetailPage({
                       Visa historik →
                     </Link>
                   )}
+                </div>
+              </div>
+            </div>
+
+            {/* Anpassade listor */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Anpassade listor</h4>
+              <div className="bg-gray-50 rounded p-2 border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-gray-600">
+                    {customListsCount > 0 
+                      ? `${customListsCount} anpassade listor skapade`
+                      : 'Hantera projektspecifika rankningslistor'
+                    }
+                  </p>
+                  <Link
+                    href={`/admin/projects/${project.id}/custom-lists`}
+                    className="text-xs text-blue-600 hover:text-blue-800 transition-colors duration-300"
+                  >
+                    Visa listor →
+                  </Link>
                 </div>
               </div>
             </div>

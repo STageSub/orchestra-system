@@ -108,6 +108,25 @@ export async function POST(
       )
     }
 
+    // Check if a custom list already exists for this position and project
+    const existingList = await prisma.customRankingList.findFirst({
+      where: {
+        projectId: parseInt(projectId),
+        positionId: parseInt(positionId)
+      }
+    })
+
+    if (existingList) {
+      return NextResponse.json(
+        { 
+          error: 'En anpassad lista finns redan för denna position i projektet',
+          existingListId: existingList.id,
+          existingListName: existingList.name
+        },
+        { status: 409 } // Conflict
+      )
+    }
+
     // Get project details
     const project = await prisma.project.findUnique({
       where: { id: parseInt(projectId) }
