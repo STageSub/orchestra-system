@@ -240,12 +240,25 @@ export default function EditCustomListPage({
                 {customList.position.instrument.name} - {customList.position.name}
               </p>
             </div>
-            <Link
-              href={`/admin/projects/${projectId}/custom-lists`}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Avbryt
-            </Link>
+            <div className="flex items-center space-x-3">
+              <Link
+                href={`/admin/projects/${projectId}/custom-lists`}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Avbryt
+              </Link>
+              <button
+                onClick={handleSave}
+                disabled={saving || musicians.length === 0}
+                className={`px-6 py-2 text-sm font-medium rounded-lg ${
+                  saving || musicians.length === 0
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
+              >
+                {saving ? 'Sparar...' : 'Spara ändringar'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -301,7 +314,7 @@ export default function EditCustomListPage({
                 Nuvarande lista
               </h2>
               <p className="text-sm text-gray-600 mt-1">
-                {musicians.length} musiker
+                {musicians.length} musiker • Dra för att ändra ordning
               </p>
             </div>
 
@@ -334,6 +347,11 @@ export default function EditCustomListPage({
                               }`}
                             >
                               <div className="flex items-center">
+                                <div className="cursor-move text-gray-400 hover:text-gray-600 mr-3">
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                  </svg>
+                                </div>
                                 <span className="text-sm font-medium text-gray-500 mr-3">
                                   {index + 1}.
                                 </span>
@@ -400,26 +418,6 @@ export default function EditCustomListPage({
           </div>
         </div>
 
-        {/* Bottom actions */}
-        <div className="mt-6 flex justify-end space-x-3">
-          <Link
-            href={`/admin/projects/${projectId}/custom-lists`}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            Avbryt
-          </Link>
-          <button
-            onClick={handleSave}
-            disabled={saving || musicians.length === 0}
-            className={`px-6 py-2 text-sm font-medium rounded-lg ${
-              saving || musicians.length === 0
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
-            }`}
-          >
-            {saving ? 'Sparar...' : 'Spara ändringar'}
-          </button>
-        </div>
       </div>
     </div>
   )

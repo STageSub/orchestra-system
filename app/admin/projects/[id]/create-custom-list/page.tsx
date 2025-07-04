@@ -252,12 +252,25 @@ export default function CreateCustomListPage({
                 {instrumentName} - {positionName} • {project?.name}
               </p>
             </div>
-            <button
-              onClick={() => router.back()}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Avbryt
-            </button>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => router.back()}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={saveCustomList}
+                disabled={saving || newListMusicians.length === 0}
+                className={`px-6 py-2 text-sm font-medium rounded-lg ${
+                  saving || newListMusicians.length === 0
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
+              >
+                {saving ? 'Sparar...' : 'Spara lista'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -271,7 +284,7 @@ export default function CreateCustomListPage({
                 V. {project?.weekNumber} {project?.name}
               </h2>
               <p className="text-sm text-gray-600 mt-1">
-                {newListMusicians.length} musiker
+                {newListMusicians.length} musiker • Dra för att ändra ordning
               </p>
             </div>
             
@@ -304,6 +317,11 @@ export default function CreateCustomListPage({
                               }`}
                             >
                               <div className="flex items-center">
+                                <div className="cursor-move text-gray-400 hover:text-gray-600 mr-3">
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                  </svg>
+                                </div>
                                 <span className="text-sm font-medium text-gray-500 mr-3">
                                   {index + 1}.
                                 </span>
@@ -459,43 +477,29 @@ export default function CreateCustomListPage({
           </div>
         </div>
 
-        {/* Bottom actions */}
+        {/* Bottom actions - Template options only */}
         <div className="mt-6 bg-white rounded-lg shadow p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={saveAsTemplate}
-                  onChange={(e) => setSaveAsTemplate(e.target.checked)}
-                  className="h-4 w-4 text-blue-600 rounded"
-                />
-                <span className="ml-2 text-sm font-medium text-gray-700">
-                  Spara som mall för framtida projekt
-                </span>
-              </label>
-              {saveAsTemplate && (
-                <input
-                  type="text"
-                  placeholder="Mallnamn..."
-                  value={templateName}
-                  onChange={(e) => setTemplateName(e.target.value)}
-                  className="px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                />
-              )}
-            </div>
-            
-            <button
-              onClick={saveCustomList}
-              disabled={saving || newListMusicians.length === 0}
-              className={`px-6 py-2 text-sm font-medium rounded-lg ${
-                saving || newListMusicians.length === 0
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
-              }`}
-            >
-              {saving ? 'Sparar...' : 'Spara lista'}
-            </button>
+          <div className="flex items-center space-x-4">
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={saveAsTemplate}
+                onChange={(e) => setSaveAsTemplate(e.target.checked)}
+                className="h-4 w-4 text-blue-600 rounded"
+              />
+              <span className="ml-2 text-sm font-medium text-gray-700">
+                Spara som mall för framtida projekt
+              </span>
+            </label>
+            {saveAsTemplate && (
+              <input
+                type="text"
+                placeholder="Mallnamn..."
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                className="px-3 py-2 text-sm border border-gray-300 rounded-lg"
+              />
+            )}
           </div>
         </div>
       </div>

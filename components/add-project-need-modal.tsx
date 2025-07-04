@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import ResponseTimeSelectorNested from './response-time-selector-nested'
+import CreateCustomListModal from './create-custom-list-modal'
 
 interface Instrument {
   id: number
@@ -51,6 +52,8 @@ export default function AddProjectNeedModal({
   const [rankingListsLoading, setRankingListsLoading] = useState(false)
   const [validationWarning, setValidationWarning] = useState('')
   const [customList, setCustomList] = useState<any>(null)
+  const [showCreateCustomListModal, setShowCreateCustomListModal] = useState(false)
+  const [existingCustomListForPosition, setExistingCustomListForPosition] = useState<number | null>(null)
   const [formData, setFormData] = useState({
     instrumentId: '',
     positionId: prefilledPositionId ? prefilledPositionId.toString() : '',
@@ -168,6 +171,14 @@ export default function AddProjectNeedModal({
       const response = await fetch(`/api/ranking-lists?positionId=${positionId}&projectId=${projectId}`)
       const data = await response.json()
       setRankingLists(data)
+      
+      // Check if there's an existing custom list for this position
+      const customList = data.find((list: any) => list.isCustomList)
+      if (customList) {
+        setExistingCustomListForPosition(customList.customListId || customList.id)
+      } else {
+        setExistingCustomListForPosition(null)
+      }
     } catch (error) {
       console.error('Error fetching ranking lists:', error)
     } finally {
@@ -328,16 +339,13 @@ export default function AddProjectNeedModal({
                   </select>
                 )}
                 {formData.positionId && (
-                  <a
-                    href={`/admin/projects/${projectId}/create-custom-list?positionId=${formData.positionId}&positionName=${encodeURIComponent(
-                      positions.find(p => p.id === parseInt(formData.positionId))?.name || ''
-                    )}&instrumentName=${encodeURIComponent(
-                      instruments.find(i => i.id === parseInt(formData.instrumentId))?.name || ''
-                    )}`}
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateCustomListModal(true)}
                     className="text-sm font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap"
                   >
-                    Skapa ny lista
-                  </a>
+                    {existingCustomListForPosition ? 'Ändra befintlig lista' : 'Skapa ny lista'}
+                  </button>
                 )}
               </div>
               {validationWarning && (
@@ -378,7 +386,7 @@ export default function AddProjectNeedModal({
                   }
                 }}
                 className="block w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:bg-gray-50 disabled:text-gray-500"
-                disabled={!formData.rankingListId}
+                disabled={!formData.rankingListId && !formData.customRankingListId && !customList}
               >
                 <option value="">Välj strategi</option>
                 <option value="sequential">Sekventiell - Fråga en musiker i taget</option>
@@ -535,6 +543,30 @@ export default function AddProjectNeedModal({
           </button>
         </div>
       </div>
+      
+      {/* Create Custom List Modal */}
+      {showCreateCustomListModal && formData.positionId && (
+        <CreateCustomListModal
+          projectId={projectId}
+          positionId={parseInt(formData.positionId)}
+          positionName={positions.find(p => p.id === parseInt(formData.positionId))?.name || ''}
+          instrumentName={instruments.find(i => i.id === parseInt(formData.instrumentId))?.name || ''}
+          existingCustomListId={existingCustomListForPosition || undefined}
+          onClose={() => setShowCreateCustomListModal(false)}
+          onSuccess={(customListId) => {
+            setShowCreateCustomListModal(false)
+            // Refresh ranking lists to include the new custom list
+            fetchRankingLists(parseInt(formData.positionId))
+            // Select the custom list
+            setFormData(prev => ({ 
+              ...prev, 
+              rankingListId: customListId.toString(),
+              customRankingListId: customListId.toString()
+            }))
+            setCustomList({ id: customListId })
+          }}
+        />
+      )}
     </div>
   )
 }
