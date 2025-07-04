@@ -33,7 +33,11 @@ export async function POST(
       // Send for specific need
       const result = await getRecipientsForNeed(projectNeedId, {
         dryRun: false,
-        includeDetails: false
+        includeDetails: false,
+        sessionId,
+        onProgress: sessionId ? (projectId, data) => {
+          updateSendProgress(id, sessionId, data)
+        } : undefined
       }, prisma)
 
       totalSent = result.totalToSend
@@ -67,7 +71,7 @@ export async function POST(
     }
 
     // Update progress to completed
-    if (!projectNeedId && sessionId) {
+    if (sessionId) {
       updateSendProgress(id, sessionId, {
         status: 'completed',
         sent: totalSent

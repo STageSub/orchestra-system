@@ -472,22 +472,67 @@ export default function ProjectDetailPage({
   const handleConfirmSendRequests = async () => {
     if (!sendPreviewNeedId || !project) return
     
-    const response = await fetch(`/api/projects/${project.id}/send-requests`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ projectNeedId: sendPreviewNeedId })
-    })
+    try {
+      // First, get the preview to determine email volume
+      const previewResponse = await fetch(`/api/projects/${project.id}/preview-requests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectNeedId: sendPreviewNeedId })
+      })
+      
+      if (!previewResponse.ok) {
+        throw new Error('Kunde inte hämta förhandsgranskning')
+      }
+      
+      const previewData = await previewResponse.json()
+      const totalEmails = previewData.preview?.musiciansToContact?.length || 0
+      
+      // Generate a unique session ID for this send operation
+      const sessionId = `send-${Date.now()}`
+      setSendingSessionId(sessionId)
+      setEmailVolume(totalEmails)
+      
+      // Show progress modal if more than 10 emails
+      if (totalEmails > 10) {
+        setShowProgressModal(true)
+        setShowSendPreview(false)
+      }
+      
+      // Send the requests
+      const response = await fetch(`/api/projects/${project.id}/send-requests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectNeedId: sendPreviewNeedId, sessionId })
+      })
 
-    if (response.ok) {
-      const data = await response.json()
-      setSuccessMessage(data.message)
-      setShowSuccessModal(true)
-      fetchProject()
-      setShowSendPreview(false)
-      setSendPreviewNeedId(null)
-    } else {
-      const error = await response.json()
-      throw new Error(error.error || 'Kunde inte skicka förfrågningar')
+      if (response.ok) {
+        const data = await response.json()
+        
+        // If we were showing progress modal, close it
+        if (showProgressModal) {
+          setShowProgressModal(false)
+        }
+        
+        setSuccessMessage(data.message)
+        setShowSuccessModal(true)
+        fetchProject()
+        setShowSendPreview(false)
+        setSendPreviewNeedId(null)
+      } else {
+        const error = await response.json()
+        throw new Error(error.error || 'Kunde inte skicka förfrågningar')
+      }
+    } catch (error) {
+      console.error('Error sending requests:', error)
+      setShowProgressModal(false)
+      if (error instanceof Error) {
+        toast.error(error.message)
+      } else {
+        toast.error('Ett fel uppstod vid utskick av förfrågningar')
+      }
+      throw error
+    } finally {
+      setSendingSessionId(null)
     }
   }
 

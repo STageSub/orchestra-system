@@ -412,7 +412,7 @@ export async function getRecipientsForNeed(
   options: GetRecipientsOptions = {},
   prisma: PrismaClient
 ): Promise<RecipientResult> {
-  const { dryRun = true, includeDetails = false } = options
+  const { dryRun = true, includeDetails = false, onProgress, sessionId } = options
 
   // Get the need with all required data
   const need = await prisma.projectNeed.findUnique({
@@ -543,12 +543,36 @@ export async function getRecipientsForNeed(
 
   // If not dry run, actually send the requests
   if (!dryRun && musiciansToContact.length > 0) {
+    const estimatedTime = EmailRateLimiter.estimateTime(musiciansToContact.length)
+    
+    // Report initial progress if callback provided
+    if (onProgress && need.projectId) {
+      onProgress(need.projectId, {
+        total: musiciansToContact.length,
+        sent: 0,
+        currentBatch: [],
+        estimatedTime,
+        status: 'sending'
+      })
+    }
+    
     // Use rate limiter for sending emails
     const results = await EmailRateLimiter.sendBatch(
       musiciansToContact,
       async (musician) => createAndSendRequest(need.id, musician.id, prisma),
       (sent, total, currentBatch) => {
         console.log(`📧 Sending requests: ${sent}/${total} - Current batch: ${currentBatch.join(', ')}`)
+        
+        // Report progress if callback provided
+        if (onProgress && need.projectId) {
+          onProgress(need.projectId, {
+            total,
+            sent,
+            currentBatch,
+            estimatedTime: Math.ceil((total - sent) / 2),
+            status: sent === total ? 'completed' : 'sending'
+          })
+        }
       }
     )
 
