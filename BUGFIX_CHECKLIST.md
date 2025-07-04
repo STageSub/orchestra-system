@@ -2,7 +2,7 @@
 
 Detta dokument innehåller alla problem som identifierats och måste åtgärdas innan SaaS-implementation kan påbörjas.
 
-*Senast uppdaterad: 2025-06-30 (Kväll)*
+*Senast uppdaterad: 2025-07-04*
 
 ## 🔴 KRITISKA PROBLEM (Blockerar användning)
 
@@ -95,6 +95,20 @@ Detta dokument innehåller alla problem som identifierats och måste åtgärdas 
 - **Status**: FIXAD (2025-06-30)
   - SQL-migration skapad och klar att köras i Supabase
   - Omfattande dokumentation för att undvika framtida problem
+
+### [x] Custom Ranking Lists - Implementation och buggar
+- **Symptom**: Kunde inte skapa anpassade rankningslistor för projekt
+- **Problem 1**: 500-fel vid sparande - saknade ID-prefix för 'customList'
+- **Problem 2**: Null reference errors - rankingList förväntades alltid finnas
+- **Problem 3**: Databastabeller saknades i produktion
+- **Lösning**:
+  - Implementerade komplett custom lists system med drag & drop
+  - Lade till 'customList: CLIST' i ID_PREFIXES
+  - Gjorde rankingList optional i alla interfaces
+  - Skapade migrations för databastabeller
+  - Lade till backwards compatibility i alla API endpoints
+- **Status**: FIXAD (2025-07-04)
+- **SQL-fil**: `/prisma/migrations/combined_custom_lists_migration.sql`
 
 ## 🟡 VIKTIGA ANVÄNDBARHETSPROBLEM
 

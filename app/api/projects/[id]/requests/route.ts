@@ -31,6 +31,7 @@ export async function GET(
                 }
               }
             },
+            customRankingList: true,
             requests: {
               include: {
                 musician: true,
@@ -61,14 +62,14 @@ export async function GET(
 
       // Get next musicians in queue
       const requestedMusicianIds = requests.map(r => r.musicianId)
-      const nextInQueue = need.rankingList.rankings
-        .filter(r => !requestedMusicianIds.includes(r.musicianId))
+      const nextInQueue = need.rankingList?.rankings
+        ?.filter(r => !requestedMusicianIds.includes(r.musicianId))
         .slice(0, 10) // Get next 10 musicians
         .map(r => ({
           id: r.musician.id,
           name: `${r.musician.firstName} ${r.musician.lastName}`,
           rank: r.rank
-        }))
+        })) || []
 
       return {
         id: need.id,
@@ -79,16 +80,17 @@ export async function GET(
           instrument: need.position.instrument.name
         },
         quantity: need.quantity,
-        rankingList: {
+        rankingList: need.rankingList ? {
           id: need.rankingList.id,
           listType: need.rankingList.listType
-        },
+        } : null,
+        customRankingList: need.customRankingList || null,
         requestStrategy: need.requestStrategy,
         maxRecipients: need.maxRecipients,
         responseTimeHours: need.responseTimeHours,
         needStatus: need.status,
         nextInQueue,
-        totalInQueue: need.rankingList.rankings.length - requestedMusicianIds.length,
+        totalInQueue: need.rankingList ? (need.rankingList.rankings.length - requestedMusicianIds.length) : 0,
         status: {
           acceptedCount,
           pendingCount,
