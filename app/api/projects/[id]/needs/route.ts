@@ -19,6 +19,7 @@ export async function GET(
           }
         },
         rankingList: true,
+        customRankingList: true,
         _count: {
           select: {
             requests: true
@@ -57,7 +58,7 @@ export async function POST(
     const prisma = await getPrismaForUser(request)
     const { id } = await context.params
     const body = await request.json()
-    const { positionId, rankingListId, quantity, requestStrategy, maxRecipients, responseTimeHours, requireLocalResidence } = body
+    const { positionId, rankingListId, customRankingListId, quantity, requestStrategy, maxRecipients, responseTimeHours, requireLocalResidence } = body
     
     const parsedQuantity = parseInt(quantity)
     const parsedMaxRecipients = maxRecipients ? parseInt(maxRecipients) : null
@@ -104,17 +105,41 @@ export async function POST(
       )
     }
     
-    // Validation 5: Check available musicians in ranking list
-    const musiciansInList = await prisma.musician.findMany({
-      where: {
-        isActive: true,
-        isArchived: false,
-        rankings: {
-          some: { listId: parseInt(rankingListId) }
-        }
-      },
-      select: { id: true }
-    })
+    // Validation 5: Check if either rankingListId or customRankingListId is provided
+    if (!rankingListId && !customRankingListId) {
+      return NextResponse.json(
+        { error: 'En rankningslista måste väljas' },
+        { status: 400 }
+      )
+    }
+    
+    // Check available musicians based on list type
+    let musiciansInList
+    if (rankingListId) {
+      // Standard ranking list
+      musiciansInList = await prisma.musician.findMany({
+        where: {
+          isActive: true,
+          isArchived: false,
+          rankings: {
+            some: { listId: parseInt(rankingListId) }
+          }
+        },
+        select: { id: true }
+      })
+    } else {
+      // Custom ranking list
+      musiciansInList = await prisma.musician.findMany({
+        where: {
+          isActive: true,
+          isArchived: false,
+          customRankings: {
+            some: { customListId: parseInt(customRankingListId) }
+          }
+        },
+        select: { id: true }
+      })
+    }
     
     // Exclude musicians who already have requests in this project
     const musiciansWithRequests = await prisma.request.findMany({
@@ -157,7 +182,8 @@ export async function POST(
         projectNeedId,
         projectId: parseInt(id),
         positionId: parseInt(positionId),
-        rankingListId: parseInt(rankingListId),
+        rankingListId: rankingListId ? parseInt(rankingListId) : null,
+        customRankingListId: customRankingListId ? parseInt(customRankingListId) : null,
         quantity: parsedQuantity,
         requestStrategy,
         maxRecipients: parsedMaxRecipients,
@@ -171,6 +197,7 @@ export async function POST(
           }
         },
         rankingList: true,
+        customRankingList: true,
         _count: {
           select: {
             requests: true

@@ -10,13 +10,15 @@ interface Musician {
 }
 
 interface RankingListTooltipProps {
-  rankingListId: number
+  rankingListId?: number
+  customRankingListId?: number
   listType: string
   positionName: string
 }
 
 export default function RankingListTooltip({ 
   rankingListId, 
+  customRankingListId,
   listType, 
   positionName 
 }: RankingListTooltipProps) {
@@ -25,24 +27,47 @@ export default function RankingListTooltip({
   const [totalCount, setTotalCount] = useState(0)
 
   useEffect(() => {
-    fetchRankingList()
-  }, [rankingListId])
+    if (rankingListId || customRankingListId) {
+      fetchRankingList()
+    }
+  }, [rankingListId, customRankingListId])
 
   const fetchRankingList = async () => {
     try {
-      const response = await fetch(`/api/rankings/${rankingListId}`)
-      if (response.ok) {
-        const data = await response.json()
-        const rankings = data.rankings || []
-        const musiciansData = rankings.map((ranking: any) => ({
-          id: ranking.musician.id,
-          firstName: ranking.musician.firstName,
-          lastName: ranking.musician.lastName,
-          rank: ranking.rank
-        }))
-        
-        setMusicians(musiciansData.slice(0, 8)) // Show first 8
-        setTotalCount(musiciansData.length)
+      let response
+      if (customRankingListId) {
+        // Fetch custom ranking list
+        const searchParams = new URLSearchParams({ customListId: customRankingListId.toString() })
+        response = await fetch(`/api/projects/0/custom-lists?${searchParams}`)
+        if (response.ok) {
+          const data = await response.json()
+          const rankings = data.customRankings || []
+          const musiciansData = rankings.map((ranking: any) => ({
+            id: ranking.musician.id,
+            firstName: ranking.musician.firstName,
+            lastName: ranking.musician.lastName,
+            rank: ranking.rank
+          }))
+          
+          setMusicians(musiciansData.slice(0, 8)) // Show first 8
+          setTotalCount(musiciansData.length)
+        }
+      } else if (rankingListId) {
+        // Fetch standard ranking list
+        response = await fetch(`/api/rankings/${rankingListId}`)
+        if (response.ok) {
+          const data = await response.json()
+          const rankings = data.rankings || []
+          const musiciansData = rankings.map((ranking: any) => ({
+            id: ranking.musician.id,
+            firstName: ranking.musician.firstName,
+            lastName: ranking.musician.lastName,
+            rank: ranking.rank
+          }))
+          
+          setMusicians(musiciansData.slice(0, 8)) // Show first 8
+          setTotalCount(musiciansData.length)
+        }
       }
     } catch (error) {
       console.error('Error fetching ranking list:', error)

@@ -25,6 +25,7 @@ model Musician {
   updatedAt         DateTime                @updatedAt
   qualifications    MusicianQualification[]
   rankings          Ranking[]
+  customRankings    CustomRanking[]
   requests          Request[]
 }
 
@@ -39,15 +40,16 @@ model Instrument {
 }
 
 model Position {
-  id             Int                     @id @default(autoincrement())
-  positionId     String                  @unique @default(cuid())
-  instrumentId   Int
-  name           String
-  hierarchyLevel Int
-  qualifications MusicianQualification[]
-  instrument     Instrument              @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
-  projectNeeds   ProjectNeed[]
-  rankingLists   RankingList[]
+  id                Int                     @id @default(autoincrement())
+  positionId        String                  @unique @default(cuid())
+  instrumentId      Int
+  name              String
+  hierarchyLevel    Int
+  qualifications    MusicianQualification[]
+  instrument        Instrument              @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  projectNeeds      ProjectNeed[]
+  rankingLists      RankingList[]
+  customRankingLists CustomRankingList[]
 
   @@unique([instrumentId, name])
 }
@@ -89,39 +91,42 @@ model Ranking {
 }
 
 model Project {
-  id                Int             @id @default(autoincrement())
-  projectId         String          @unique @default(cuid())
+  id                Int                 @id @default(autoincrement())
+  projectId         String              @unique @default(cuid())
   name              String
   startDate         DateTime
   weekNumber        Int
   rehearsalSchedule String?
   concertInfo       String?
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
   notes             String?
   projectFiles      ProjectFile[]
   projectNeeds      ProjectNeed[]
   groupEmailLogs    GroupEmailLog[]
   fileStorage       FileStorage[]
+  customRankingLists CustomRankingList[]
 }
 
 model ProjectNeed {
-  id                    Int           @id @default(autoincrement())
-  projectNeedId         String        @unique @default(cuid())
+  id                    Int                @id @default(autoincrement())
+  projectNeedId         String             @unique @default(cuid())
   projectId             Int
   positionId            Int
-  quantity              Int           @default(1)
-  rankingListId         Int
+  quantity              Int                @default(1)
+  rankingListId         Int?               // Now optional
+  customRankingListId   Int?               // New field for custom lists
   requestStrategy       String
   maxRecipients         Int?
-  responseTimeHours     Int?          @default(24)
-  requireLocalResidence Boolean       @default(false)
+  responseTimeHours     Int?               @default(24)
+  requireLocalResidence Boolean            @default(false)
   archivedAt            DateTime?
-  status                String        @default("active")
+  status                String             @default("active")
   projectFiles          ProjectFile[]
-  position              Position      @relation(fields: [positionId], references: [id], onDelete: Cascade)
-  project               Project       @relation(fields: [projectId], references: [id])
-  rankingList           RankingList   @relation(fields: [rankingListId], references: [id], onDelete: Cascade)
+  position              Position           @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  project               Project            @relation(fields: [projectId], references: [id])
+  rankingList           RankingList?       @relation(fields: [rankingListId], references: [id], onDelete: Cascade)
+  customRankingList     CustomRankingList? @relation(fields: [customRankingListId], references: [id], onDelete: Cascade)
   requests              Request[]
 }
 
@@ -318,4 +323,40 @@ model SystemLog {
   @@index([level])
   @@index([userId])
   @@index([orchestraId])
+}
+
+model CustomRankingList {
+  id                  Int                     @id @default(autoincrement())
+  customListId        String                  @unique @default(cuid())
+  projectId           Int
+  positionId          Int
+  name                String                  // e.g., "V. 25"
+  isTemplate          Boolean                 @default(false) // For saving as template
+  templateName        String?                 // Name if saved as template
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  
+  project             Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  position            Position                @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  customRankings      CustomRanking[]
+  projectNeeds        ProjectNeed[]
+  
+  @@index([projectId])
+  @@index([positionId])
+  @@index([isTemplate])
+}
+
+model CustomRanking {
+  id                  Int                @id @default(autoincrement())
+  customListId        Int
+  musicianId          Int
+  rank                Int
+  addedAt             DateTime           @default(now())
+  
+  customRankingList   CustomRankingList  @relation(fields: [customListId], references: [id], onDelete: Cascade)
+  musician            Musician           @relation(fields: [musicianId], references: [id])
+  
+  @@unique([customListId, musicianId])
+  @@unique([customListId, rank])
+  @@index([customListId])
 }

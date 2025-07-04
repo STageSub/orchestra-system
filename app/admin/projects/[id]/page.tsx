@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import AddProjectNeedModal from '@/components/add-project-need-modal'
 import EditProjectNeedModal from '@/components/edit-project-need-modal'
 import FileUploadModal from '@/components/file-upload-modal'
@@ -90,12 +91,15 @@ export default function ProjectDetailPage({
 }: {
   params: Promise<{ id: string }>
 }) {
+  const searchParams = useSearchParams()
   const [paramsId, setParamsId] = useState<string | null>(null)
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
   const [showRequestsModal, setShowRequestsModal] = useState(false)
   const [selectedNeedForRequests, setSelectedNeedForRequests] = useState<number | null>(null)
   const [showAddNeed, setShowAddNeed] = useState(false)
+  const [customRankingListId, setCustomRankingListId] = useState<number | null>(null)
+  const [prefilledPositionId, setPrefilledPositionId] = useState<number | null>(null)
   const [showUploadFile, setShowUploadFile] = useState(false)
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([])
   const [uploadForNeedId, setUploadForNeedId] = useState<number | null>(null)
@@ -125,6 +129,24 @@ export default function ProjectDetailPage({
       setParamsId(p.id)
     })
   }, [params])
+
+  // Check for custom list parameters in URL
+  useEffect(() => {
+    const customListId = searchParams.get('customListId')
+    const positionId = searchParams.get('positionId')
+    
+    if (customListId && positionId) {
+      setCustomRankingListId(parseInt(customListId))
+      setPrefilledPositionId(parseInt(positionId))
+      setShowAddNeed(true)
+      
+      // Clear the URL parameters
+      const url = new URL(window.location.href)
+      url.searchParams.delete('customListId')
+      url.searchParams.delete('positionId')
+      window.history.replaceState({}, '', url)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     if (paramsId) {
@@ -934,8 +956,18 @@ export default function ProjectDetailPage({
       {showAddNeed && (
         <AddProjectNeedModal
           projectId={project.id}
-          onClose={() => setShowAddNeed(false)}
-          onSuccess={fetchProject}
+          onClose={() => {
+            setShowAddNeed(false)
+            setCustomRankingListId(null)
+            setPrefilledPositionId(null)
+          }}
+          onSuccess={() => {
+            fetchProject()
+            setCustomRankingListId(null)
+            setPrefilledPositionId(null)
+          }}
+          customRankingListId={customRankingListId || undefined}
+          prefilledPositionId={prefilledPositionId || undefined}
         />
       )}
       

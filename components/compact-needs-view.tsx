@@ -22,6 +22,13 @@ interface RankingList {
   description: string | null
 }
 
+interface CustomRankingList {
+  id: number
+  name: string
+  customListId: string
+  projectId: number
+}
+
 interface ProjectNeed {
   id: number
   projectNeedId: string
@@ -31,7 +38,8 @@ interface ProjectNeed {
   responseTimeHours: number | null
   requireLocalResidence?: boolean
   position: Position
-  rankingList: RankingList
+  rankingList: RankingList | null
+  customRankingList: CustomRankingList | null
   needStatus?: string
   _count?: {
     requests: number
@@ -286,20 +294,37 @@ export default function CompactNeedsView({
                         
                         {/* Column 5: Metadata */}
                         <div className="text-xs text-gray-500 flex items-center flex-wrap gap-x-1">
-                          <Tooltip
-                            content={
-                              <RankingListTooltip 
-                                rankingListId={need.rankingList.id}
-                                listType={need.rankingList.listType}
-                                positionName={need.position.name}
-                              />
-                            }
-                            delay={700}
-                          >
-                            <span className="cursor-help border-b border-dashed border-gray-400 whitespace-nowrap">
-                              Lista {need.rankingList.listType}
-                            </span>
-                          </Tooltip>
+                          {need.customRankingList ? (
+                            <Tooltip
+                              content={
+                                <RankingListTooltip 
+                                  customRankingListId={need.customRankingList.id}
+                                  listType={need.customRankingList.name}
+                                  positionName={need.position.name}
+                                />
+                              }
+                              delay={700}
+                            >
+                              <span className="cursor-help border-b border-dashed border-gray-400 whitespace-nowrap">
+                                {need.customRankingList.name}
+                              </span>
+                            </Tooltip>
+                          ) : (
+                            <Tooltip
+                              content={
+                                <RankingListTooltip 
+                                  rankingListId={need.rankingList?.id}
+                                  listType={need.rankingList?.listType || ''}
+                                  positionName={need.position.name}
+                                />
+                              }
+                              delay={700}
+                            >
+                              <span className="cursor-help border-b border-dashed border-gray-400 whitespace-nowrap">
+                                Lista {need.rankingList?.listType}
+                              </span>
+                            </Tooltip>
+                          )}
                           <span className="mx-1">•</span>
                           <Tooltip
                             content={<StrategyTooltip strategy={need.requestStrategy} />}

@@ -30,9 +30,17 @@ interface AddProjectNeedModalProps {
   projectId: number
   onClose: () => void
   onSuccess: () => void
+  customRankingListId?: number
+  prefilledPositionId?: number
 }
 
-export default function AddProjectNeedModal({ projectId, onClose, onSuccess }: AddProjectNeedModalProps) {
+export default function AddProjectNeedModal({ 
+  projectId, 
+  onClose, 
+  onSuccess, 
+  customRankingListId,
+  prefilledPositionId 
+}: AddProjectNeedModalProps) {
   const [loading, setLoading] = useState(false)
   const [instruments, setInstruments] = useState<Instrument[]>([])
   const [instrumentsLoading, setInstrumentsLoading] = useState(false)
@@ -40,10 +48,12 @@ export default function AddProjectNeedModal({ projectId, onClose, onSuccess }: A
   const [rankingLists, setRankingLists] = useState<RankingList[]>([])
   const [rankingListsLoading, setRankingListsLoading] = useState(false)
   const [validationWarning, setValidationWarning] = useState('')
+  const [customList, setCustomList] = useState<any>(null)
   const [formData, setFormData] = useState({
     instrumentId: '',
-    positionId: '',
+    positionId: prefilledPositionId ? prefilledPositionId.toString() : '',
     rankingListId: '',
+    customRankingListId: customRankingListId ? customRankingListId.toString() : '',
     quantity: '1',
     requestStrategy: '',
     maxRecipients: '',
@@ -54,6 +64,35 @@ export default function AddProjectNeedModal({ projectId, onClose, onSuccess }: A
   useEffect(() => {
     fetchInstruments()
   }, [])
+
+  // Fetch custom list if provided
+  useEffect(() => {
+    if (customRankingListId) {
+      fetchCustomList()
+    }
+  }, [customRankingListId])
+
+  const fetchCustomList = async () => {
+    try {
+      const response = await fetch(
+        `/api/projects/${projectId}/custom-lists?customListId=${customRankingListId}`
+      )
+      if (response.ok) {
+        const data = await response.json()
+        setCustomList(data)
+        // Pre-fill position based on custom list
+        if (data.positionId) {
+          setFormData(prev => ({ 
+            ...prev, 
+            positionId: data.positionId.toString(),
+            instrumentId: data.position?.instrumentId?.toString() || ''
+          }))
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching custom list:', error)
+    }
+  }
 
   useEffect(() => {
     if (formData.instrumentId) {
@@ -76,7 +115,17 @@ export default function AddProjectNeedModal({ projectId, onClose, onSuccess }: A
   
   // Check validation when quantity or ranking list changes
   useEffect(() => {
-    if (formData.rankingListId) {
+    if (customList) {
+      const availableCount = customList.customRankings?.filter((r: any) => 
+        r.musician.isActive && !r.musician.isArchived
+      ).length || 0
+      const quantity = parseInt(formData.quantity)
+      if (quantity > availableCount) {
+        setValidationWarning(`Antal behov (${quantity}) är högre än tillgängliga musiker (${availableCount})`)
+      } else {
+        setValidationWarning('')
+      }
+    } else if (formData.rankingListId) {
       const selectedList = rankingLists.find(l => l.id === parseInt(formData.rankingListId))
       if (selectedList && selectedList.availableMusiciansCount !== undefined) {
         const quantity = parseInt(formData.quantity)
@@ -87,7 +136,7 @@ export default function AddProjectNeedModal({ projectId, onClose, onSuccess }: A
         }
       }
     }
-  }, [formData.quantity, formData.rankingListId, rankingLists])
+  }, [formData.quantity, formData.rankingListId, rankingLists, customList])
 
   const fetchInstruments = async () => {
     setInstrumentsLoading(true)
@@ -149,7 +198,8 @@ export default function AddProjectNeedModal({ projectId, onClose, onSuccess }: A
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           positionId: formData.positionId,
-          rankingListId: formData.rankingListId,
+          rankingListId: formData.customRankingListId ? null : formData.rankingListId,
+          customRankingListId: formData.customRankingListId || null,
           quantity: formData.quantity,
           requestStrategy: formData.requestStrategy,
           maxRecipients: formData.maxRecipients || null,
@@ -238,27 +288,49 @@ export default function AddProjectNeedModal({ projectId, onClose, onSuccess }: A
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Rankningslista <span className="text-red-500">*</span>
               </label>
-              <select
-                required
-                value={formData.rankingListId}
-                onChange={(e) => setFormData({ ...formData, rankingListId: e.target.value })}
-                className="block w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:bg-gray-50 disabled:text-gray-500"
-                disabled={!formData.positionId || rankingListsLoading}
-              >
-                <option value="">{rankingListsLoading ? 'Laddar rankningslistor...' : 'Välj rankningslista'}</option>
-                {rankingLists.map((list: any) => (
-                  <option 
-                    key={list.id} 
-                    value={list.id}
-                    disabled={list.isUsedInProject || (list.availableMusiciansCount !== undefined && list.availableMusiciansCount === 0)}
+              <div className="flex items-center space-x-2">
+                {customList ? (
+                  <div className="flex-1 px-3 py-2 bg-green-50 border border-green-300 rounded-lg">
+                    <span className="text-sm font-medium text-green-800">
+                      Anpassad lista: {customList.name} ({customList.customRankings?.length || 0} musiker)
+                    </span>
+                  </div>
+                ) : (
+                  <select
+                    required
+                    value={formData.rankingListId}
+                    onChange={(e) => setFormData({ ...formData, rankingListId: e.target.value })}
+                    className="flex-1 h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:bg-gray-50 disabled:text-gray-500"
+                    disabled={!formData.positionId || rankingListsLoading}
                   >
-                    {list.listType}-lista{list.description ? ` (${list.description})` : ''}
-                    {list.availableMusiciansCount !== undefined && ` (${list.availableMusiciansCount} tillgängliga)`}
-                    {list.isUsedInProject ? ' (Redan använd)' : ''}
-                    {list.availableMusiciansCount === 0 ? ' (Inga tillgängliga)' : ''}
-                  </option>
-                ))}
-              </select>
+                    <option value="">{rankingListsLoading ? 'Laddar rankningslistor...' : 'Välj rankningslista'}</option>
+                    {rankingLists.map((list: any) => (
+                      <option 
+                        key={list.id} 
+                        value={list.id}
+                        disabled={list.isUsedInProject || (list.availableMusiciansCount !== undefined && list.availableMusiciansCount === 0)}
+                      >
+                        {list.listType}-lista{list.description ? ` (${list.description})` : ''}
+                        {list.availableMusiciansCount !== undefined && ` (${list.availableMusiciansCount} tillgängliga)`}
+                        {list.isUsedInProject ? ' (Redan använd)' : ''}
+                        {list.availableMusiciansCount === 0 ? ' (Inga tillgängliga)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {formData.positionId && (
+                  <a
+                    href={`/admin/projects/${projectId}/create-custom-list?positionId=${formData.positionId}&positionName=${encodeURIComponent(
+                      positions.find(p => p.id === parseInt(formData.positionId))?.name || ''
+                    )}&instrumentName=${encodeURIComponent(
+                      instruments.find(i => i.id === parseInt(formData.instrumentId))?.name || ''
+                    )}`}
+                    className="text-sm font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap"
+                  >
+                    Skapa ny lista
+                  </a>
+                )}
+              </div>
               {validationWarning && (
                 <p className="mt-2 text-sm text-red-600">{validationWarning}</p>
               )}
