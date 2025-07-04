@@ -471,11 +471,7 @@ export default function ProjectDetailPage({
     
     try {
       // First, get the preview to determine email volume
-      const previewResponse = await fetch(`/api/projects/${project.id}/preview-requests`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectNeedId: sendPreviewNeedId })
-      })
+      const previewResponse = await fetch(`/api/projects/${project.id}/needs/${sendPreviewNeedId}/preview-requests`)
       
       if (!previewResponse.ok) {
         throw new Error('Kunde inte hämta förhandsgranskning')
