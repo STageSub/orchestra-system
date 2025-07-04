@@ -2,11 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sendEmail } from '@/lib/email'
 import { getPrismaForUser } from '@/lib/auth-prisma'
 import { apiLogger } from '@/lib/logger'
+import { EmailRateLimiter } from '@/lib/email/rate-limiter'
 
 export async function POST(request: NextRequest) {
+  let recipients: any[] = []
+  let subject = ''
+  
   try {
     const prisma = await getPrismaForUser(request)
-    const { recipients, subject, message, metadata } = await request.json()
+    const body = await request.json()
+    recipients = body.recipients
+    subject = body.subject
+    const message = body.message
+    const metadata = body.metadata
 
     // Validate input
     if (!recipients || recipients.length === 0) {
@@ -23,17 +31,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Send emails in batches to avoid overwhelming the email service
-    const batchSize = 10
-    const results = []
+    // Use rate limiter for sending emails
+    const processedResults: Array<{ email: string; success: boolean; error?: string }> = []
     let successCount = 0
     let failureCount = 0
 
-    for (let i = 0; i < recipients.length; i += batchSize) {
-      const batch = recipients.slice(i, i + batchSize)
-      
-      // Send emails in parallel within batch
-      const batchPromises = batch.map(async (recipient: { email: string; name: string }) => {
+    // Send emails using rate limiter
+    const results = await EmailRateLimiter.sendBatch(
+      recipients,
+      async (recipient: { email: string; name: string }) => {
         try {
           await sendEmail({
             to: recipient.email,
@@ -50,31 +56,38 @@ export async function POST(request: NextRequest) {
               </div>
             `
           })
-          
           return { email: recipient.email, success: true }
         } catch (error) {
           console.error(`Failed to send email to ${recipient.email}:`, error)
           return { email: recipient.email, success: false, error: error instanceof Error ? error.message : 'Unknown error' }
         }
-      })
+      },
+      (sent, total, currentBatch) => {
+        console.log(`📧 Sending group emails: ${sent}/${total} - Current batch: ${currentBatch.join(', ')}`)
+      }
+    )
 
-      const batchResults = await Promise.all(batchPromises)
-      results.push(...batchResults)
-      
-      // Count successes and failures
-      batchResults.forEach(result => {
-        if (result.success) {
+    // Process results
+    results.forEach((result, index) => {
+      const recipient = recipients[index]
+      if (result.status === 'fulfilled') {
+        const res = result.value
+        processedResults.push(res)
+        if (res.success) {
           successCount++
         } else {
           failureCount++
         }
-      })
-
-      // Add a small delay between batches to avoid rate limiting
-      if (i + batchSize < recipients.length) {
-        await new Promise(resolve => setTimeout(resolve, 1000))
+      } else {
+        // Rejected promise
+        processedResults.push({ 
+          email: recipient.email, 
+          success: false, 
+          error: result.reason?.message || 'Unknown error' 
+        })
+        failureCount++
       }
-    }
+    })
 
     // Log the group email activity
     try {
@@ -123,7 +136,7 @@ export async function POST(request: NextRequest) {
           details: {
             sent: successCount,
             failed: failureCount,
-            failures: results.filter(r => !r.success)
+            failures: processedResults.filter(r => !r.success)
           }
         },
         { status: 500 }
@@ -135,7 +148,7 @@ export async function POST(request: NextRequest) {
         details: {
           sent: successCount,
           failed: failureCount,
-          failures: results.filter(r => !r.success)
+          failures: processedResults.filter(r => !r.success)
         }
       })
     }

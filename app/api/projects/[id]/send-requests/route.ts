@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getRecipientsForNeed, getRecipientsForProject } from '@/lib/recipient-selection'
 import { getPrismaForUser } from '@/lib/auth-prisma'
 import { apiLogger } from '@/lib/logger'
+import { updateSendProgress } from '../send-progress/route'
 
 export async function POST(
   request: NextRequest,
@@ -9,9 +10,9 @@ export async function POST(
 ) {
   const { id } = await params
   
-  // Parse request body to get optional projectNeedId
+  // Parse request body to get optional projectNeedId and sessionId
   const body = await request.json().catch(() => ({}))
-  const { projectNeedId } = body
+  const { projectNeedId, sessionId } = body
 
   try {
     const prisma = await getPrismaForUser(request)
@@ -48,7 +49,11 @@ export async function POST(
       // Send for all needs in project
       const result = await getRecipientsForProject(parseInt(id), {
         dryRun: false,
-        includeDetails: false
+        includeDetails: false,
+        sessionId,
+        onProgress: (projectId, data) => {
+          updateSendProgress(id, sessionId, data)
+        }
       }, prisma)
 
       totalSent = result.totalToSend
@@ -61,6 +66,14 @@ export async function POST(
       })
     }
 
+    // Update progress to completed
+    if (!projectNeedId && sessionId) {
+      updateSendProgress(id, sessionId, {
+        status: 'completed',
+        sent: totalSent
+      })
+    }
+    
     // Log successful sending
     await apiLogger.info(request, 'api', 'Project requests sent successfully', {
       metadata: {

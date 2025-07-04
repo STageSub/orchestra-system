@@ -16,6 +16,7 @@ import { toast } from '@/components/toast'
 import { useProjectEvents } from '@/hooks/use-project-events'
 import AcceptedMusiciansModal from '@/components/accepted-musicians-modal'
 import SuccessModal from '@/components/success-modal'
+import EmailSendProgressModal from '@/components/email-send-progress-modal-v2'
 
 interface Position {
   id: number
@@ -98,6 +99,9 @@ export default function ProjectDetailPage({
 }: {
   params: Promise<{ id: string }>
 }) {
+  const [showProgressModal, setShowProgressModal] = useState(false)
+  const [sendingSessionId, setSendingSessionId] = useState<string | null>(null)
+  const [emailVolume, setEmailVolume] = useState(0)
   const searchParams = useSearchParams()
   const [paramsId, setParamsId] = useState<string | null>(null)
   const [project, setProject] = useState<Project | null>(null)
@@ -128,6 +132,9 @@ export default function ProjectDetailPage({
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [customListsCount, setCustomListsCount] = useState(0)
+  const [showProgressModal, setShowProgressModal] = useState(false)
+  const [totalEmailsToSend, setTotalEmailsToSend] = useState(0)
+  const [sessionId, setSessionId] = useState<string>('')
   
   // Use project events hook for toast notifications
   useProjectEvents(project?.id || 0)
@@ -228,13 +235,40 @@ export default function ProjectDetailPage({
   const confirmSendRequests = async () => {
     setSendingRequests(true)
     try {
+      // First, get the preview to determine email volume
+      const previewResponse = await fetch(`/api/projects/${paramsId}/preview-all-requests`)
+      if (!previewResponse.ok) {
+        throw new Error('Kunde inte hämta förhandsgranskning')
+      }
+      const previewData = await previewResponse.json()
+      const totalEmails = previewData.totalToSend
+      
+      // Generate a unique session ID for this send operation
+      const sessionId = `send-${Date.now()}`
+      setSendingSessionId(sessionId)
+      setEmailVolume(totalEmails)
+      
+      // Show progress modal if more than 10 emails
+      if (totalEmails > 10) {
+        setShowProgressModal(true)
+        setShowGlobalSendPreview(false)
+      }
+      
+      // Start sending requests
       const response = await fetch(`/api/projects/${paramsId}/send-requests`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId })
       })
       
       if (response.ok) {
         const result = await response.json()
+        
+        // If we were showing progress modal, close it
+        if (showProgressModal) {
+          setShowProgressModal(false)
+        }
+        
         setSuccessMessage(`${result.totalSent} förfrågningar skickades ut.`)
         setShowSuccessModal(true)
         fetchProject() // Reload to update counts
@@ -245,6 +279,7 @@ export default function ProjectDetailPage({
       }
     } catch (error) {
       console.error('Error sending requests:', error)
+      setShowProgressModal(false)
       if (error instanceof Error) {
         toast.error(error.message)
       } else {
@@ -253,6 +288,7 @@ export default function ProjectDetailPage({
       throw error
     } finally {
       setSendingRequests(false)
+      setSendingSessionId(null)
     }
   }
   
@@ -1115,6 +1151,20 @@ export default function ProjectDetailPage({
         title="Förfrågningar skickade!"
         message={successMessage}
       />
+      
+      {/* Email Send Progress Modal */}
+      {showProgressModal && sendingSessionId && (
+        <EmailSendProgressModal
+          projectId={paramsId}
+          sessionId={sendingSessionId}
+          volume={emailVolume}
+          isOpen={showProgressModal}
+          onClose={() => {
+            setShowProgressModal(false)
+            setSendingSessionId(null)
+          }}
+        />
+      )}
       
       {/* Delete Project Modal */}
       {showDeleteModal && (

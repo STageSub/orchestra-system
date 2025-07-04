@@ -2,6 +2,17 @@ import { PrismaClient } from '@prisma/client'
 import { generateRequestToken } from '@/lib/request-tokens'
 import { sendRequestEmail } from '@/lib/email'
 import { generateUniqueId } from '@/lib/id-generator'
+import { EmailRateLimiter } from '@/lib/email/rate-limiter'
+
+// Progress callback type
+export type ProgressCallback = (projectId: number, data: {
+  total: number
+  sent: number
+  currentBatch: string[]
+  estimatedTime: number
+  status: 'sending' | 'completed' | 'error'
+  error?: string
+}) => void
 
 // Types for the unified function
 export interface RecipientInfo {
@@ -66,6 +77,8 @@ export interface ConflictInfo {
 interface GetRecipientsOptions {
   dryRun?: boolean // true for preview, false for actual sending
   includeDetails?: boolean // include extra info for preview display
+  onProgress?: ProgressCallback // callback for progress updates
+  sessionId?: string // unique session ID for progress tracking
 }
 
 interface MusicianConflictInfo {
@@ -530,10 +543,13 @@ export async function getRecipientsForNeed(
 
   // If not dry run, actually send the requests
   if (!dryRun && musiciansToContact.length > 0) {
-    const results = await Promise.allSettled(
-      musiciansToContact.map(musician => 
-        createAndSendRequest(need.id, musician.id, prisma)
-      )
+    // Use rate limiter for sending emails
+    const results = await EmailRateLimiter.sendBatch(
+      musiciansToContact,
+      async (musician) => createAndSendRequest(need.id, musician.id, prisma),
+      (sent, total, currentBatch) => {
+        console.log(`📧 Sending requests: ${sent}/${total} - Current batch: ${currentBatch.join(', ')}`)
+      }
     )
 
     // Log results
@@ -591,7 +607,7 @@ export async function getRecipientsForProject(
   options: GetRecipientsOptions = {},
   prisma: PrismaClient
 ): Promise<RecipientResult> {
-  const { dryRun = true, includeDetails = false } = options
+  const { dryRun = true, includeDetails = false, onProgress, sessionId } = options
 
   // Get project with all active needs
   const project = await prisma.project.findUnique({
@@ -763,10 +779,32 @@ export async function getRecipientsForProject(
 
       // If not dry run, actually send the requests
       if (!dryRun) {
-        const results = await Promise.allSettled(
-          musiciansToContact.map(musician => 
-            createAndSendRequest(need.id, musician.id, prisma)
-          )
+        // Calculate total emails for progress
+        const totalEmailsToSend = needResults.reduce((sum, n) => sum + n.musiciansToContact.length, 0)
+        const estimatedTime = EmailRateLimiter.estimateTime(totalEmailsToSend)
+        
+        // Use rate limiter for sending emails
+        const results = await EmailRateLimiter.sendBatch(
+          musiciansToContact,
+          async (musician) => createAndSendRequest(need.id, musician.id, prisma),
+          (sent, total, currentBatch) => {
+            console.log(`📧 Sending requests for ${need.position.name}: ${sent}/${total} - Current batch: ${currentBatch.join(', ')}`)
+            
+            // Report progress if callback provided
+            if (onProgress) {
+              const overallSent = needResults
+                .slice(0, needResults.indexOf(needResults.find(n => n.needId === need.id)!))
+                .reduce((sum, n) => sum + n.musiciansToContact.length, 0) + sent
+              
+              onProgress(projectId, {
+                total: totalEmailsToSend,
+                sent: overallSent,
+                currentBatch,
+                estimatedTime: Math.ceil((totalEmailsToSend - overallSent) / 2),
+                status: 'sending'
+              })
+            }
+          }
         )
 
         // Log results
