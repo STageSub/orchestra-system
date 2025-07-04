@@ -65,7 +65,7 @@ export async function GET(
         },
         {
           position: {
-            hierarchyNumber: 'asc'
+            hierarchyLevel: 'asc'
           }
         },
         {
@@ -83,7 +83,7 @@ export async function GET(
         id: list.position.id,
         name: list.position.name,
         instrument: list.position.instrument.name,
-        hierarchyNumber: list.position.hierarchyNumber
+        hierarchyLevel: list.position.hierarchyLevel
       },
       musicianCount: list.customRankings.length,
       isInUse: list.projectNeeds.length > 0,
