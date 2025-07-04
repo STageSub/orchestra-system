@@ -90,3 +90,125 @@
 - UI-förbättringarna är deployade men kräver databastabeller för att fungera
 
 ### Status: COMPLETED ✅
+
+---
+
+## 🎯 Fokus: Email Rate Limiting Implementation
+
+### ✅ Genomförda Uppgifter
+
+#### 1. Identifierade och löste Resend API rate limit problem
+- **Problem**: 429 "Too Many Requests" fel vid utskick av många förfrågningar
+- **Orsak**: Resend API har en gräns på 2 förfrågningar per sekund
+- **Scenario**: Särskilt problematiskt vid "först till kvarn" strategi med 50+ mottagare
+
+#### 2. Implementerade EmailRateLimiter
+- **Fil**: `/lib/email/rate-limiter.ts` (NY)
+- **Funktioner**:
+  - Batch-sändning med 2 email/sekund begränsning
+  - Progress callbacks för realtidsuppdateringar
+  - Volymbaserade processlägen (instant/small/medium/large)
+  - Promise.allSettled för robust felhantering
+
+#### 3. Progress Tracking System
+- **API Endpoint**: `/app/api/projects/[id]/send-progress/route.ts` (NY)
+- **Funktioner**:
+  - Session-baserad spårning i minnet
+  - Automatisk rensning efter 5 minuter
+  - Polling endpoint för UI-uppdateringar
+  - Export av `updateSendProgress` funktion
+
+#### 4. Progress Modal UI
+- **Fil**: `/components/email-send-progress-modal-v2.tsx` (NY)
+- **Lägen baserat på volym**:
+  - **Instant (1-10)**: Enkel spinner
+  - **Small (11-30)**: Progress bar med mottagarnamn
+  - **Medium (31-60)**: Val att köra i bakgrunden
+  - **Large (60+)**: Automatisk bakgrundsprocessering
+- **Features**:
+  - Realtidsuppdatering var 500ms
+  - Visar aktuella mottagare
+  - Tidsuppskattning
+  - Felhantering
+
+#### 5. Integration i alla email-scenarier
+- **"Skicka alla förfrågningar"**:
+  - Full rate limiting + progress UI
+  - Session-baserad spårning
+  - Uppdaterad `confirmSendRequests` i project page
+
+- **Individuella positionsförfrågningar**:
+  - Utökade `handleConfirmSendRequests` med volymkontroll
+  - Progress modal för > 10 emails
+  - Uppdaterade `getRecipientsForNeed` med callbacks
+
+- **Gruppmail**:
+  - Rate limiting implementerat
+  - Console logging (ingen UI behövs)
+
+### 📁 Modifierade Filer
+
+1. **lib/email/rate-limiter.ts** (NY)
+   - EmailRateLimiter class
+   - Batch processing logik
+   - Volymbaserade lägen
+
+2. **app/api/projects/[id]/send-progress/route.ts** (NY)
+   - Progress tracking endpoint
+   - In-memory storage
+   - Cleanup logic
+
+3. **components/email-send-progress-modal-v2.tsx** (NY)
+   - Progress modal UI
+   - Polling implementation
+   - Olika visningslägen
+
+4. **lib/recipient-selection.ts**
+   - Lade till onProgress callbacks i båda funktioner
+   - Progress rapportering under batch-sändning
+   - Session support
+
+5. **app/admin/projects/[id]/page.tsx**
+   - Progress modal integration
+   - Volymkontroll före sändning
+   - Session ID generering
+
+6. **app/api/projects/[id]/send-requests/route.ts**
+   - Progress support för individuella behov
+   - Session-baserad spårning
+
+7. **app/api/group-email/send/route.ts**
+   - EmailRateLimiter integration
+   - Batch processing
+
+### 🐛 Lösta Problem
+
+1. ✅ 429 "Too Many Requests" fel från Resend
+2. ✅ Ingen feedback vid stora email-utskick
+3. ✅ Timeout vid sändning av många förfrågningar
+4. ✅ Användare visste inte om systemet hängde sig
+
+### 📊 Resultat
+
+- **Före**: 429 fel vid > 2 emails/sekund
+- **Efter**: Stabil sändning oavsett volym
+- **UX**: Tydlig progress för användaren
+- **Prestanda**: 2 emails/sekund = 120 emails/minut
+
+### 📝 Dokumentation
+
+- Skapade `/docs/EMAIL_RATE_LIMITING.md`:
+  - Fullständig teknisk dokumentation
+  - Arkitekturdiagram
+  - Användningsexempel
+  - Felsökningsguide
+  - Framtida förbättringar
+
+### 🚀 Nästa Steg
+
+1. **Bakgrundsjobb** för mycket stora volymer (60+ emails)
+2. **Redis/BullMQ** för persistent köhantering
+3. **WebSocket/SSE** för realtidsuppdateringar
+4. **Retry-mekanismer** för misslyckade emails
+
+### Status: COMPLETED ✅
