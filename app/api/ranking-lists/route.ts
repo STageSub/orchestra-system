@@ -88,13 +88,20 @@ export async function GET(request: Request) {
     )
     
     // If projectId is provided, filter out already used ranking lists
+    let usedCustomListIds = new Set<number>()
+    
     if (projectId) {
       const projectNeeds = await prisma.projectNeed.findMany({
         where: { projectId: parseInt(projectId) },
-        select: { rankingListId: true }
+        select: { 
+          rankingListId: true,
+          customRankingListId: true 
+        }
       })
       
       const usedRankingListIds = new Set(projectNeeds.map(need => need.rankingListId))
+      usedCustomListIds = new Set(projectNeeds.map(need => need.customRankingListId).filter(id => id !== null))
+      
       rankingLists = enhancedLists.map(list => ({
         ...list,
         isUsedInProject: usedRankingListIds.has(list.id)
@@ -144,6 +151,9 @@ export async function GET(request: Request) {
           select: { musicianId: true }
         })
         
+        // Check if this custom list is already used
+        const isUsed = usedCustomListIds.has(customList.id)
+        
         return {
           id: customList.id,
           listType: 'Anpassad',
@@ -153,7 +163,8 @@ export async function GET(request: Request) {
           availableMusiciansCount: activeMusicians.length,
           totalActiveMusicians: activeMusicians.length,
           isCustomList: true,
-          customListId: customList.id
+          customListId: customList.id,
+          isUsedInProject: isUsed
         }
       }))
     }

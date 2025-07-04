@@ -112,12 +112,6 @@ export default function AddProjectNeedModal({
     } else if (formData.rankingListId) {
       const selectedList = rankingLists.find(l => l.id === parseInt(formData.rankingListId))
       if (selectedList) {
-        // Check if this is actually a custom list
-        if (selectedList.isCustomList && !customList) {
-          // Fetch the custom list details
-          fetchCustomList(selectedList.customListId || selectedList.id)
-        }
-        
         if (selectedList.availableMusiciansCount !== undefined) {
           const quantity = parseInt(formData.quantity)
           if (quantity > selectedList.availableMusiciansCount) {
@@ -146,11 +140,6 @@ export default function AddProjectNeedModal({
             ...prev, 
             positionId: data.positionId.toString(),
             instrumentId: data.position?.instrumentId?.toString() || '',
-            customRankingListId: customListId.toString()
-          }))
-        } else {
-          setFormData(prev => ({ 
-            ...prev, 
             customRankingListId: customListId.toString()
           }))
         }
@@ -330,12 +319,25 @@ export default function AddProjectNeedModal({
                     required
                     value={formData.rankingListId}
                     onChange={(e) => {
-                      setFormData({ ...formData, rankingListId: e.target.value })
-                      // Clear custom list if selecting a different option
-                      const selectedList = rankingLists.find(l => l.id === parseInt(e.target.value))
-                      if (!selectedList?.isCustomList) {
+                      const selectedValue = e.target.value
+                      const selectedList = rankingLists.find(l => l.id === parseInt(selectedValue))
+                      
+                      if (selectedList?.isCustomList) {
+                        // This is a custom list - fetch its details
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          rankingListId: selectedValue,
+                          customRankingListId: selectedValue
+                        }))
+                        fetchCustomList(selectedList.customListId || selectedList.id)
+                      } else {
+                        // This is a standard list
                         setCustomList(null)
-                        setFormData(prev => ({ ...prev, customRankingListId: '' }))
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          rankingListId: selectedValue,
+                          customRankingListId: ''
+                        }))
                       }
                     }}
                     className={`flex-1 h-10 px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:bg-gray-50 disabled:text-gray-500 overflow-y-auto ${

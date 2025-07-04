@@ -619,6 +619,18 @@ export async function getRecipientsForProject(
               }
             }
           },
+          customRankingList: {
+            include: {
+              customRankings: {
+                include: {
+                  musician: true
+                },
+                orderBy: {
+                  rank: 'asc'
+                }
+              }
+            }
+          },
           requests: {
             include: {
               musician: true
@@ -727,8 +739,9 @@ export async function getRecipientsForProject(
         },
         strategy: need.requestStrategy as 'sequential' | 'parallel' | 'first_come',
         maxRecipients: need.maxRecipients,
-        listType: need.rankingList?.listType, // Lägg till vilken lista
-        rankingListId: need.rankingList?.id, // Lägg till ranking list ID
+        listType: need.customRankingList ? need.customRankingList.name : need.rankingList?.listType, // Handle both standard and custom lists
+        rankingListId: need.customRankingList ? null : need.rankingList?.id, // Only set for standard lists
+        customRankingListId: need.customRankingList?.id, // Add custom list ID
         musiciansToContact,
         nextInQueue,
         allMusiciansWithStatus,

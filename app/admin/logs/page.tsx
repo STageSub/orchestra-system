@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 
@@ -123,6 +123,86 @@ export default function LogsPage() {
     setExpandedLogs(newExpanded)
   }
 
+  const renderMetadata = (metadata: any) => {
+    if (!metadata) return null
+
+    // Special handling for email logs
+    if (metadata.recipients || metadata.recipientCount) {
+      return (
+        <div className="mt-2 space-y-2">
+          {metadata.recipients && (
+            <div className="bg-white rounded p-3 border border-gray-200">
+              <h4 className="font-medium text-sm mb-2">Email Recipients ({metadata.recipientCount || metadata.recipients.length})</h4>
+              <div className="space-y-1">
+                {metadata.recipients.map((recipient: any, index: number) => (
+                  <div key={index} className="text-xs flex items-center justify-between p-1 hover:bg-gray-50 rounded">
+                    <span className="font-medium">{recipient.name || recipient.email}</span>
+                    <span className="text-gray-500">{recipient.email}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {metadata.projectName && (
+            <div className="text-sm">
+              <span className="font-medium">Project:</span> {metadata.projectName}
+            </div>
+          )}
+          {metadata.positionName && (
+            <div className="text-sm">
+              <span className="font-medium">Position:</span> {metadata.positionName}
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    // Special handling for request logs
+    if (metadata.musicianName || metadata.requestId) {
+      return (
+        <div className="mt-2 space-y-1">
+          {metadata.musicianName && (
+            <div className="text-sm">
+              <span className="font-medium">Musician:</span> {metadata.musicianName}
+            </div>
+          )}
+          {metadata.positionName && (
+            <div className="text-sm">
+              <span className="font-medium">Position:</span> {metadata.positionName}
+            </div>
+          )}
+          {metadata.projectName && (
+            <div className="text-sm">
+              <span className="font-medium">Project:</span> {metadata.projectName}
+            </div>
+          )}
+          {metadata.status && (
+            <div className="text-sm">
+              <span className="font-medium">Status:</span> <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                metadata.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                metadata.status === 'declined' ? 'bg-red-100 text-red-800' :
+                metadata.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                'bg-gray-100 text-gray-800'
+              }`}>{metadata.status}</span>
+            </div>
+          )}
+          {metadata.error && (
+            <div className="text-sm text-red-600 bg-red-50 p-2 rounded mt-2">
+              <span className="font-medium">Error:</span> {metadata.error}
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    // Default JSON display for other metadata
+    return (
+      <pre className="mt-1 text-xs bg-gray-100 p-2 rounded overflow-x-auto">
+        {JSON.stringify(metadata, null, 2)}
+      </pre>
+    )
+  }
+
   const totalPages = Math.ceil(total / limit)
 
   return (
@@ -224,85 +304,105 @@ export default function LogsPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {logs.map((log) => (
-                  <tr key={log.id} className={`hover:bg-gray-50 ${getLevelBgColor(log.level)}`}>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                      {format(new Date(log.timestamp), 'HH:mm:ss', { locale: sv })}
-                      <div className="text-xs text-gray-500">
-                        {format(new Date(log.timestamp), 'yyyy-MM-dd', { locale: sv })}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`text-sm font-medium ${getLevelColor(log.level)}`}>
-                        {log.level.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getCategoryColor(log.category)}`}>
-                        {log.category}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      <div className="max-w-xl">
-                        <p className="truncate">{log.message}</p>
-                        {log.duration && (
-                          <span className="text-xs text-gray-500">({log.duration}ms)</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
-                      <button
-                        onClick={() => toggleExpanded(log.id)}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        {expandedLogs.has(log.id) ? 'Hide' : 'Show'}
-                      </button>
-                    </td>
-                  </tr>
+                  <React.Fragment key={log.id}>
+                    <tr className={`hover:bg-gray-50 ${getLevelBgColor(log.level)}`}>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                        {format(new Date(log.timestamp), 'HH:mm:ss', { locale: sv })}
+                        <div className="text-xs text-gray-500">
+                          {format(new Date(log.timestamp), 'yyyy-MM-dd', { locale: sv })}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className={`text-sm font-medium ${getLevelColor(log.level)}`}>
+                          {log.level.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getCategoryColor(log.category)}`}>
+                          {log.category}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        <div className="max-w-xl">
+                          <p className="truncate">
+                            {/* Enhanced message display */}
+                            {log.category === 'email' && log.metadata?.recipients?.[0] ? (
+                              <>
+                                {log.message.replace('Email sent successfully', 'Email sent to')} {log.metadata.recipients[0].name || log.metadata.recipients[0].email}
+                                {log.metadata.recipientCount > 1 && ` and ${log.metadata.recipientCount - 1} others`}
+                              </>
+                            ) : log.category === 'email' && log.metadata?.musicianName ? (
+                              `${log.message.includes('successfully') ? 'Email sent to' : log.message} ${log.metadata.musicianName}`
+                            ) : log.category === 'request' && log.metadata?.musicianName ? (
+                              `${log.metadata.musicianName} ${log.message.toLowerCase()}`
+                            ) : (
+                              log.message
+                            )}
+                          </p>
+                          {log.metadata?.positionName && (
+                            <span className="text-xs text-gray-500">
+                              {log.metadata.positionName}
+                            </span>
+                          )}
+                          {log.duration && (
+                            <span className="text-xs text-gray-500 ml-2">({log.duration}ms)</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500">
+                        <button
+                          onClick={() => toggleExpanded(log.id)}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          {expandedLogs.has(log.id) ? 'Hide' : 'Show'}
+                        </button>
+                      </td>
+                    </tr>
+                    {/* Inline Expanded Details */}
+                    {expandedLogs.has(log.id) && (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-3 bg-gray-50">
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            {log.userId && (
+                              <div>
+                                <span className="font-medium">User ID:</span> {log.userId}
+                              </div>
+                            )}
+                            {log.ip && (
+                              <div>
+                                <span className="font-medium">IP:</span> {log.ip}
+                              </div>
+                            )}
+                            {log.subdomain && (
+                              <div>
+                                <span className="font-medium">Subdomain:</span> {log.subdomain}
+                              </div>
+                            )}
+                            {log.requestId && (
+                              <div>
+                                <span className="font-medium">Request ID:</span> {log.requestId}
+                              </div>
+                            )}
+                          </div>
+                          {log.metadata && (
+                            <div className="mt-2">
+                              <span className="font-medium">Metadata:</span>
+                              {renderMetadata(log.metadata)}
+                            </div>
+                          )}
+                          {log.userAgent && (
+                            <div className="mt-2">
+                              <span className="font-medium">User Agent:</span>
+                              <p className="text-xs text-gray-600">{log.userAgent}</p>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
-
-            {/* Expanded Details */}
-            {logs.map((log) => expandedLogs.has(log.id) && (
-              <div key={`${log.id}-details`} className="px-4 py-3 bg-gray-50 border-t">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  {log.userId && (
-                    <div>
-                      <span className="font-medium">User ID:</span> {log.userId}
-                    </div>
-                  )}
-                  {log.ip && (
-                    <div>
-                      <span className="font-medium">IP:</span> {log.ip}
-                    </div>
-                  )}
-                  {log.subdomain && (
-                    <div>
-                      <span className="font-medium">Subdomain:</span> {log.subdomain}
-                    </div>
-                  )}
-                  {log.requestId && (
-                    <div>
-                      <span className="font-medium">Request ID:</span> {log.requestId}
-                    </div>
-                  )}
-                </div>
-                {log.metadata && (
-                  <div className="mt-2">
-                    <span className="font-medium">Metadata:</span>
-                    <pre className="mt-1 text-xs bg-gray-100 p-2 rounded overflow-x-auto">
-                      {JSON.stringify(log.metadata, null, 2)}
-                    </pre>
-                  </div>
-                )}
-                {log.userAgent && (
-                  <div className="mt-2">
-                    <span className="font-medium">User Agent:</span>
-                    <p className="text-xs text-gray-600">{log.userAgent}</p>
-                  </div>
-                )}
-              </div>
-            ))}
           </div>
         )}
 
@@ -340,9 +440,80 @@ export default function LogsPage() {
       {/* Test Mode Banner */}
       {process.env.NODE_ENV !== 'production' && (
         <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-sm text-yellow-800">
+          <p className="text-sm text-yellow-800 mb-3">
             <strong>Development Mode:</strong> Logs are stored both in memory and database.
           </p>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={async () => {
+                await fetch('/api/test-logs', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    type: 'email',
+                    metadata: {
+                      recipientCount: 5,
+                      recipients: [
+                        { name: 'Anna Andersson', email: 'anna@example.com' },
+                        { name: 'Björn Bengtsson', email: 'bjorn@example.com' },
+                        { name: 'Cecilia Carlsson', email: 'cecilia@example.com' },
+                        { name: 'David Davidsson', email: 'david@example.com' },
+                        { name: 'Eva Eriksson', email: 'eva@example.com' }
+                      ],
+                      projectName: 'V.28 Mahler 9',
+                      positionName: 'Violin 1 - Tutti'
+                    }
+                  })
+                })
+                fetchLogs()
+              }}
+              className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Test Email Log
+            </button>
+            <button
+              onClick={async () => {
+                await fetch('/api/test-logs', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    type: 'request',
+                    metadata: {
+                      musicianName: 'Johan Johansson',
+                      positionName: 'Viola - Stämledare',
+                      projectName: 'V.32 Beethoven 5',
+                      status: 'accepted'
+                    }
+                  })
+                })
+                fetchLogs()
+              }}
+              className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+            >
+              Test Request Log
+            </button>
+            <button
+              onClick={async () => {
+                await fetch('/api/test-logs', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    type: 'error',
+                    metadata: {
+                      error: 'Connection timeout',
+                      musicianName: 'Sara Svensson',
+                      positionName: 'Cello - Tutti',
+                      projectName: 'V.30 Mozart Requiem'
+                    }
+                  })
+                })
+                fetchLogs()
+              }}
+              className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+            >
+              Test Error Log
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -178,6 +178,24 @@ export async function POST(
       )
     }
     
+    // Validation 6: Check if custom list is already used in this project
+    if (customRankingListId) {
+      const existingNeedWithCustomList = await prisma.projectNeed.findFirst({
+        where: {
+          projectId: parseInt(id),
+          customRankingListId: parseInt(customRankingListId),
+          status: { not: 'cancelled' }
+        }
+      })
+      
+      if (existingNeedWithCustomList) {
+        return NextResponse.json(
+          { error: 'Denna anpassade lista används redan i projektet' },
+          { status: 400 }
+        )
+      }
+    }
+    
     // Check available musicians based on list type
     let musiciansInList
     if (rankingListId) {

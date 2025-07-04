@@ -530,14 +530,14 @@ export default function RankingListPage({
 
       {/* Modal för att lägga till musiker */}
       {showAddMusician && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto border w-full max-w-2xl shadow-lg rounded-md bg-white flex flex-col" style={{ maxHeight: 'calc(100vh - 10rem)' }}>
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">
                 Lägg till musiker
               </h3>
             </div>
-            <div className="p-6 overflow-y-auto max-h-[60vh]">
+            <div className="flex-1 overflow-y-auto p-6">
               {availableMusicians.length === 0 ? (
                 <p className="text-center text-gray-500 py-4">
                   Inga tillgängliga musiker för denna position
@@ -609,10 +609,10 @@ export default function RankingListPage({
                 </>
               )}
             </div>
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end">
               <button
                 onClick={() => setShowAddMusician(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
               >
                 Stäng
               </button>
