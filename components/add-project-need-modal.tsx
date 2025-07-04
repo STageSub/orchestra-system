@@ -338,15 +338,23 @@ export default function AddProjectNeedModal({
                     ))}
                   </select>
                 )}
-                {formData.positionId && (
+                {formData.positionId && !existingCustomListForPosition && (
                   <button
                     type="button"
                     onClick={() => setShowCreateCustomListModal(true)}
                     className="text-sm font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap"
                   >
-                    {(existingCustomListForPosition && 
-                     (formData.rankingListId === existingCustomListForPosition.toString() || 
-                      customList)) ? 'Ändra befintlig lista' : 'Skapa ny lista'}
+                    Skapa ny lista
+                  </button>
+                )}
+                {formData.positionId && existingCustomListForPosition && 
+                 formData.rankingListId === existingCustomListForPosition.toString() && (
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateCustomListModal(true)}
+                    className="text-sm font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap"
+                  >
+                    Ändra befintlig lista
                   </button>
                 )}
               </div>
