@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPrismaForUser } from '@/lib/auth-prisma'
 import { generateUniqueId } from '@/lib/id-generator'
 import { saveFile, generateFileName, isValidFileType, isValidFileSize } from '@/lib/file-handler-db'
+import { apiLogger } from '@/lib/logger'
 
 // Increase body size limit for file uploads
 export const maxDuration = 60 // 60 seconds timeout
@@ -13,6 +14,14 @@ export async function GET(
   try {
     const prisma = await getPrismaForUser(request)
     const { id } = await context.params
+    
+    // Log file fetch start
+    await apiLogger.info(request, 'api', 'Fetching project files', {
+      metadata: {
+        action: 'list_project_files',
+        projectId: id
+      }
+    })
     
     const files = await prisma.projectFile.findMany({
       where: { projectId: parseInt(id) },
@@ -30,9 +39,28 @@ export async function GET(
       orderBy: { uploadedAt: 'desc' }
     })
     
+    // Log successful fetch
+    await apiLogger.info(request, 'api', 'Project files fetched successfully', {
+      metadata: {
+        action: 'list_project_files',
+        projectId: id,
+        filesCount: files.length
+      }
+    })
+    
     return NextResponse.json(files)
   } catch (error) {
     console.error('Error fetching project files:', error)
+    
+    // Log error
+    await apiLogger.error(request, 'api', `Failed to fetch project files: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+      metadata: {
+        action: 'list_project_files',
+        projectId: id,
+        error: error instanceof Error ? error.message : String(error)
+      }
+    })
+    
     return NextResponse.json(
       { error: 'Failed to fetch project files' },
       { status: 500 }

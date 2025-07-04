@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendEmail } from '@/lib/email'
 import { getPrismaForUser } from '@/lib/auth-prisma'
+import { apiLogger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -92,6 +93,18 @@ export async function POST(request: NextRequest) {
       console.error('Failed to log group email:', logError)
       // Don't fail the request if logging fails
     }
+    
+    // Log group email operation
+    await apiLogger.info(request, 'email', 'Group email sent', {
+      metadata: {
+        subject,
+        recipientCount: recipients.length,
+        successCount,
+        failureCount,
+        projectId: metadata?.projectId || null,
+        filters: metadata?.filters || null
+      }
+    })
 
     // Return response
     if (failureCount === 0) {
@@ -128,6 +141,16 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error('Error sending group email:', error)
+    
+    // Log error
+    await apiLogger.error(request, 'email', `Group email failed: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+      metadata: {
+        subject,
+        recipientCount: recipients?.length || 0,
+        error: error instanceof Error ? error.message : String(error)
+      }
+    })
+    
     return NextResponse.json(
       { error: 'Ett fel uppstod vid utskick av gruppmail' },
       { status: 500 }

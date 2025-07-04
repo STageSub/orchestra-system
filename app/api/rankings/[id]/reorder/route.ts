@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getPrismaForUser } from '@/lib/auth-prisma'
+import { apiLogger } from '@/lib/logger'
 
 export async function PUT(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -90,6 +91,16 @@ export async function PUT(
       })
       
       console.log('Successfully updated', results.length, 'rankings')
+      
+      // Log the reorder operation
+      await apiLogger.info(request, 'system', 'Ranking list reordered', {
+        metadata: {
+          rankingListId: listId,
+          updatedCount: results.length,
+          newOrder: rankings.map((r: { id: number; rank: number }) => ({ id: r.id, rank: r.rank }))
+        }
+      })
+      
       return NextResponse.json({ success: true, updated: results.length })
     } catch (transactionError) {
       console.error('Transaction error:', transactionError)
@@ -103,6 +114,14 @@ export async function PUT(
       stack: error.stack,
       name: error.name
     } : { raw: String(error) }
+    
+    // Log error
+    await apiLogger.error(request, 'system', `Failed to reorder rankings: ${errorMessage}`, {
+      metadata: {
+        rankingListId: parseInt((await params).id),
+        error: errorMessage
+      }
+    })
     
     return NextResponse.json(
       { 

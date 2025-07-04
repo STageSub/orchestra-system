@@ -4,6 +4,7 @@ import { getPrismaForUser } from '@/lib/auth-prisma'
 import { sendConfirmationEmail, sendPositionFilledEmail } from '@/lib/email'
 import { ensureLogStorage } from '@/lib/server-init'
 import { generateUniqueId } from '@/lib/id-generator'
+import { logger } from '@/lib/logger'
 
 // Initialize log storage for this API route
 ensureLogStorage()
@@ -58,6 +59,15 @@ export async function GET(request: NextRequest) {
       console.error('Searched for token:', token)
       console.error('In database for org:', org || 'default')
       
+      // Log invalid token attempt
+      await logger.warn('request', 'Invalid token used for response', {
+        metadata: {
+          token: token.substring(0, 20) + '...',
+          org,
+          ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+        }
+      })
+      
       // Try to count tokens in this database for debugging
       try {
         const tokenCount = await prisma.requestToken.count()
@@ -91,6 +101,13 @@ export async function GET(request: NextRequest) {
     }
 
     if (requestToken.usedAt) {
+      await logger.warn('request', 'Already used token attempted', {
+        metadata: {
+          token: token.substring(0, 20) + '...',
+          requestId: requestToken.requestId,
+          usedAt: requestToken.usedAt
+        }
+      })
       return NextResponse.json(
         { error: 'Denna token har redan använts' },
         { status: 400 }
@@ -129,6 +146,16 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error validating token:', error)
+    
+    // Log error
+    await logger.error('request', `Token validation error: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+      metadata: {
+        token: token ? token.substring(0, 20) + '...' : 'missing',
+        org,
+        error: error instanceof Error ? error.message : String(error)
+      }
+    })
+    
     return NextResponse.json(
       { error: 'Ett fel uppstod' },
       { status: 500 }
@@ -259,6 +286,21 @@ export async function POST(request: NextRequest) {
         data: {
           status: response,
           respondedAt: new Date()
+        }
+      })
+      
+      // Log musician response
+      await logger.info('request', `Musician ${response} request`, {
+        metadata: {
+          requestId: requestToken.request.id,
+          musicianId: requestToken.request.musicianId,
+          musicianName: `${requestToken.request.musician.firstName} ${requestToken.request.musician.lastName}`,
+          projectNeedId: requestToken.request.projectNeedId,
+          projectName: projectNeed.project.name,
+          positionName: projectNeed.position.name,
+          response,
+          responseTime: updatedRequest.respondedAt && requestToken.request.createdAt ? 
+            Math.round((updatedRequest.respondedAt.getTime() - requestToken.request.createdAt.getTime()) / (1000 * 60 * 60)) : null
         }
       })
       console.log('Request updated:')
@@ -431,6 +473,16 @@ export async function POST(request: NextRequest) {
     console.error('Error message:', error instanceof Error ? error.message : String(error))
     console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
     console.error('Full error object:', error)
+    
+    // Log error
+    await logger.error('request', `Response processing error: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+      metadata: {
+        token: token ? token.substring(0, 20) + '...' : 'missing',
+        response,
+        org,
+        error: error instanceof Error ? error.message : String(error)
+      }
+    })
     
     // Check for specific error types
     if (error instanceof Error) {

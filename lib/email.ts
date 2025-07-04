@@ -2,6 +2,7 @@ import { Resend } from 'resend'
 import { PrismaClient } from '@prisma/client'
 import { getFile } from '@/lib/file-handler-db'
 import { getLogStorage } from '@/lib/log-storage'
+import { logger } from '@/lib/logger'
 
 // Initialize log storage for email module
 if (process.env.NODE_ENV === 'development') {
@@ -45,6 +46,18 @@ export async function sendEmail({ to, subject, html, from = 'Orchestra System <n
       console.log('Attachments:', attachments.map(a => a.filename).join(', '))
     }
     console.log('========================')
+    
+    // Log simulated email
+    await logger.info('email', 'Email simulated (dev mode)', {
+      metadata: {
+        to,
+        subject,
+        from,
+        attachmentCount: attachments?.length || 0,
+        mode: 'simulation'
+      }
+    })
+    
     return { id: 'simulated-' + Date.now() }
   }
 
@@ -71,13 +84,49 @@ export async function sendEmail({ to, subject, html, from = 'Orchestra System <n
 
     if (error) {
       console.error('Email send error:', error)
+      
+      // Log email error
+      await logger.error('email', `Email failed to send: ${error.message || 'Unknown error'}`, {
+        metadata: {
+          to,
+          subject,
+          from,
+          error: error,
+          attachmentCount: attachments?.length || 0
+        }
+      })
+      
       throw error
     }
 
     console.log('Email sent successfully:', data)
+    
+    // Log successful email
+    await logger.info('email', 'Email sent successfully', {
+      metadata: {
+        to,
+        subject,
+        from,
+        emailId: data?.id,
+        attachmentCount: attachments?.length || 0
+      }
+    })
+    
     return data
   } catch (error) {
     console.error('Failed to send email:', error)
+    
+    // Log email exception
+    await logger.error('email', `Email exception: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+      metadata: {
+        to,
+        subject,
+        from,
+        error: error instanceof Error ? error.message : String(error),
+        attachmentCount: attachments?.length || 0
+      }
+    })
+    
     throw error
   }
 }
@@ -307,6 +356,16 @@ export async function sendRequestEmail(
     return global.sendRequestEmail(request, token)
   }
   console.log('Token:', token.substring(0, 20) + '...')
+  
+  // Log request email attempt
+  await logger.info('email', 'Sending musician request email', {
+    metadata: {
+      requestId: request.id,
+      musicianId: request.musicianId,
+      projectNeedId: request.projectNeedId,
+      emailType: 'request'
+    }
+  })
   
   // Get subdomain from the prisma client
   const { getSubdomainFromPrismaClient } = await import('@/lib/database-config')

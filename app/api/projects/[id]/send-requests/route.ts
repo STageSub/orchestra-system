@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getRecipientsForNeed, getRecipientsForProject } from '@/lib/recipient-selection'
 import { getPrismaForUser } from '@/lib/auth-prisma'
+import { apiLogger } from '@/lib/logger'
 
 export async function POST(
   request: NextRequest,
@@ -16,6 +17,16 @@ export async function POST(
     const prisma = await getPrismaForUser(request)
     let totalSent = 0
     const results = []
+    
+    // Log request sending start
+    await apiLogger.info(request, 'api', 'Starting to send project requests', {
+      metadata: {
+        action: 'send_requests',
+        projectId: id,
+        projectNeedId: projectNeedId || null,
+        type: projectNeedId ? 'single_need' : 'all_needs'
+      }
+    })
 
     if (projectNeedId) {
       // Send for specific need
@@ -50,6 +61,18 @@ export async function POST(
       })
     }
 
+    // Log successful sending
+    await apiLogger.info(request, 'api', 'Project requests sent successfully', {
+      metadata: {
+        action: 'send_requests',
+        projectId: id,
+        projectNeedId: projectNeedId || null,
+        totalSent,
+        results,
+        type: projectNeedId ? 'single_need' : 'all_needs'
+      }
+    })
+    
     return NextResponse.json({
       success: true,
       totalSent,
@@ -60,6 +83,17 @@ export async function POST(
     })
   } catch (error) {
     console.error('Error sending requests:', error)
+    
+    // Log error
+    await apiLogger.error(request, 'api', `Failed to send requests: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+      metadata: {
+        action: 'send_requests',
+        projectId: id,
+        projectNeedId: projectNeedId || null,
+        error: error instanceof Error ? error.message : String(error)
+      }
+    })
+    
     return NextResponse.json(
       { error: 'Ett fel uppstod vid utskick av förfrågningar' },
       { status: 500 }

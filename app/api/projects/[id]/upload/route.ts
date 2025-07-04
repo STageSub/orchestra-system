@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPrismaForUser } from '@/lib/auth-prisma'
 import { generateUniqueId } from '@/lib/id-generator'
 import { saveFile, generateFileName, isValidFileType, isValidFileSize } from '@/lib/file-handler-db'
+import { apiLogger } from '@/lib/logger'
 
 // Alternative approach using JSON with base64 encoding
 export async function POST(
@@ -25,6 +26,19 @@ export async function POST(
       sendTiming,
       originalFileName,
       hasFile: !!file
+    })
+    
+    // Log file upload start
+    await apiLogger.info(request, 'api', 'Starting file upload', {
+      metadata: {
+        action: 'upload_file',
+        projectId,
+        fileName,
+        fileType,
+        projectNeedId,
+        sendTiming,
+        originalFileName
+      }
     })
     
     if (!file || !fileName || !fileType || !originalFileName) {
@@ -99,9 +113,33 @@ export async function POST(
       }
     })
     
+    // Log successful upload
+    await apiLogger.info(request, 'api', 'File uploaded successfully', {
+      metadata: {
+        action: 'upload_file',
+        projectId,
+        projectFileId: projectFile.projectFileId,
+        fileName: projectFile.fileName,
+        fileType: projectFile.fileType,
+        projectNeedId: projectFile.projectNeedId,
+        sendTiming: projectFile.sendTiming
+      }
+    })
+    
     return NextResponse.json(projectFile, { status: 201 })
   } catch (error) {
     console.error('Error uploading file:', error)
+    
+    // Log error
+    await apiLogger.error(request, 'api', `Failed to upload file: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+      metadata: {
+        action: 'upload_file',
+        projectId: id,
+        fileName,
+        error: error instanceof Error ? error.message : String(error)
+      }
+    })
+    
     return NextResponse.json(
       { error: 'Failed to upload file', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

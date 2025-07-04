@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getPrismaForUser } from '@/lib/auth-prisma'
 import { generateUniqueId } from '@/lib/id-generator'
+import { apiLogger } from '@/lib/logger'
 
 export async function GET(
   request: Request,
@@ -9,6 +10,14 @@ export async function GET(
   try {
     const prisma = await getPrismaForUser(request)
     const { id } = await context.params
+    
+    // Log needs fetch start
+    await apiLogger.info(request, 'api', 'Fetching project needs', {
+      metadata: {
+        action: 'list_project_needs',
+        projectId: id
+      }
+    })
     
     // Check if customRankingList table exists (for backwards compatibility)
     let includeCustomList = false
@@ -49,9 +58,28 @@ export async function GET(
       return a.position.hierarchyLevel - b.position.hierarchyLevel
     })
     
+    // Log successful fetch
+    await apiLogger.info(request, 'api', 'Project needs fetched successfully', {
+      metadata: {
+        action: 'list_project_needs',
+        projectId: id,
+        needsCount: sortedNeeds.length
+      }
+    })
+    
     return NextResponse.json(sortedNeeds)
   } catch (error) {
     console.error('Error fetching project needs:', error)
+    
+    // Log error
+    await apiLogger.error(request, 'api', `Failed to fetch project needs: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+      metadata: {
+        action: 'list_project_needs',
+        projectId: id,
+        error: error instanceof Error ? error.message : String(error)
+      }
+    })
+    
     return NextResponse.json(
       { error: 'Failed to fetch project needs' },
       { status: 500 }
@@ -69,6 +97,17 @@ export async function POST(
     const body = await request.json()
     const { positionId, rankingListId, customRankingListId, quantity, requestStrategy, maxRecipients, responseTimeHours, requireLocalResidence } = body
     
+    // Log project need creation start
+    await apiLogger.info(request, 'api', 'Creating project need', {
+      metadata: {
+        action: 'create_project_need',
+        projectId: id,
+        positionId,
+        quantity,
+        requestStrategy
+      }
+    })
+    
     // Check if customRankingList table exists (for backwards compatibility)
     let includeCustomList = false
     try {
@@ -83,6 +122,14 @@ export async function POST(
     
     // Validation 1: Sequential strategy must have quantity = 1
     if (requestStrategy === 'sequential' && parsedQuantity !== 1) {
+      await apiLogger.warn(request, 'api', 'Invalid sequential strategy quantity', {
+        metadata: {
+          action: 'create_project_need',
+          projectId: id,
+          requestStrategy,
+          quantity: parsedQuantity
+        }
+      })
       return NextResponse.json(
         { error: 'Sekventiell strategi måste ha antal = 1' },
         { status: 400 }
@@ -227,9 +274,32 @@ export async function POST(
       }
     })
     
+    // Log successful creation
+    await apiLogger.info(request, 'api', 'Project need created successfully', {
+      metadata: {
+        action: 'create_project_need',
+        projectId: id,
+        projectNeedId: need.projectNeedId,
+        positionId: need.positionId,
+        quantity: need.quantity,
+        requestStrategy: need.requestStrategy
+      }
+    })
+    
     return NextResponse.json(need, { status: 201 })
   } catch (error) {
     console.error('Error creating project need:', error)
+    
+    // Log error
+    await apiLogger.error(request, 'api', `Failed to create project need: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+      metadata: {
+        action: 'create_project_need',
+        projectId: id,
+        error: error instanceof Error ? error.message : String(error),
+        requestData: body
+      }
+    })
+    
     return NextResponse.json(
       { error: 'Failed to create project need' },
       { status: 500 }

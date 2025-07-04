@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getPrismaForUser } from '@/lib/auth-prisma'
+import { apiLogger } from '@/lib/logger'
 
 export async function GET(
   request: Request,
@@ -171,9 +172,33 @@ export async function PUT(
       }
     })
 
+    // Log musician update
+    await apiLogger.info(request, 'system', 'Musician updated', {
+      metadata: {
+        musicianId: updatedMusicianWithRelations.id,
+        musicianCode: updatedMusicianWithRelations.musicianId,
+        name: `${firstName} ${lastName}`,
+        changes: {
+          email: email !== updatedMusicianWithRelations.email,
+          phone: phone !== updatedMusicianWithRelations.phone,
+          localResidence: localResidence !== updatedMusicianWithRelations.localResidence,
+          isActive: isActive !== updatedMusicianWithRelations.isActive,
+          qualificationsUpdated: !!qualificationIds
+        }
+      }
+    })
+    
     return NextResponse.json(updatedMusicianWithRelations)
   } catch (error: any) {
     console.error('Error updating musician:', error)
+    
+    // Log error
+    await apiLogger.error(request, 'system', `Failed to update musician: ${error.message}`, {
+      metadata: {
+        musicianId: parseInt(id),
+        error: error.message
+      }
+    })
     
     if (error.code === 'P2002') {
       return NextResponse.json(
@@ -197,7 +222,7 @@ export async function DELETE(
   try {
     const prisma = await getPrismaForUser(request)
     // Soft delete - archive the musician
-    await prisma.musician.update({
+    const musician = await prisma.musician.update({
       where: { id: parseInt(id) },
       data: {
         isArchived: true,
@@ -205,10 +230,27 @@ export async function DELETE(
         archivedAt: new Date()
       }
     })
+    
+    // Log musician archive
+    await apiLogger.info(request, 'system', 'Musician archived', {
+      metadata: {
+        musicianId: musician.id,
+        musicianCode: musician.musicianId,
+        name: `${musician.firstName} ${musician.lastName}`
+      }
+    })
 
     return NextResponse.json({ message: 'Musician archived successfully' })
   } catch (error) {
     console.error('Error archiving musician:', error)
+    
+    // Log error
+    await apiLogger.error(request, 'system', `Failed to archive musician: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+      metadata: {
+        musicianId: parseInt(id),
+        error: error instanceof Error ? error.message : String(error)
+      }
+    })
     return NextResponse.json(
       { error: 'Failed to archive musician' },
       { status: 500 }

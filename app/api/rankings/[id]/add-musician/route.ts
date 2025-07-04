@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getPrismaForUser } from '@/lib/auth-prisma'
+import { apiLogger } from '@/lib/logger'
 
 export async function POST(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -31,10 +32,30 @@ export async function POST(
         musician: true
       }
     })
+    
+    // Log the addition
+    await apiLogger.info(request, 'system', 'Musician added to ranking list', {
+      metadata: {
+        rankingListId: parseInt(id),
+        musicianId: parseInt(musicianId),
+        musicianName: `${ranking.musician.firstName} ${ranking.musician.lastName}`,
+        rank: newRank
+      }
+    })
 
     return NextResponse.json(ranking, { status: 201 })
   } catch (error) {
     console.error('Error adding musician to ranking:', error)
+    
+    // Log error
+    await apiLogger.error(request, 'system', `Failed to add musician to ranking: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+      metadata: {
+        rankingListId: parseInt((await params).id),
+        musicianId: body?.musicianId,
+        error: error instanceof Error ? error.message : String(error)
+      }
+    })
+    
     return NextResponse.json(
       { error: 'Failed to add musician to ranking' },
       { status: 500 }

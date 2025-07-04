@@ -3,6 +3,7 @@ import { createToken, setAuthCookie, verifyPassword, verifySuperadminPassword } 
 import { authenticateUser, createToken as createDbToken } from '@/lib/auth-db'
 import { getSubdomain } from '@/lib/database-config'
 import { setAuthCookieOnResponse } from '@/lib/auth-cookie-fix'
+import { logger } from '@/lib/logger'
 
 // Rate limiting: Track login attempts
 const loginAttempts = new Map<string, { count: number; resetTime: number }>()
@@ -36,6 +37,12 @@ export async function POST(request: NextRequest) {
     
     // Check rate limit
     if (!checkRateLimit(ip)) {
+      await logger.warn('auth', 'Rate limit exceeded for login attempts', {
+        metadata: {
+          ip,
+          attempts: loginAttempts.get(ip)?.count || 0
+        }
+      })
       return NextResponse.json(
         { error: 'För många inloggningsförsök. Försök igen om 15 minuter.' },
         { status: 429 }
@@ -64,6 +71,13 @@ export async function POST(request: NextRequest) {
       const user = await authenticateUser(username, password)
       
       if (!user) {
+        await logger.warn('auth', 'Failed login attempt - invalid credentials', {
+          metadata: {
+            username,
+            ip,
+            loginType: 'database'
+          }
+        })
         return NextResponse.json(
           { error: 'Fel användarnamn eller lösenord' },
           { status: 401 }
@@ -86,6 +100,13 @@ export async function POST(request: NextRequest) {
       }
       
       if (!isValid) {
+        await logger.warn('auth', 'Failed login attempt - invalid password', {
+          metadata: {
+            ip,
+            loginType,
+            subdomain
+          }
+        })
         return NextResponse.json(
           { error: 'Fel lösenord' },
           { status: 401 }
@@ -98,6 +119,17 @@ export async function POST(request: NextRequest) {
     
     // Reset login attempts on successful login
     loginAttempts.delete(ip)
+    
+    // Log successful login
+    await logger.info('auth', 'User logged in successfully', {
+      metadata: {
+        username: username || 'legacy-admin',
+        role,
+        subdomain,
+        ip,
+        loginType: username ? 'database' : loginType
+      }
+    })
     
     // Create response with cookie
     const response = NextResponse.json({ success: true, role })
@@ -113,6 +145,14 @@ export async function POST(request: NextRequest) {
     return response
   } catch (error) {
     console.error('Login error:', error)
+    
+    // Log error
+    await logger.error('auth', `Login error: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+      metadata: {
+        error: error instanceof Error ? error.message : String(error),
+        ip: getClientIp(request)
+      }
+    })
     
     // More detailed error in development
     if (process.env.NODE_ENV !== 'production') {

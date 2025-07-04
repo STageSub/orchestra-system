@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getPrismaForUser } from '@/lib/auth-prisma'
 import { generateUniqueId } from '@/lib/id-generator'
+import { apiLogger } from '@/lib/logger'
 
 export async function GET(request: Request) {
   try {
@@ -139,6 +140,18 @@ export async function POST(request: Request) {
             }
           }
         }
+      }
+    })
+    
+    // Log musician creation
+    await apiLogger.info(request, 'system', 'Musician created', {
+      metadata: {
+        musicianId: musician.id,
+        musicianCode: musician.musicianId,
+        name: `${firstName} ${lastName}`,
+        email,
+        qualificationCount: qualificationIds.length,
+        localResidence
       }
     })
     

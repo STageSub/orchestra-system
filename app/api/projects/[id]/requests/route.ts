@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getPrismaForUser } from '@/lib/auth-prisma'
+import { apiLogger } from '@/lib/logger'
 
 export async function GET(
   request: Request,
@@ -8,6 +9,14 @@ export async function GET(
   try {
     const prisma = await getPrismaForUser(request)
     const { id } = await context.params
+    
+    // Log request fetch start
+    await apiLogger.info(request, 'api', 'Fetching project requests', {
+      metadata: {
+        action: 'list_project_requests',
+        projectId: id
+      }
+    })
 
     const project = await prisma.project.findUnique({
       where: { id: parseInt(id) },
@@ -47,6 +56,12 @@ export async function GET(
     })
 
     if (!project) {
+      await apiLogger.warn(request, 'api', 'Project not found for requests', {
+        metadata: {
+          action: 'list_project_requests',
+          projectId: id
+        }
+      })
       return NextResponse.json(
         { error: 'Projekt hittades inte' },
         { status: 404 }
@@ -136,6 +151,18 @@ export async function GET(
       return a.position.name.localeCompare(b.position.name)
     })
 
+    // Log successful fetch
+    const totalRequests = sortedNeeds.reduce((sum, need) => sum + need.requests.length, 0)
+    await apiLogger.info(request, 'api', 'Project requests fetched successfully', {
+      metadata: {
+        action: 'list_project_requests',
+        projectId: project.projectId,
+        projectName: project.name,
+        needsCount: sortedNeeds.length,
+        totalRequests
+      }
+    })
+    
     return NextResponse.json({
       project: {
         id: project.id,
@@ -147,6 +174,16 @@ export async function GET(
     })
   } catch (error) {
     console.error('Error fetching project requests:', error)
+    
+    // Log error
+    await apiLogger.error(request, 'api', `Failed to fetch project requests: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+      metadata: {
+        action: 'list_project_requests',
+        projectId: id,
+        error: error instanceof Error ? error.message : String(error)
+      }
+    })
+    
     return NextResponse.json(
       { error: 'Kunde inte hämta förfrågningar' },
       { status: 500 }
