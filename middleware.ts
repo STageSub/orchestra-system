@@ -64,6 +64,11 @@ export async function middleware(request: NextRequest) {
     }
   }
   
+  // Don't interfere with API routes (except for subdomain header)
+  if (request.nextUrl.pathname.startsWith('/api')) {
+    return response
+  }
+  
   // Only protect admin routes
   if (!request.nextUrl.pathname.startsWith('/admin')) {
     return response

@@ -35,29 +35,30 @@ class Logger {
     message: string,
     context?: LogContext
   ) {
-    const logEntry = {
-      timestamp: new Date(),
-      level,
-      category,
-      message,
-      ...context
-    }
-
-    // Always log to console in development
-    if (process.env.NODE_ENV !== 'production') {
-      const color = this.getConsoleColor(level)
-      console.log(
-        `${color}[${level.toUpperCase()}]${this.resetColor()} [${category}] ${message}`,
-        context?.metadata || ''
-      )
-    }
-
-    // Store in memory for development
-    this.addToMemory(logEntry)
-
-    // Store in database
     try {
-      await neonPrisma.systemLog.create({
+      const logEntry = {
+        timestamp: new Date(),
+        level,
+        category,
+        message,
+        ...context
+      }
+
+      // Always log to console in development
+      if (process.env.NODE_ENV !== 'production') {
+        const color = this.getConsoleColor(level)
+        console.log(
+          `${color}[${level.toUpperCase()}]${this.resetColor()} [${category}] ${message}`,
+          context?.metadata || ''
+        )
+      }
+
+      // Store in memory for development
+      this.addToMemory(logEntry)
+
+      // Store in database - make this fire-and-forget to prevent blocking
+      // Don't await to prevent circular dependency issues
+      neonPrisma.systemLog.create({
         data: {
           level,
           category,
@@ -71,10 +72,16 @@ class Logger {
           requestId: context?.requestId,
           duration: context?.duration
         }
+      }).catch((dbError) => {
+        // Only log to console if database write fails, don't throw
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('Failed to write log to database:', dbError)
+        }
       })
     } catch (error) {
-      // Fallback to console if database write fails
-      console.error('Failed to write log to database:', error)
+      // Catch any errors in the entire logging process
+      // This prevents logger from ever throwing and breaking the app
+      console.error('Logger error (non-blocking):', error)
     }
   }
 

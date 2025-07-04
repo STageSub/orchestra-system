@@ -9,6 +9,15 @@ export async function POST(
 ) {
   console.log('[Custom Lists API] POST request received')
   
+  // Log request headers for debugging
+  console.log('[Custom Lists API] Request headers:', {
+    contentType: request.headers.get('content-type'),
+    contentLength: request.headers.get('content-length'),
+    subdomain: request.headers.get('x-subdomain'),
+    origin: request.headers.get('origin'),
+    host: request.headers.get('host')
+  })
+  
   try {
     const { id: projectId } = await params
     console.log('[Custom Lists API] Project ID:', projectId)
@@ -35,17 +44,42 @@ export async function POST(
       )
     }
 
-    const prisma = await getPrismaForUser(request)
+    let prisma
+    try {
+      prisma = await getPrismaForUser(request)
+      console.log('[Custom Lists API] Got Prisma client successfully')
+    } catch (prismaError) {
+      console.error('[Custom Lists API] Failed to get Prisma client:', prismaError)
+      throw new Error(`Failed to establish database connection: ${prismaError instanceof Error ? prismaError.message : 'Unknown error'}`)
+    }
 
     // Check if customRankingList table exists
     let hasCustomListTable = false
+    let tableCheckError: any = null
     try {
       await prisma.$queryRaw`SELECT 1 FROM "CustomRankingList" LIMIT 1`
       hasCustomListTable = true
       console.log('[Custom Lists API] CustomRankingList table exists')
     } catch (error) {
-      console.error('[Custom Lists API] CustomRankingList table does not exist:', error)
-      // Table doesn't exist yet
+      tableCheckError = error
+      console.error('[Custom Lists API] Table check error:', {
+        error: error instanceof Error ? error.message : error,
+        code: (error as any)?.code,
+        name: error instanceof Error ? error.name : 'Unknown'
+      })
+      
+      // Check if it's actually a "table doesn't exist" error
+      if (error instanceof Error && (
+        error.message.includes('does not exist') ||
+        error.message.includes('relation') ||
+        (error as any)?.code === '42P01' // PostgreSQL error code for undefined table
+      )) {
+        console.log('[Custom Lists API] Table does not exist (expected for new installations)')
+      } else {
+        // This is a different error, not just missing table
+        console.error('[Custom Lists API] Unexpected error during table check:', error)
+        throw new Error(`Database connection error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
     }
 
     if (!hasCustomListTable) {
@@ -75,7 +109,15 @@ export async function POST(
     }
 
     // Create the custom ranking list
-    const customListId = await generateUniqueId('customList', prisma)
+    let customListId
+    try {
+      customListId = await generateUniqueId('customList', prisma)
+      console.log('[Custom Lists API] Generated unique ID:', customListId)
+    } catch (idError) {
+      console.error('[Custom Lists API] Failed to generate unique ID:', idError)
+      throw new Error(`Failed to generate unique ID: ${idError instanceof Error ? idError.message : 'Unknown error'}`)
+    }
+    
     const customList = await prisma.customRankingList.create({
       data: {
         customListId,
@@ -118,13 +160,45 @@ export async function POST(
       musicianCount: customList.customRankings.length
     })
   } catch (error) {
-    logger.error('api', 'Error creating custom ranking list', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
+    // Detailed error logging
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorStack = error instanceof Error ? error.stack : undefined
+    const errorName = error instanceof Error ? error.name : 'UnknownError'
+    
+    console.error('[Custom Lists API] Caught error:', {
+      name: errorName,
+      message: errorMessage,
+      stack: errorStack
     })
+    
+    // Try to log to database, but don't let it fail the response
+    try {
+      await logger.error('api', 'Error creating custom ranking list', {
+        error: errorMessage,
+        stack: errorStack,
+        metadata: {
+          errorName,
+          projectId: params ? (await params).id : 'unknown',
+          requestBody: body
+        }
+      })
+    } catch (logError) {
+      console.error('[Custom Lists API] Failed to log error:', logError)
+    }
+    
+    // Return detailed error response with debugging info
     return NextResponse.json(
-      { error: 'Failed to create custom ranking list' },
-      { status: 500 }
+      { 
+        error: 'Failed to create custom ranking list',
+        details: process.env.NODE_ENV !== 'production' ? errorMessage : undefined
+      },
+      { 
+        status: 500,
+        headers: {
+          'X-Error-Type': errorName,
+          'X-Error-Message': errorMessage.substring(0, 100) // First 100 chars for debugging
+        }
+      }
     )
   }
 }
@@ -154,7 +228,22 @@ export async function GET(
       await prisma.$queryRaw`SELECT 1 FROM "CustomRankingList" LIMIT 1`
       hasCustomListTable = true
     } catch (error) {
-      // Table doesn't exist yet
+      console.error('[Custom Lists API GET] Table check error:', {
+        error: error instanceof Error ? error.message : error,
+        code: (error as any)?.code
+      })
+      
+      // Check if it's actually a "table doesn't exist" error
+      if (error instanceof Error && (
+        error.message.includes('does not exist') ||
+        error.message.includes('relation') ||
+        (error as any)?.code === '42P01'
+      )) {
+        // Table doesn't exist yet
+      } else {
+        // This is a different error
+        throw new Error(`Database connection error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
     }
 
     if (!hasCustomListTable) {
@@ -193,13 +282,44 @@ export async function GET(
 
     return NextResponse.json(customList)
   } catch (error) {
-    logger.error('api', 'Error fetching custom list', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
+    // Detailed error logging
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorStack = error instanceof Error ? error.stack : undefined
+    const errorName = error instanceof Error ? error.name : 'UnknownError'
+    
+    console.error('[Custom Lists API GET] Caught error:', {
+      name: errorName,
+      message: errorMessage,
+      stack: errorStack
     })
+    
+    // Try to log to database, but don't let it fail the response
+    try {
+      await logger.error('api', 'Error fetching custom list', {
+        error: errorMessage,
+        stack: errorStack,
+        metadata: {
+          errorName,
+          projectId: params ? (await params).id : 'unknown',
+          customListId
+        }
+      })
+    } catch (logError) {
+      console.error('[Custom Lists API GET] Failed to log error:', logError)
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to fetch custom list' },
-      { status: 500 }
+      { 
+        error: 'Failed to fetch custom list',
+        details: process.env.NODE_ENV !== 'production' ? errorMessage : undefined
+      },
+      { 
+        status: 500,
+        headers: {
+          'X-Error-Type': errorName,
+          'X-Error-Message': errorMessage.substring(0, 100)
+        }
+      }
     )
   }
 }

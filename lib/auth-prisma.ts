@@ -15,7 +15,7 @@ export async function getPrismaForUser(request: NextRequest | Request): Promise<
     const token = cookieStore.get('orchestra-admin-session')?.value
     
     if (!token) {
-      console.log('No auth token found, using default database')
+      console.log('[getPrismaForUser] No auth token found, using default database')
       return prisma
     }
     
@@ -23,9 +23,11 @@ export async function getPrismaForUser(request: NextRequest | Request): Promise<
     const payload = await verifyToken(token)
     
     if (!payload || !payload.userId) {
-      console.log('Invalid token, using default database')
+      console.log('[getPrismaForUser] Invalid token payload:', payload ? 'missing userId' : 'null payload')
       return prisma
     }
+    
+    console.log('[getPrismaForUser] Token verified, userId:', payload.userId, 'orchestraId:', payload.orchestraId)
     
     // If user has an orchestraId, get the orchestra's database
     if (payload.orchestraId) {
@@ -35,20 +37,48 @@ export async function getPrismaForUser(request: NextRequest | Request): Promise<
           select: { subdomain: true, databaseUrl: true }
         })
         
-        if (orchestra?.subdomain) {
-          console.log(`Using database for orchestra: ${orchestra.subdomain}`)
-          return await getPrismaClient(orchestra.subdomain)
+        if (!orchestra) {
+          console.error('[getPrismaForUser] Orchestra not found for ID:', payload.orchestraId)
+          return prisma
+        }
+        
+        if (orchestra.subdomain) {
+          console.log(`[getPrismaForUser] Found orchestra: ${orchestra.subdomain}, has databaseUrl: ${!!orchestra.databaseUrl}`)
+          
+          try {
+            const client = await getPrismaClient(orchestra.subdomain)
+            console.log(`[getPrismaForUser] Successfully got client for ${orchestra.subdomain}`)
+            return client
+          } catch (clientError) {
+            console.error(`[getPrismaForUser] Failed to get client for ${orchestra.subdomain}:`, clientError)
+            return prisma
+          }
         }
       } catch (error) {
-        console.error('Error fetching orchestra:', error)
+        console.error('[getPrismaForUser] Error fetching orchestra:', error)
+        // Log more details about the error
+        if (error instanceof Error) {
+          console.error('[getPrismaForUser] Error details:', {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          })
+        }
       }
     }
     
     // Fallback to default database
-    console.log('Using default database (no orchestra found)')
+    console.log('[getPrismaForUser] Using default database (no orchestra found)')
     return prisma
   } catch (error) {
-    console.error('Error in getPrismaForUser:', error)
+    console.error('[getPrismaForUser] Unexpected error:', error)
+    if (error instanceof Error) {
+      console.error('[getPrismaForUser] Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      })
+    }
     return prisma
   }
 }
