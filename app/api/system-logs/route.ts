@@ -24,6 +24,9 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   
   try {
+    // Get subdomain from request headers (set by middleware)
+    const subdomain = request.headers.get('x-subdomain') || undefined
+    
     const logs = await getSystemLogs({
       limit: parseInt(searchParams.get('limit') || '50'),
       offset: parseInt(searchParams.get('offset') || '0'),
@@ -31,7 +34,8 @@ export async function GET(request: NextRequest) {
       level: searchParams.get('level') as any,
       search: searchParams.get('search') || undefined,
       userId: searchParams.get('userId') || undefined,
-      orchestraId: user.role === 'admin' ? user.orchestraId || undefined : searchParams.get('orchestraId') || undefined
+      subdomain: subdomain
+      // Remove orchestraId - each database only has its own logs
     })
 
     return NextResponse.json(logs)

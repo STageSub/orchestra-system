@@ -12,10 +12,11 @@
     "noEmit": false,
     "outDir": "../dist",
     "paths": {
-      "@/*": ["../src/*"],
+      "@/*": ["../*"],
       "@/lib/*": ["../lib/*"],
       "@/components/*": ["../components/*"]
-    }
+    },
+    "baseUrl": "./"
   },
   "include": [
     "**/*.ts",

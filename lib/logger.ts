@@ -1,4 +1,5 @@
-import { neonPrisma } from '@/lib/prisma-dynamic'
+import { neonPrisma, getPrisma, getCurrentSubdomain } from '@/lib/prisma-dynamic'
+import { getPrismaClient } from '@/lib/database-config'
 import { NextRequest } from 'next/server'
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
@@ -57,27 +58,47 @@ class Logger {
       this.addToMemory(logEntry)
 
       // Store in database - make this fire-and-forget to prevent blocking
-      // Don't await to prevent circular dependency issues
-      neonPrisma.systemLog.create({
-        data: {
-          level,
-          category,
-          message,
-          metadata: context?.metadata ? JSON.parse(JSON.stringify(context.metadata)) : undefined,
-          userId: context?.userId,
-          orchestraId: context?.orchestraId,
-          subdomain: context?.subdomain,
-          ip: context?.ip,
-          userAgent: context?.userAgent,
-          requestId: context?.requestId,
-          duration: context?.duration
+      // Determine which database to write to based on subdomain
+      (async () => {
+        try {
+          let prisma
+          
+          // If subdomain is provided in context, use that orchestra's database
+          if (context?.subdomain && context.subdomain !== 'admin') {
+            prisma = await getPrismaClient(context.subdomain)
+          } else {
+            // Try to get current subdomain from auth context
+            const currentSubdomain = await getCurrentSubdomain()
+            if (currentSubdomain && currentSubdomain !== 'admin') {
+              prisma = await getPrismaClient(currentSubdomain)
+            } else {
+              // Fallback to central database for superadmin logs
+              prisma = neonPrisma
+            }
+          }
+          
+          await prisma.systemLog.create({
+            data: {
+              level,
+              category,
+              message,
+              metadata: context?.metadata ? JSON.parse(JSON.stringify(context.metadata)) : undefined,
+              userId: context?.userId,
+              orchestraId: context?.orchestraId,
+              subdomain: context?.subdomain,
+              ip: context?.ip,
+              userAgent: context?.userAgent,
+              requestId: context?.requestId,
+              duration: context?.duration
+            }
+          })
+        } catch (dbError) {
+          // Only log to console if database write fails, don't throw
+          if (process.env.NODE_ENV !== 'production') {
+            console.error('Failed to write log to database:', dbError)
+          }
         }
-      }).catch((dbError) => {
-        // Only log to console if database write fails, don't throw
-        if (process.env.NODE_ENV !== 'production') {
-          console.error('Failed to write log to database:', dbError)
-        }
-      })
+      })()
     } catch (error) {
       // Catch any errors in the entire logging process
       // This prevents logger from ever throwing and breaking the app
@@ -154,6 +175,7 @@ export async function getSystemLogs(options: {
   search?: string
   userId?: string
   orchestraId?: string
+  subdomain?: string
 }) {
   const {
     limit = 50,
@@ -164,15 +186,31 @@ export async function getSystemLogs(options: {
     endDate,
     search,
     userId,
-    orchestraId
+    orchestraId,
+    subdomain
   } = options
+
+  // Get the correct prisma instance for the orchestra
+  let prisma
+  if (subdomain && subdomain !== 'admin') {
+    prisma = await getPrismaClient(subdomain)
+  } else {
+    // Try to get from auth context
+    const currentSubdomain = await getCurrentSubdomain()
+    if (currentSubdomain && currentSubdomain !== 'admin') {
+      prisma = await getPrismaClient(currentSubdomain)
+    } else {
+      // Superadmin sees logs from central database
+      prisma = neonPrisma
+    }
+  }
 
   const where: any = {}
 
   if (category) where.category = category
   if (level) where.level = level
   if (userId) where.userId = userId
-  if (orchestraId) where.orchestraId = orchestraId
+  // Remove orchestraId filter - each database only has its own logs
 
   if (startDate || endDate) {
     where.timestamp = {}
@@ -188,24 +226,37 @@ export async function getSystemLogs(options: {
   }
 
   const [logs, total] = await Promise.all([
-    neonPrisma.systemLog.findMany({
+    prisma.systemLog.findMany({
       where,
       orderBy: { timestamp: 'desc' },
       take: limit,
       skip: offset
     }),
-    neonPrisma.systemLog.count({ where })
+    prisma.systemLog.count({ where })
   ])
 
   return { logs, total }
 }
 
 // Helper to clean old logs
-export async function cleanOldLogs(daysToKeep: number = 30) {
+export async function cleanOldLogs(daysToKeep: number = 30, subdomain?: string) {
   const cutoffDate = new Date()
   cutoffDate.setDate(cutoffDate.getDate() - daysToKeep)
 
-  const result = await neonPrisma.systemLog.deleteMany({
+  // Get the correct prisma instance
+  let prisma
+  if (subdomain && subdomain !== 'admin') {
+    prisma = await getPrismaClient(subdomain)
+  } else {
+    const currentSubdomain = await getCurrentSubdomain()
+    if (currentSubdomain && currentSubdomain !== 'admin') {
+      prisma = await getPrismaClient(currentSubdomain)
+    } else {
+      prisma = neonPrisma
+    }
+  }
+
+  const result = await prisma.systemLog.deleteMany({
     where: {
       timestamp: {
         lt: cutoffDate
