@@ -328,11 +328,19 @@ export default function LogsPage() {
                             {/* Enhanced message display */}
                             {log.category === 'email' && log.metadata?.recipients?.[0] ? (
                               <>
-                                {log.message.replace('Email sent successfully', 'Email sent to')} {log.metadata.recipients[0].name || log.metadata.recipients[0].email}
+                                {log.message.replace('Email sent successfully', 'Email sent to').replace('Email simulated (dev mode)', 'Email simulated to')} {log.metadata.recipients[0].name || log.metadata.recipients[0].email}
                                 {log.metadata.recipientCount > 1 && ` and ${log.metadata.recipientCount - 1} others`}
                               </>
                             ) : log.category === 'email' && log.metadata?.musicianName ? (
-                              `${log.message.includes('successfully') ? 'Email sent to' : log.message} ${log.metadata.musicianName}`
+                              <>
+                                {log.message.includes('Email sent to') || log.message.includes('Email simulated to') ? log.message : 
+                                  (log.message.includes('successfully') ? 'Email sent to' : log.message)} {log.metadata.musicianName}
+                              </>
+                            ) : log.category === 'email' && log.metadata?.to ? (
+                              // Handle generic email logs that include recipient in metadata
+                              <>
+                                {log.message.includes(' to ') ? log.message : `${log.message} to ${log.metadata.to}`}
+                              </>
                             ) : log.category === 'request' && log.metadata?.musicianName ? (
                               `${log.metadata.musicianName} ${log.message.toLowerCase()}`
                             ) : (

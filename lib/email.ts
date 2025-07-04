@@ -48,7 +48,7 @@ export async function sendEmail({ to, subject, html, from = 'Orchestra System <n
     console.log('========================')
     
     // Log simulated email
-    await logger.info('email', 'Email simulated (dev mode)', {
+    await logger.info('email', `Email simulated to ${to}`, {
       metadata: {
         to,
         subject,
@@ -102,7 +102,7 @@ export async function sendEmail({ to, subject, html, from = 'Orchestra System <n
     console.log('Email sent successfully:', data)
     
     // Log successful email
-    await logger.info('email', 'Email sent successfully', {
+    await logger.info('email', `Email sent to ${to}`, {
       metadata: {
         to,
         subject,
@@ -357,15 +357,13 @@ export async function sendRequestEmail(
   }
   console.log('Token:', token.substring(0, 20) + '...')
   
-  // Log request email attempt
-  await logger.info('email', 'Sending musician request email', {
-    metadata: {
-      requestId: request.id,
-      musicianId: request.musicianId,
-      projectNeedId: request.projectNeedId,
-      emailType: 'request'
-    }
-  })
+  // Log request email attempt (will be updated with musician name after fetching data)
+  const initialLogMetadata = {
+    requestId: request.id,
+    musicianId: request.musicianId,
+    projectNeedId: request.projectNeedId,
+    emailType: 'request'
+  }
   
   // Get subdomain from the prisma client
   const { getSubdomainFromPrismaClient } = await import('@/lib/database-config')
@@ -437,6 +435,17 @@ export async function sendRequestEmail(
   }
 
   console.log('Sending request email to:', musician.email)
+  
+  // Log with musician name
+  await logger.info('email', `Sending request email to ${musician.firstName} ${musician.lastName}`, {
+    metadata: {
+      ...initialLogMetadata,
+      musicianName: `${musician.firstName} ${musician.lastName}`,
+      musicianEmail: musician.email,
+      positionName: projectNeed.position.name,
+      projectName: projectNeed.project.name
+    }
+  })
   
   // Get files to attach with the request
   const attachments = await getProjectFilesForEmail(
