@@ -10,6 +10,15 @@ export async function GET(
     const prisma = await getPrismaForUser(request)
     const { id } = await context.params
     
+    // Check if customRankingList table exists (for backwards compatibility)
+    let includeCustomList = false
+    try {
+      await prisma.$queryRaw`SELECT 1 FROM "CustomRankingList" LIMIT 1`
+      includeCustomList = true
+    } catch (error) {
+      // Table doesn't exist yet, skip including it
+    }
+
     const needs = await prisma.projectNeed.findMany({
       where: { projectId: parseInt(id) },
       include: {
@@ -19,7 +28,7 @@ export async function GET(
           }
         },
         rankingList: true,
-        customRankingList: true,
+        ...(includeCustomList && { customRankingList: true }),
         _count: {
           select: {
             requests: true
@@ -59,6 +68,15 @@ export async function POST(
     const { id } = await context.params
     const body = await request.json()
     const { positionId, rankingListId, customRankingListId, quantity, requestStrategy, maxRecipients, responseTimeHours, requireLocalResidence } = body
+    
+    // Check if customRankingList table exists (for backwards compatibility)
+    let includeCustomList = false
+    try {
+      await prisma.$queryRaw`SELECT 1 FROM "CustomRankingList" LIMIT 1`
+      includeCustomList = true
+    } catch (error) {
+      // Table doesn't exist yet, skip including it
+    }
     
     const parsedQuantity = parseInt(quantity)
     const parsedMaxRecipients = maxRecipients ? parseInt(maxRecipients) : null
@@ -127,8 +145,8 @@ export async function POST(
         },
         select: { id: true }
       })
-    } else {
-      // Custom ranking list
+    } else if (customRankingListId && includeCustomList) {
+      // Custom ranking list (only if table exists)
       musiciansInList = await prisma.musician.findMany({
         where: {
           isActive: true,
@@ -139,6 +157,9 @@ export async function POST(
         },
         select: { id: true }
       })
+    } else {
+      // Fallback: if custom list specified but table doesn't exist
+      musiciansInList = []
     }
     
     // Exclude musicians who already have requests in this project
@@ -197,7 +218,7 @@ export async function POST(
           }
         },
         rankingList: true,
-        customRankingList: true,
+        ...(includeCustomList && { customRankingList: true }),
         _count: {
           select: {
             requests: true
