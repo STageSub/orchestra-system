@@ -68,8 +68,19 @@ export async function GET(request: Request) {
           availableMusiciansCount = musiciansInList.filter(m => !excludedMusicianIds.has(m.id)).length
         }
         
+        // Clean up description - don't include position name if there's no actual description
+        let cleanDescription = list.description
+        if (cleanDescription && list.position) {
+          // Remove redundant position information from description
+          const positionPattern = new RegExp(`^${list.listType}-lista för ${list.position.name}$`, 'i')
+          if (positionPattern.test(cleanDescription)) {
+            cleanDescription = null
+          }
+        }
+        
         return {
           ...list,
+          description: cleanDescription,
           availableMusiciansCount,
           totalActiveMusicians: musiciansInList.length
         }

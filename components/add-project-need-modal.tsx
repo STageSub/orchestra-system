@@ -271,7 +271,7 @@ export default function AddProjectNeedModal({
           <h3 className="text-xl font-semibold text-gray-900">Lägg till musikerbehov</h3>
         </div>
         
-        <div className="p-6 overflow-visible flex-1">
+        <div className="p-6 overflow-y-auto flex-1">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -326,20 +326,22 @@ export default function AddProjectNeedModal({
                 Rankningslista <span className="text-red-500">*</span>
               </label>
               <div className="flex items-start space-x-2">
-                {customList ? (
-                  <div className="flex-1 px-3 py-2 bg-green-50 border border-green-300 rounded-lg">
-                    <span className="text-sm font-medium text-green-800">
-                      Anpassad lista: {customList.name} ({customList.customRankings?.length || 0} musiker)
-                    </span>
-                  </div>
-                ) : (
-                  <select
+                <select
                     required
                     value={formData.rankingListId}
-                    onChange={(e) => setFormData({ ...formData, rankingListId: e.target.value })}
-                    className="flex-1 h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:bg-gray-50 disabled:text-gray-500"
+                    onChange={(e) => {
+                      setFormData({ ...formData, rankingListId: e.target.value })
+                      // Clear custom list if selecting a different option
+                      const selectedList = rankingLists.find(l => l.id === parseInt(e.target.value))
+                      if (!selectedList?.isCustomList) {
+                        setCustomList(null)
+                        setFormData(prev => ({ ...prev, customRankingListId: '' }))
+                      }
+                    }}
+                    className={`flex-1 h-10 px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:bg-gray-50 disabled:text-gray-500 overflow-y-auto ${
+                      formData.customRankingListId ? 'border-green-300 bg-green-50' : 'border-gray-300'
+                    }`}
                     disabled={!formData.positionId || rankingListsLoading}
-                    style={{ maxHeight: '10rem' }}
                     size={1}
                   >
                     <option value="">{rankingListsLoading ? 'Laddar rankningslistor...' : 'Välj rankningslista'}</option>
@@ -351,9 +353,10 @@ export default function AddProjectNeedModal({
                             key={list.id} 
                             value={list.id}
                             disabled={list.isUsedInProject || (list.availableMusiciansCount !== undefined && list.availableMusiciansCount === 0)}
+                            title={`${list.listType}-lista${list.description ? ` - ${list.description}` : ''}`}
                           >
                             {`${list.listType}-lista${list.description ? ` (${list.description})` : ''}`}
-                            {list.availableMusiciansCount !== undefined && ` (${list.availableMusiciansCount} tillgängliga)`}
+                            {list.availableMusiciansCount !== undefined && list.availableMusiciansCount > 0 && ` (${list.availableMusiciansCount} tillgängliga)`}
                             {list.isUsedInProject ? ' (Redan använd)' : ''}
                             {list.availableMusiciansCount === 0 ? ' (Inga tillgängliga)' : ''}
                           </option>
@@ -368,9 +371,14 @@ export default function AddProjectNeedModal({
                             key={list.id} 
                             value={list.id}
                             disabled={list.isUsedInProject || (list.availableMusiciansCount !== undefined && list.availableMusiciansCount === 0)}
+                            title={list.description || 'Anpassad lista'}
                           >
-                            {list.description}
-                            {list.availableMusiciansCount !== undefined && ` (${list.availableMusiciansCount} tillgängliga)`}
+                            {(() => {
+                              const name = list.description || 'Anpassad lista'
+                              const truncatedName = name.length > 40 ? name.substring(0, 37) + '...' : name
+                              return truncatedName
+                            })()}
+                            {list.availableMusiciansCount !== undefined && list.availableMusiciansCount > 0 && ` (${list.availableMusiciansCount} tillgängliga)`}
                             {list.isUsedInProject ? ' (Redan använd)' : ''}
                             {list.availableMusiciansCount === 0 ? ' (Inga tillgängliga)' : ''}
                           </option>
@@ -378,26 +386,28 @@ export default function AddProjectNeedModal({
                       </optgroup>
                     )}
                   </select>
-                )}
-                {formData.positionId && !existingCustomListForPosition && (
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateCustomListModal(true)}
-                    className="text-sm font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap"
-                  >
-                    Skapa ny lista
-                  </button>
-                )}
-                {formData.positionId && existingCustomListForPosition && 
-                 formData.rankingListId === existingCustomListForPosition.toString() && (
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateCustomListModal(true)}
-                    className="text-sm font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap flex-shrink-0"
-                    title="Ändra befintlig lista"
-                  >
-                    Ändra lista
-                  </button>
+                {formData.positionId && (
+                  <>
+                    {existingCustomListForPosition && 
+                     formData.rankingListId === existingCustomListForPosition.toString() ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowCreateCustomListModal(true)}
+                        className="text-sm font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap flex-shrink-0"
+                        title="Ändra befintlig lista"
+                      >
+                        Ändra lista
+                      </button>
+                    ) : !existingCustomListForPosition && (
+                      <button
+                        type="button"
+                        onClick={() => setShowCreateCustomListModal(true)}
+                        className="text-sm font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap"
+                      >
+                        Skapa ny lista
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
               {validationWarning && (
