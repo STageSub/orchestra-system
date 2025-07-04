@@ -3,8 +3,11 @@ import { getCurrentUser } from '@/lib/auth-db'
 import { getSystemLogs } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
+  console.log('[system-logs API] Starting...')
+  
   // Check authentication
   const user = await getCurrentUser()
+  console.log('[system-logs API] User:', user?.email, user?.role, user?.orchestraId)
   
   if (!user) {
     return NextResponse.json(
@@ -22,6 +25,7 @@ export async function GET(request: NextRequest) {
   }
 
   const searchParams = request.nextUrl.searchParams
+  console.log('[system-logs API] Query params:', Object.fromEntries(searchParams.entries()))
   
   try {
     const logs = await getSystemLogs({
@@ -34,6 +38,7 @@ export async function GET(request: NextRequest) {
       request: request // Pass the request so it can determine the correct database
     })
 
+    console.log('[system-logs API] Found logs:', logs.logs?.length, 'Total:', logs.total)
     return NextResponse.json(logs)
   } catch (error) {
     console.error('Error fetching logs:', error)

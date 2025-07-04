@@ -216,12 +216,15 @@ export async function getSystemLogs(options: {
   } = options
 
   // Get the correct prisma instance for the orchestra
+  console.log('[getSystemLogs] Starting with request:', !!request)
   let prisma
   if (request) {
     // Use the same logic as writing - get database based on user's orchestra
+    console.log('[getSystemLogs] Using getPrismaForUser')
     prisma = await getPrismaForUser(request)
   } else {
     // Fallback to central database
+    console.log('[getSystemLogs] No request, using neonPrisma')
     prisma = neonPrisma
   }
 
@@ -245,6 +248,8 @@ export async function getSystemLogs(options: {
     ]
   }
 
+  console.log('[getSystemLogs] Query where clause:', JSON.stringify(where))
+
   const [logs, total] = await Promise.all([
     prisma.systemLog.findMany({
       where,
@@ -255,6 +260,7 @@ export async function getSystemLogs(options: {
     prisma.systemLog.count({ where })
   ])
 
+  console.log('[getSystemLogs] Found:', logs.length, 'logs, Total:', total)
   return { logs, total }
 }
 

@@ -47,10 +47,16 @@ export default function LogsPage() {
       if (filters.search) params.append('search', filters.search)
 
       const response = await fetch(`/api/system-logs?${params}`)
+      console.log('[Logs Page] API Response:', response.status, response.statusText)
+      
       if (response.ok) {
         const data = await response.json()
+        console.log('[Logs Page] Data received:', { logs: data.logs?.length, total: data.total })
         setLogs(data.logs)
         setTotal(data.total)
+      } else {
+        const errorText = await response.text()
+        console.error('[Logs Page] API Error:', response.status, errorText)
       }
     } catch (error) {
       console.error('Error fetching logs:', error)
