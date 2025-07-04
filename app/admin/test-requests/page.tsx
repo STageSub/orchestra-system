@@ -45,12 +45,7 @@ export default function TestRequestsPage() {
   })
 
   useEffect(() => {
-    if (process.env.NODE_ENV !== 'development') {
-      alert('Denna sida är endast tillgänglig i utvecklingsläge')
-      window.location.href = '/admin'
-      return
-    }
-    
+    // Remove development-only check - now protected by authentication
     fetchRequests()
     fetchProjects()
     fetchStats()
@@ -285,16 +280,15 @@ export default function TestRequestsPage() {
   return (
     <div className="py-6">
       <div className="max-w-7xl mx-auto">
-        <div className="bg-orange-50 border-l-4 border-orange-400 p-4 mb-6">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-orange-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
+        {/* TEST MODE Banner */}
+        <div className="mb-6 p-4 bg-orange-50 border-2 border-orange-300 rounded-lg">
+          <div className="flex items-center">
+            <span className="text-2xl mr-3">⚠️</span>
+            <div>
+              <h2 className="text-lg font-bold text-orange-800">TEST MODE ACTIVE</h2>
               <p className="text-sm text-orange-700">
-                <strong>Utvecklingsverktyg</strong> - Endast för testning av förfrågningssystemet
+                All actions on this page are for testing only. Emails sent from here will be marked with [TEST] prefix.
+                All test data is isolated and can be cleared without affecting production data.
               </p>
             </div>
           </div>

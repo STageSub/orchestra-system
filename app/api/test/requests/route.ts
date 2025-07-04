@@ -1,13 +1,13 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getPrismaForUser } from '@/lib/auth-prisma'
+import { requireTestAccess } from '@/lib/test-auth-middleware'
+import { logger } from '@/lib/logger'
 
-export async function GET(request: Request) {
-  // Only allow in development
-  if (process.env.NODE_ENV !== 'development') {
-    return NextResponse.json(
-      { error: 'This endpoint is only available in development' },
-      { status: 403 }
-    )
+export async function GET(request: NextRequest) {
+  // Check test access
+  const authResult = await requireTestAccess(request)
+  if (authResult instanceof NextResponse) {
+    return authResult
   }
 
   try {

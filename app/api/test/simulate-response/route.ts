@@ -1,14 +1,15 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getPrismaForUser } from '@/lib/auth-prisma'
 import { handleDeclinedRequest } from '@/lib/request-handlers'
 import { generateUniqueId } from '@/lib/id-generator'
+import { requireTestAccess } from '@/lib/test-auth-middleware'
+import { logger } from '@/lib/logger'
 
-export async function POST(request: Request) {
-  if (process.env.NODE_ENV !== 'development') {
-    return NextResponse.json(
-      { error: 'This endpoint is only available in development' },
-      { status: 403 }
-    )
+export async function POST(request: NextRequest) {
+  // Check test access
+  const authResult = await requireTestAccess(request)
+  if (authResult instanceof NextResponse) {
+    return authResult
   }
 
   try {
@@ -37,6 +38,16 @@ export async function POST(request: Request) {
     }
 
     const newStatus = response === 'accepted' ? 'accepted' : 'declined'
+
+    logger.info('test', 'Simulating response for request', {
+      userId: authResult.user.id,
+      requestId,
+      response: newStatus,
+      metadata: {
+        musicianId: req.musicianId,
+        projectNeedId: req.projectNeedId
+      }
+    })
 
     await prisma.request.update({
       where: { id: requestId },
@@ -91,11 +102,27 @@ export async function POST(request: Request) {
             })
           }
 
-          console.log(`Cancelled ${pendingRequests.length} pending requests for filled position (first_come strategy)`)
+          logger.info('test', 'Cancelled pending requests for filled position', {
+            userId: authResult.user.id,
+            projectNeedId: updatedProjectNeed!.id,
+            metadata: {
+              cancelledCount: pendingRequests.length,
+              strategy: 'first_come',
+              acceptedCount
+            }
+          })
         }
       }
     } else if (response === 'declined') {
       await handleDeclinedRequest(requestId)
+      
+      logger.info('test', 'Handled declined request', {
+        userId: authResult.user.id,
+        requestId,
+        metadata: {
+          projectNeedId: req.projectNeedId
+        }
+      })
     }
 
     const communicationLogId = await generateUniqueId('communicationLog', prisma)
@@ -108,9 +135,19 @@ export async function POST(request: Request) {
       }
     })
 
+    logger.info('test', 'Response simulation completed', {
+      userId: authResult.user.id,
+      requestId,
+      response: newStatus
+    })
+
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error simulating response:', error)
+    logger.error('test', 'Error simulating response', {
+      userId: authResult.user.id,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    })
     return NextResponse.json(
       { error: 'Failed to simulate response' },
       { status: 500 }

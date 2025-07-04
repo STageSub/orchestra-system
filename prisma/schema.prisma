@@ -297,3 +297,25 @@ model User {
   @@index([username])
   @@index([email])
 }
+
+model SystemLog {
+  id          String    @id @default(cuid())
+  timestamp   DateTime  @default(now())
+  level       String    // debug, info, warn, error
+  category    String    // system, auth, email, request, test, error, api
+  message     String
+  metadata    Json?     // Additional structured data
+  userId      String?   // User who triggered the action
+  orchestraId String?   // Which orchestra context
+  subdomain   String?   // Which subdomain
+  ip          String?   // IP address for security logs
+  userAgent   String?   // Browser info
+  requestId   String?   // Correlation ID for tracking
+  duration    Int?      // Duration in ms for performance logs
+  
+  @@index([timestamp])
+  @@index([category])
+  @@index([level])
+  @@index([userId])
+  @@index([orchestraId])
+}

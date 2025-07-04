@@ -1,13 +1,14 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getPrismaForUser } from '@/lib/auth-prisma'
 import { getRecipientsForNeed } from '@/lib/recipient-selection'
+import { requireTestAccess } from '@/lib/test-auth-middleware'
+import { logger } from '@/lib/logger'
 
-export async function POST(request: Request) {
-  if (process.env.NODE_ENV !== 'development') {
-    return NextResponse.json(
-      { error: 'This endpoint is only available in development' },
-      { status: 403 }
-    )
+export async function POST(request: NextRequest) {
+  // Check test access
+  const authResult = await requireTestAccess(request)
+  if (authResult instanceof NextResponse) {
+    return authResult
   }
 
   try {
@@ -41,6 +42,17 @@ export async function POST(request: Request) {
     const beforeCount = need.requests.length
 
     // Use the unified function to send requests
+    logger.info('test', 'Creating test requests for need', {
+      userId: authResult.user.id,
+      needId: need.id,
+      projectId: need.projectId,
+      metadata: {
+        currentRequests: beforeCount,
+        quantity: need.quantity,
+        acceptedCount
+      }
+    })
+
     await getRecipientsForNeed(need.id, {
       dryRun: false,
       includeDetails: false
@@ -61,6 +73,15 @@ export async function POST(request: Request) {
 
     const newRequests = updatedNeed!.requests.slice(0, updatedNeed!.requests.length - beforeCount)
 
+    logger.info('test', 'Test requests created successfully', {
+      userId: authResult.user.id,
+      needId: need.id,
+      metadata: {
+        requestsCreated: newRequests.length,
+        requestIds: newRequests.map(r => r.id)
+      }
+    })
+
     return NextResponse.json({
       message: `Created ${newRequests.length} test request(s)`,
       requests: newRequests.map(req => ({
@@ -74,7 +95,11 @@ export async function POST(request: Request) {
       }))
     })
   } catch (error) {
-    console.error('Error creating test request:', error)
+    logger.error('test', 'Error creating test request', {
+      userId: authResult.user.id,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    })
     return NextResponse.json(
       { error: 'Failed to create test request' },
       { status: 500 }

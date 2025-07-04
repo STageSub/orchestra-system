@@ -1,16 +1,22 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getPrismaForUser } from '@/lib/auth-prisma'
+import { requireTestAccess } from '@/lib/test-auth-middleware'
+import { logger } from '@/lib/logger'
 
-export async function GET(request: Request) {
-  if (process.env.NODE_ENV !== 'development') {
-    return NextResponse.json(
-      { error: 'This endpoint is only available in development' },
-      { status: 403 }
-    )
+export async function GET(request: NextRequest) {
+  // Check test access
+  const authResult = await requireTestAccess(request)
+  if (authResult instanceof NextResponse) {
+    return authResult
   }
 
   try {
     const prisma = await getPrismaForUser(request)
+    
+    logger.info('test', 'Fetching test request statistics', {
+      userId: authResult.user.id
+    })
+
     const stats = await prisma.request.groupBy({
       by: ['status'],
       _count: true
@@ -46,9 +52,18 @@ export async function GET(request: Request) {
       }
     })
 
+    logger.info('test', 'Test statistics retrieved', {
+      userId: authResult.user.id,
+      metadata: result
+    })
+
     return NextResponse.json(result)
   } catch (error) {
-    console.error('Error fetching stats:', error)
+    logger.error('test', 'Error fetching stats', {
+      userId: authResult.user.id,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    })
     return NextResponse.json(
       { error: 'Failed to fetch stats' },
       { status: 500 }
