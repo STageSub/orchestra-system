@@ -653,7 +653,7 @@ export default function ProjectDetailPage({
           <div className="flex justify-evenly items-center h-full">
             <div className="flex items-center">
               <div className="relative w-14 h-14 mr-3">
-                <svg className="w-14 h-14 transform -rotate-90" viewBox="0 0 36 36">
+                <svg className="w-14 h-14 transform rotate-90" viewBox="0 0 36 36">
                   <path
                     className="text-gray-100"
                     stroke="currentColor"
