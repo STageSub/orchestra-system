@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createToken, setAuthCookie, verifyPassword, verifySuperadminPassword } from '@/lib/auth'
 import { authenticateUser, createToken as createDbToken } from '@/lib/auth-db'
 import { getSubdomain } from '@/lib/database-config'
+import { setAuthCookieOnResponse } from '@/lib/auth-cookie-fix'
 
 // Rate limiting: Track login attempts
 const loginAttempts = new Map<string, { count: number; resetTime: number }>()
@@ -101,18 +102,29 @@ export async function POST(request: NextRequest) {
     // Create response with cookie
     const response = NextResponse.json({ success: true, role })
     
-    // Set cookie directly in the response
-    response.cookies.set('orchestra-admin-session', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24, // 24 hours
-      path: '/'
-    })
+    // Use improved cookie setting for production
+    setAuthCookieOnResponse(response, token, process.env.NODE_ENV === 'production')
+    
+    // Add debug logging in development
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Login successful:', { username, role, subdomain })
+    }
     
     return response
   } catch (error) {
     console.error('Login error:', error)
+    
+    // More detailed error in development
+    if (process.env.NODE_ENV !== 'production') {
+      return NextResponse.json(
+        { 
+          error: 'Ett fel uppstod vid inloggning',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json(
       { error: 'Ett fel uppstod vid inloggning' },
       { status: 500 }
