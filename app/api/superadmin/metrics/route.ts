@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
-import { prismaCentral } from '@/lib/prisma-central'
+import { PrismaClient } from '@prisma/client'
+import { getDynamicPrisma } from '@/lib/database-connection'
+
+const prisma = new PrismaClient()
 
 export async function GET() {
   // Check superadmin authentication
@@ -10,62 +13,130 @@ export async function GET() {
   // }
 
   try {
-    // Get overall metrics
-    const orchestras = await prismaCentral.orchestra.findMany({
-      include: {
-        subscription: true,
-        metrics: {
-          orderBy: { date: 'desc' },
-          take: 1
+    // Get all orchestras from main database
+    const orchestras = await prisma.$queryRaw`
+      SELECT * FROM "Orchestra" 
+      WHERE status = 'active' 
+      ORDER BY subdomain
+    ` as any[]
+
+    // Fetch metrics from each orchestra's database
+    const orchestraMetrics = []
+    let totalMusicians = 0
+    let activeMusicians = 0
+    let totalProjects = 0
+    let activeProjects = 0
+    let totalRequests = 0
+    let acceptedRequests = 0
+
+    for (const orchestra of orchestras) {
+      try {
+        // Skip if no real database URL
+        if (!orchestra.databaseUrl || orchestra.databaseUrl.includes('dummy')) {
+          continue
         }
-      }
-    })
 
-    // Calculate totals from latest metrics
-    const totals = orchestras.reduce((acc, orchestra) => {
-      const latestMetric = orchestra.metrics[0]
-      if (latestMetric) {
-        acc.totalMusicians += latestMetric.totalMusicians
-        acc.activeMusicians += latestMetric.activeMusicians
-        acc.totalProjects += latestMetric.totalProjects
-        acc.activeProjects += latestMetric.activeProjects
-        acc.totalRequests += latestMetric.totalRequests
-        acc.acceptedRequests += latestMetric.acceptedRequests
-      }
-      return acc
-    }, {
-      totalMusicians: 0,
-      activeMusicians: 0,
-      totalProjects: 0,
-      activeProjects: 0,
-      totalRequests: 0,
-      acceptedRequests: 0
-    })
+        // Get Prisma client for this orchestra
+        const orchestraPrisma = getDynamicPrisma(orchestra.databaseUrl)
 
-    // Calculate revenue
-    const activeSubscriptions = orchestras.filter(o => o.subscription?.status === 'active')
-    const totalMRR = activeSubscriptions.reduce((sum, o) => sum + (o.subscription?.pricePerMonth || 0), 0)
+        // Fetch metrics from orchestra database
+        const musicians = await orchestraPrisma.musician.count()
+        const activeMusiciansCount = await orchestraPrisma.musician.count({
+          where: { active: true }
+        })
+        const projects = await orchestraPrisma.project.count()
+        const activeProjectsCount = await orchestraPrisma.project.count({
+          where: { 
+            startDate: { gte: new Date() }
+          }
+        })
+        const requests = await orchestraPrisma.request.count()
+        const acceptedRequestsCount = await orchestraPrisma.request.count({
+          where: { status: 'accepted' }
+        })
 
-    // Get recent events
-    const recentEvents = await prismaCentral.systemEvent.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 10,
-      include: {
-        orchestra: true
+        // Add to totals
+        totalMusicians += musicians
+        activeMusicians += activeMusiciansCount
+        totalProjects += projects
+        activeProjects += activeProjectsCount
+        totalRequests += requests
+        acceptedRequests += acceptedRequestsCount
+
+        // Create orchestra data with metrics
+        orchestraMetrics.push({
+          id: orchestra.id,
+          orchestraId: orchestra.orchestraId,
+          name: orchestra.name,
+          subdomain: orchestra.subdomain,
+          status: orchestra.status,
+          subscription: {
+            plan: 'medium', // Default for now
+            status: 'active',
+            pricePerMonth: 4990,
+            maxMusicians: 200,
+            maxProjects: 20
+          },
+          metrics: [{
+            totalMusicians: musicians,
+            activeMusicians: activeMusiciansCount,
+            totalProjects: projects,
+            activeProjects: activeProjectsCount,
+            totalRequests: requests,
+            acceptedRequests: acceptedRequestsCount,
+            createdAt: new Date().toISOString()
+          }]
+        })
+      } catch (error) {
+        console.error(`Error fetching metrics for ${orchestra.subdomain}:`, error)
+        // Add orchestra without metrics
+        orchestraMetrics.push({
+          id: orchestra.id,
+          orchestraId: orchestra.orchestraId,
+          name: orchestra.name,
+          subdomain: orchestra.subdomain,
+          status: orchestra.status,
+          subscription: null,
+          metrics: []
+        })
       }
-    })
+    }
+
+    // Calculate total MRR (mock for now)
+    const totalMRR = orchestraMetrics.filter(o => o.subscription).length * 4990
+
+    // Create recent events (mock for now)
+    const recentEvents = [
+      {
+        id: '1',
+        type: 'orchestra_created',
+        severity: 'info',
+        title: 'SCO Admin tillagd',
+        description: 'Ny orkester registrerad i systemet',
+        createdAt: new Date().toISOString(),
+        orchestra: { name: 'SCO Admin' }
+      },
+      {
+        id: '2',
+        type: 'orchestra_created',
+        severity: 'info',
+        title: 'SCOSO Admin tillagd',
+        description: 'Ny orkester registrerad i systemet',
+        createdAt: new Date().toISOString(),
+        orchestra: { name: 'SCOSO Admin' }
+      }
+    ]
 
     return NextResponse.json({
-      orchestras: orchestras.map(o => ({
-        id: o.id,
-        orchestraId: o.orchestraId,
-        name: o.name,
-        subdomain: o.subdomain,
-        status: o.status,
-        subscription: o.subscription,
-        metrics: o.metrics
-      })),
-      metrics: totals,
+      orchestras: orchestraMetrics,
+      metrics: {
+        totalMusicians,
+        activeMusicians,
+        totalProjects,
+        activeProjects,
+        totalRequests,
+        acceptedRequests
+      },
       revenue: {
         mrr: totalMRR,
         currency: 'SEK'
@@ -78,5 +149,7 @@ export async function GET() {
       { error: 'Failed to fetch metrics' },
       { status: 500 }
     )
+  } finally {
+    await prisma.$disconnect()
   }
 }
