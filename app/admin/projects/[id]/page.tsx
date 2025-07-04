@@ -132,9 +132,6 @@ export default function ProjectDetailPage({
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [customListsCount, setCustomListsCount] = useState(0)
-  const [showProgressModal, setShowProgressModal] = useState(false)
-  const [totalEmailsToSend, setTotalEmailsToSend] = useState(0)
-  const [sessionId, setSessionId] = useState<string>('')
   
   // Use project events hook for toast notifications
   useProjectEvents(project?.id || 0)
