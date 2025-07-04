@@ -7,9 +7,25 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  console.log('[Custom Lists API] POST request received')
+  
   try {
     const { id: projectId } = await params
-    const body = await request.json()
+    console.log('[Custom Lists API] Project ID:', projectId)
+    
+    // Try to parse request body with error handling
+    let body
+    try {
+      body = await request.json()
+      console.log('[Custom Lists API] Request body:', JSON.stringify(body, null, 2))
+    } catch (parseError) {
+      console.error('[Custom Lists API] Failed to parse request body:', parseError)
+      return NextResponse.json(
+        { error: 'Invalid request body - failed to parse JSON' },
+        { status: 400 }
+      )
+    }
+    
     const { positionId, musicians, saveAsTemplate, templateName } = body
 
     if (!positionId || !musicians || !Array.isArray(musicians)) {
@@ -26,14 +42,23 @@ export async function POST(
     try {
       await prisma.$queryRaw`SELECT 1 FROM "CustomRankingList" LIMIT 1`
       hasCustomListTable = true
+      console.log('[Custom Lists API] CustomRankingList table exists')
     } catch (error) {
+      console.error('[Custom Lists API] CustomRankingList table does not exist:', error)
       // Table doesn't exist yet
     }
 
     if (!hasCustomListTable) {
+      console.log('[Custom Lists API] Returning 503 - table not found')
       return NextResponse.json(
         { error: 'Custom ranking lists feature is not available yet. Please run database migration.' },
-        { status: 503 }
+        { status: 503 },
+        {
+          headers: {
+            'X-Debug-Table-Check': 'failed',
+            'X-Debug-Message': 'CustomRankingList table not found'
+          }
+        }
       )
     }
 

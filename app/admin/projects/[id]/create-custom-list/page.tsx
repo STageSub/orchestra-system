@@ -162,6 +162,11 @@ export default function CreateCustomListPage({
 
   // Save the custom list
   const saveCustomList = async () => {
+    console.log('[Frontend] Save button clicked')
+    console.log('[Frontend] Musicians to save:', newListMusicians.length)
+    console.log('[Frontend] Project ID:', projectId)
+    console.log('[Frontend] Position ID:', positionId)
+    
     if (newListMusicians.length === 0) {
       alert('Listan är tom. Lägg till minst en musiker.')
       return
@@ -169,18 +174,26 @@ export default function CreateCustomListPage({
 
     setSaving(true)
     try {
+      const requestBody = {
+        positionId: parseInt(positionId),
+        musicians: newListMusicians.map(m => m.id),
+        saveAsTemplate,
+        templateName: saveAsTemplate ? templateName : null
+      }
+      
+      console.log('[Frontend] Request body:', JSON.stringify(requestBody, null, 2))
+      console.log('[Frontend] Request URL:', `/api/projects/${projectId}/custom-lists`)
+      
       const response = await fetch(`/api/projects/${projectId}/custom-lists`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          positionId: parseInt(positionId),
-          musicians: newListMusicians.map(m => m.id),
-          saveAsTemplate,
-          templateName: saveAsTemplate ? templateName : null
-        })
+        body: JSON.stringify(requestBody)
       })
+      
+      console.log('[Frontend] Response status:', response.status)
+      console.log('[Frontend] Response headers:', response.headers)
 
       if (response.ok) {
         const data = await response.json()
@@ -190,10 +203,12 @@ export default function CreateCustomListPage({
         router.push(`/admin/projects/${projectId}?customListId=${data.id}&positionId=${positionId}`)
       } else {
         const error = await response.json()
+        console.error('[Frontend] Error response:', error)
+        console.error('[Frontend] Response status:', response.status)
         alert(error.error || 'Ett fel uppstod vid skapande av lista')
       }
     } catch (error) {
-      console.error('Error saving custom list:', error)
+      console.error('[Frontend] Network or parsing error:', error)
       alert('Ett fel uppstod')
     } finally {
       setSaving(false)
