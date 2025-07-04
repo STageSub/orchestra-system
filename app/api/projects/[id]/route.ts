@@ -9,6 +9,15 @@ export async function GET(
     const prisma = await getPrismaForUser(request)
     const { id } = await context.params
     
+    // Check if customRankingList table exists (for backwards compatibility)
+    let includeCustomList = false
+    try {
+      await prisma.$queryRaw`SELECT 1 FROM "CustomRankingList" LIMIT 1`
+      includeCustomList = true
+    } catch (error) {
+      // Table doesn't exist yet, skip including it
+    }
+    
     const project = await prisma.project.findUnique({
       where: { id: parseInt(id) },
       include: {
@@ -20,6 +29,7 @@ export async function GET(
               }
             },
             rankingList: true,
+            ...(includeCustomList && { customRankingList: true }),
             requests: {
               select: {
                 status: true

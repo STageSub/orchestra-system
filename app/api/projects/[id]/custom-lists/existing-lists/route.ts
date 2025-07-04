@@ -52,40 +52,52 @@ export async function GET(
       }
     })
 
+    // Check if customRankingList table exists
+    let hasCustomListTable = false
+    try {
+      await prisma.$queryRaw`SELECT 1 FROM "CustomRankingList" LIMIT 1`
+      hasCustomListTable = true
+    } catch (error) {
+      // Table doesn't exist yet
+    }
+
     // Get custom lists from current season projects
-    const customLists = await prisma.customRankingList.findMany({
-      where: {
-        positionId: parseInt(positionId),
-        project: {
-          startDate: {
-            gte: new Date(currentYear, 0, 1),
-            lt: new Date(currentYear + 1, 0, 1)
-          }
-        }
-      },
-      include: {
-        project: {
-          select: {
-            id: true,
-            name: true,
-            weekNumber: true
+    let customLists: any[] = []
+    if (hasCustomListTable) {
+      customLists = await prisma.customRankingList.findMany({
+        where: {
+          positionId: parseInt(positionId),
+          project: {
+            startDate: {
+              gte: new Date(currentYear, 0, 1),
+              lt: new Date(currentYear + 1, 0, 1)
+            }
           }
         },
-        customRankings: {
-          include: {
-            musician: true
+        include: {
+          project: {
+            select: {
+              id: true,
+              name: true,
+              weekNumber: true
+            }
           },
-          orderBy: {
-            rank: 'asc'
+          customRankings: {
+            include: {
+              musician: true
+            },
+            orderBy: {
+              rank: 'asc'
+            }
+          }
+        },
+        orderBy: {
+          project: {
+            weekNumber: 'asc'
           }
         }
-      },
-      orderBy: {
-        project: {
-          weekNumber: 'asc'
-        }
-      }
-    })
+      })
+    }
 
     // Format the response
     const lists = {

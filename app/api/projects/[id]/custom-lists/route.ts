@@ -21,6 +21,22 @@ export async function POST(
 
     const prisma = await getPrismaForUser(request)
 
+    // Check if customRankingList table exists
+    let hasCustomListTable = false
+    try {
+      await prisma.$queryRaw`SELECT 1 FROM "CustomRankingList" LIMIT 1`
+      hasCustomListTable = true
+    } catch (error) {
+      // Table doesn't exist yet
+    }
+
+    if (!hasCustomListTable) {
+      return NextResponse.json(
+        { error: 'Custom ranking lists feature is not available yet. Please run database migration.' },
+        { status: 503 }
+      )
+    }
+
     // Get project details
     const project = await prisma.project.findUnique({
       where: { id: parseInt(projectId) }
@@ -106,6 +122,22 @@ export async function GET(
     }
 
     const prisma = await getPrismaForUser(request)
+
+    // Check if customRankingList table exists
+    let hasCustomListTable = false
+    try {
+      await prisma.$queryRaw`SELECT 1 FROM "CustomRankingList" LIMIT 1`
+      hasCustomListTable = true
+    } catch (error) {
+      // Table doesn't exist yet
+    }
+
+    if (!hasCustomListTable) {
+      return NextResponse.json(
+        { error: 'Custom ranking lists feature is not available yet' },
+        { status: 503 }
+      )
+    }
 
     const customList = await prisma.customRankingList.findUnique({
       where: { id: parseInt(customListId) },

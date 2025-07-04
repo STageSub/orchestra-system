@@ -54,9 +54,18 @@ export async function GET(
       ]
     })
 
+    // Check if customRankingList table exists
+    let hasCustomListTable = false
+    try {
+      await prisma.$queryRaw`SELECT 1 FROM "CustomRankingList" LIMIT 1`
+      hasCustomListTable = true
+    } catch (error) {
+      // Table doesn't exist yet
+    }
+
     // Get musicians already in the custom list if customListId is provided
     let customListMusicianIds: number[] = []
-    if (customListId) {
+    if (customListId && hasCustomListTable) {
       const customList = await prisma.customRankingList.findUnique({
         where: { id: parseInt(customListId) },
         include: {
