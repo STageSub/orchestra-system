@@ -55,9 +55,23 @@ export async function GET(
           }
         }
       },
-      orderBy: {
-        createdAt: 'desc'
-      }
+      orderBy: [
+        {
+          position: {
+            instrument: {
+              displayOrder: 'asc'
+            }
+          }
+        },
+        {
+          position: {
+            hierarchyNumber: 'asc'
+          }
+        },
+        {
+          createdAt: 'desc'
+        }
+      ]
     })
 
     // Format the response
@@ -68,7 +82,8 @@ export async function GET(
       position: {
         id: list.position.id,
         name: list.position.name,
-        instrument: list.position.instrument.name
+        instrument: list.position.instrument.name,
+        hierarchyNumber: list.position.hierarchyNumber
       },
       musicianCount: list.customRankings.length,
       isInUse: list.projectNeeds.length > 0,

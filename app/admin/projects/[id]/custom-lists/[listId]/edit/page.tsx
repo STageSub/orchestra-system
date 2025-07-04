@@ -206,9 +206,9 @@ export default function EditCustomListPage({
   const isInUse = customList.projectNeeds.length > 0
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-white shadow-sm border-b flex-shrink-0">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
@@ -263,35 +263,37 @@ export default function EditCustomListPage({
         </div>
       </div>
 
-      {/* Warning if list is in use */}
-      {isInUse && (
-        <div className="max-w-7xl mx-auto px-4 pt-4">
-          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-            <div className="flex">
-              <svg
-                className="h-5 w-5 text-yellow-400"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <div className="ml-3">
-                <p className="text-sm text-yellow-700">
-                  Denna lista används av {customList.projectNeeds.length} projektbehov.
-                  Ändringar kommer att påverka dessa behov.
-                </p>
+      {/* Content with scrollable area */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Warning if list is in use */}
+        {isInUse && (
+          <div className="max-w-7xl mx-auto px-4 pt-4">
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+              <div className="flex">
+                <svg
+                  className="h-5 w-5 text-yellow-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <div className="ml-3">
+                  <p className="text-sm text-yellow-700">
+                    Denna lista används av {customList.projectNeeds.length} projektbehov.
+                    Ändringar kommer att påverka dessa behov.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Main content */}
+        <div className="max-w-7xl mx-auto px-4 py-6">
         {/* List name */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -306,9 +308,9 @@ export default function EditCustomListPage({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-6">
+        <div className="flex gap-6" style={{ height: 'calc(100vh - 350px)' }}>
           {/* Current list */}
-          <div className="bg-white rounded-lg shadow">
+          <div className="flex-1 bg-white rounded-lg shadow flex flex-col">
             <div className="px-4 py-3 border-b bg-gray-50">
               <h2 className="font-semibold text-gray-900">
                 Nuvarande lista
@@ -324,7 +326,7 @@ export default function EditCustomListPage({
                   <div
                     {...provided.droppableProps}
                     ref={provided.innerRef}
-                    className="min-h-[400px] p-4"
+                    className="flex-1 p-4 overflow-y-auto"
                   >
                     {musicians.length === 0 ? (
                       <p className="text-sm text-gray-500 text-center py-8">
@@ -378,7 +380,7 @@ export default function EditCustomListPage({
           </div>
 
           {/* Available musicians */}
-          <div className="bg-white rounded-lg shadow">
+          <div className="flex-1 bg-white rounded-lg shadow flex flex-col">
             <div className="px-4 py-3 border-b bg-gray-50">
               <h2 className="font-semibold text-gray-900 mb-2">
                 Tillgängliga musiker
@@ -392,7 +394,7 @@ export default function EditCustomListPage({
               />
             </div>
 
-            <div className="p-4 max-h-[500px] overflow-y-auto">
+            <div className="flex-1 p-4 overflow-y-auto">
               {filteredAvailableMusicians.map(musician => {
                 const isInList = isMusicianInList(musician.id)
                 return (
@@ -417,7 +419,7 @@ export default function EditCustomListPage({
             </div>
           </div>
         </div>
-
+        </div>
       </div>
     </div>
   )
