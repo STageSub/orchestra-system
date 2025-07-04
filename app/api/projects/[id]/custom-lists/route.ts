@@ -25,12 +25,24 @@ export async function POST(
     // Try to parse request body with error handling
     let body
     try {
-      body = await request.json()
-      console.log('[Custom Lists API] Request body:', JSON.stringify(body, null, 2))
+      // First try to get the raw text to see what we're receiving
+      const text = await request.text()
+      console.log('[Custom Lists API] Raw request body length:', text.length)
+      console.log('[Custom Lists API] Raw request body:', text)
+      
+      if (!text || text.trim() === '') {
+        throw new Error('Empty request body received')
+      }
+      
+      body = JSON.parse(text)
+      console.log('[Custom Lists API] Parsed body:', JSON.stringify(body, null, 2))
     } catch (parseError) {
       console.error('[Custom Lists API] Failed to parse request body:', parseError)
       return NextResponse.json(
-        { error: 'Invalid request body - failed to parse JSON' },
+        { 
+          error: 'Invalid request body - failed to parse JSON',
+          details: parseError instanceof Error ? parseError.message : 'Unknown parse error'
+        },
         { status: 400 }
       )
     }
@@ -173,13 +185,12 @@ export async function POST(
     
     // Try to log to database, but don't let it fail the response
     try {
-      await logger.error('api', 'Error creating custom ranking list', {
-        error: errorMessage,
-        stack: errorStack,
+      // Don't await logger to prevent it from blocking the response
+      logger.error('api', 'Error creating custom ranking list', {
         metadata: {
+          error: errorMessage,
           errorName,
-          projectId: params ? (await params).id : 'unknown',
-          requestBody: body
+          projectId: 'error-state'
         }
       })
     } catch (logError) {

@@ -14,7 +14,8 @@ const ID_PREFIXES = {
   emailTemplate: 'TMPL',
   communicationLog: 'COMM',
   projectFile: 'FILE',
-  auditLog: 'AUDIT'
+  auditLog: 'AUDIT',
+  customList: 'CLIST'
 } as const
 
 type EntityType = keyof typeof ID_PREFIXES
