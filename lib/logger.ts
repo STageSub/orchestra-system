@@ -66,12 +66,15 @@ class Logger {
           
           // If request is provided, use getPrismaForUser to get the correct database
           if (request) {
+            console.log('[Logger] Using getPrismaForUser for database selection')
             prisma = await getPrismaForUser(request)
           } else {
             // Fallback to central database for system logs without user context
+            console.log('[Logger] No request provided, using neonPrisma')
             prisma = neonPrisma
           }
           
+          console.log('[Logger] Writing log to database...')
           await prisma.systemLog.create({
             data: {
               level,
@@ -87,11 +90,10 @@ class Logger {
               duration: context?.duration
             }
           })
+          console.log('[Logger] Log written successfully')
         } catch (dbError) {
-          // Only log to console if database write fails, don't throw
-          if (process.env.NODE_ENV !== 'production') {
-            console.error('Failed to write log to database:', dbError)
-          }
+          // Always log database errors for debugging
+          console.error('[Logger] Failed to write log to database:', dbError)
         }
       })()
     } catch (error) {

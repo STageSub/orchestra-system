@@ -9,6 +9,7 @@ import { prisma } from './prisma'
  * This ensures complete data isolation between orchestras
  */
 export async function getPrismaForUser(request: NextRequest | Request): Promise<any> {
+  console.log('[getPrismaForUser] Starting...')
   try {
     // Get token from cookie
     const cookieStore = await cookies()
