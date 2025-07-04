@@ -244,8 +244,9 @@ export default function CreateCustomListModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-75 z-50">
-      <div className="fixed inset-4 bg-white rounded-lg shadow-xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-75 z-50 overflow-y-auto">
+      <div className="min-h-screen p-4 flex items-center justify-center">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[calc(100vh-2rem)] flex flex-col">
         {/* Header */}
         <div className="bg-white shadow-sm border-b px-6 py-4">
           <div className="flex items-center justify-between">
@@ -297,10 +298,10 @@ export default function CreateCustomListModal({
             </div>
           )}
 
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-3 gap-6 h-full">
             {/* Left column - New list */}
             <div className="bg-white rounded-lg shadow">
-              <div className="px-4 py-3 border-b bg-gray-50">
+              <div className="px-4 py-3 border-b bg-gray-50 sticky top-0 z-10">
                 <h2 className="font-semibold text-gray-900">
                   {listName || `V. ${project?.weekNumber}`} {project?.name}
                 </h2>
@@ -315,7 +316,7 @@ export default function CreateCustomListModal({
                     <div
                       {...provided.droppableProps}
                       ref={provided.innerRef}
-                      className="min-h-[400px] p-4"
+                      className="p-4"
                     >
                       {newListMusicians.length === 0 ? (
                         <p className="text-sm text-gray-500 text-center py-8">
@@ -371,7 +372,7 @@ export default function CreateCustomListModal({
             {/* Middle column - Existing lists */}
             {!isEditMode && (
               <div className="bg-white rounded-lg shadow">
-                <div className="px-4 py-3 border-b bg-gray-50">
+                <div className="px-4 py-3 border-b bg-gray-50 sticky top-0 z-10">
                   <h2 className="font-semibold text-gray-900 mb-2">Befintliga listor</h2>
                   <select
                     value={selectedList?.id || ''}
@@ -423,7 +424,7 @@ export default function CreateCustomListModal({
                   </button>
                 </div>
                 
-                <div className="p-4 max-h-[500px] overflow-y-auto">
+                <div className="p-4">
                   {selectedList?.musicians.map((musician, index) => {
                     const isInNewList = isMusicianInNewList(musician.id)
                     return (
@@ -456,7 +457,7 @@ export default function CreateCustomListModal({
 
             {/* Right column - All qualified musicians */}
             <div className={`bg-white rounded-lg shadow ${isEditMode ? 'col-span-2' : ''}`}>
-              <div className="px-4 py-3 border-b bg-gray-50">
+              <div className="px-4 py-3 border-b bg-gray-50 sticky top-0 z-10">
                 <h2 className="font-semibold text-gray-900 mb-2">Alla kvalificerade musiker</h2>
                 <div className="relative">
                   <input
@@ -469,7 +470,7 @@ export default function CreateCustomListModal({
                 </div>
               </div>
               
-              <div className="p-4 max-h-[500px] overflow-y-auto">
+              <div className="p-4">
                 {filteredMusicians.map(musician => {
                   const isInNewList = isMusicianInNewList(musician.id)
                   return (
@@ -528,6 +529,7 @@ export default function CreateCustomListModal({
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   )
