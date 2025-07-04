@@ -120,16 +120,30 @@ export async function GET(request: Request) {
       })
       
       // Transform custom lists to match ranking list format
-      customLists = projectCustomLists.map(customList => ({
-        id: customList.id,
-        listType: 'custom',
-        description: customList.name,
-        positionId: customList.positionId,
-        position: rankingLists[0]?.position, // Use position from standard lists
-        availableMusiciansCount: customList._count.customRankings,
-        totalActiveMusicians: customList._count.customRankings,
-        isCustomList: true,
-        customListId: customList.id
+      customLists = await Promise.all(projectCustomLists.map(async customList => {
+        // Get active musicians count
+        const activeMusicians = await prisma.customRanking.findMany({
+          where: {
+            customListId: customList.id,
+            musician: {
+              isActive: true,
+              isArchived: false
+            }
+          },
+          select: { musicianId: true }
+        })
+        
+        return {
+          id: customList.id,
+          listType: 'Anpassad',
+          description: customList.name,
+          positionId: customList.positionId,
+          position: rankingLists[0]?.position, // Use position from standard lists
+          availableMusiciansCount: activeMusicians.length,
+          totalActiveMusicians: activeMusicians.length,
+          isCustomList: true,
+          customListId: customList.id
+        }
       }))
     }
     

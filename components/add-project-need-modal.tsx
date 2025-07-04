@@ -73,31 +73,10 @@ export default function AddProjectNeedModal({
   // Fetch custom list if provided
   useEffect(() => {
     if (customRankingListId) {
-      fetchCustomList()
+      fetchCustomList(customRankingListId)
     }
   }, [customRankingListId])
 
-  const fetchCustomList = async () => {
-    try {
-      const response = await fetch(
-        `/api/projects/${projectId}/custom-lists?customListId=${customRankingListId}`
-      )
-      if (response.ok) {
-        const data = await response.json()
-        setCustomList(data)
-        // Pre-fill position based on custom list
-        if (data.positionId) {
-          setFormData(prev => ({ 
-            ...prev, 
-            positionId: data.positionId.toString(),
-            instrumentId: data.position?.instrumentId?.toString() || ''
-          }))
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching custom list:', error)
-    }
-  }
 
   useEffect(() => {
     if (formData.instrumentId) {
@@ -132,16 +111,54 @@ export default function AddProjectNeedModal({
       }
     } else if (formData.rankingListId) {
       const selectedList = rankingLists.find(l => l.id === parseInt(formData.rankingListId))
-      if (selectedList && selectedList.availableMusiciansCount !== undefined) {
-        const quantity = parseInt(formData.quantity)
-        if (quantity > selectedList.availableMusiciansCount) {
-          setValidationWarning(`Antal behov (${quantity}) är högre än tillgängliga musiker (${selectedList.availableMusiciansCount})`)
-        } else {
-          setValidationWarning('')
+      if (selectedList) {
+        // Check if this is actually a custom list
+        if (selectedList.isCustomList && !customList) {
+          // Fetch the custom list details
+          fetchCustomList(selectedList.customListId || selectedList.id)
+        }
+        
+        if (selectedList.availableMusiciansCount !== undefined) {
+          const quantity = parseInt(formData.quantity)
+          if (quantity > selectedList.availableMusiciansCount) {
+            setValidationWarning(`Antal behov (${quantity}) är högre än tillgängliga musiker (${selectedList.availableMusiciansCount})`)
+          } else {
+            setValidationWarning('')
+          }
         }
       }
     }
   }, [formData.quantity, formData.rankingListId, rankingLists, customList])
+  
+  const fetchCustomList = async (customListId?: number) => {
+    if (!customListId) return
+    
+    try {
+      const response = await fetch(
+        `/api/projects/${projectId}/custom-lists?customListId=${customListId}`
+      )
+      if (response.ok) {
+        const data = await response.json()
+        setCustomList(data)
+        // Pre-fill position based on custom list if it's the initial load
+        if (data.positionId && customRankingListId === customListId) {
+          setFormData(prev => ({ 
+            ...prev, 
+            positionId: data.positionId.toString(),
+            instrumentId: data.position?.instrumentId?.toString() || '',
+            customRankingListId: customListId.toString()
+          }))
+        } else {
+          setFormData(prev => ({ 
+            ...prev, 
+            customRankingListId: customListId.toString()
+          }))
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching custom list:', error)
+    }
+  }
 
   const fetchInstruments = async () => {
     setInstrumentsLoading(true)
@@ -179,8 +196,11 @@ export default function AddProjectNeedModal({
       } else {
         setExistingCustomListForPosition(null)
       }
+      
+      return data
     } catch (error) {
       console.error('Error fetching ranking lists:', error)
+      return []
     } finally {
       setRankingListsLoading(false)
     }
@@ -305,7 +325,7 @@ export default function AddProjectNeedModal({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Rankningslista <span className="text-red-500">*</span>
               </label>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-start space-x-2">
                 {customList ? (
                   <div className="flex-1 px-3 py-2 bg-green-50 border border-green-300 rounded-lg">
                     <span className="text-sm font-medium text-green-800">
@@ -319,23 +339,44 @@ export default function AddProjectNeedModal({
                     onChange={(e) => setFormData({ ...formData, rankingListId: e.target.value })}
                     className="flex-1 h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:bg-gray-50 disabled:text-gray-500"
                     disabled={!formData.positionId || rankingListsLoading}
+                    style={{ maxHeight: '10rem' }}
+                    size={1}
                   >
                     <option value="">{rankingListsLoading ? 'Laddar rankningslistor...' : 'Välj rankningslista'}</option>
-                    {rankingLists.map((list: any) => (
-                      <option 
-                        key={list.id} 
-                        value={list.id}
-                        disabled={list.isUsedInProject || (list.availableMusiciansCount !== undefined && list.availableMusiciansCount === 0)}
-                      >
-                        {list.isCustomList ? 
-                          `Anpassad: ${list.description}` : 
-                          `${list.listType}-lista${list.description ? ` (${list.description})` : ''}`
-                        }
-                        {list.availableMusiciansCount !== undefined && ` (${list.availableMusiciansCount} tillgängliga)`}
-                        {list.isUsedInProject ? ' (Redan använd)' : ''}
-                        {list.availableMusiciansCount === 0 ? ' (Inga tillgängliga)' : ''}
-                      </option>
-                    ))}
+                    {/* Standard lists first */}
+                    {rankingLists.filter(list => !list.isCustomList).length > 0 && (
+                      <optgroup label="Standardlistor">
+                        {rankingLists.filter(list => !list.isCustomList).map((list: any) => (
+                          <option 
+                            key={list.id} 
+                            value={list.id}
+                            disabled={list.isUsedInProject || (list.availableMusiciansCount !== undefined && list.availableMusiciansCount === 0)}
+                          >
+                            {`${list.listType}-lista${list.description ? ` (${list.description})` : ''}`}
+                            {list.availableMusiciansCount !== undefined && ` (${list.availableMusiciansCount} tillgängliga)`}
+                            {list.isUsedInProject ? ' (Redan använd)' : ''}
+                            {list.availableMusiciansCount === 0 ? ' (Inga tillgängliga)' : ''}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {/* Custom lists */}
+                    {rankingLists.filter(list => list.isCustomList).length > 0 && (
+                      <optgroup label="Anpassade listor">
+                        {rankingLists.filter(list => list.isCustomList).map((list: any) => (
+                          <option 
+                            key={list.id} 
+                            value={list.id}
+                            disabled={list.isUsedInProject || (list.availableMusiciansCount !== undefined && list.availableMusiciansCount === 0)}
+                          >
+                            {list.description}
+                            {list.availableMusiciansCount !== undefined && ` (${list.availableMusiciansCount} tillgängliga)`}
+                            {list.isUsedInProject ? ' (Redan använd)' : ''}
+                            {list.availableMusiciansCount === 0 ? ' (Inga tillgängliga)' : ''}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
                   </select>
                 )}
                 {formData.positionId && !existingCustomListForPosition && (
@@ -352,9 +393,10 @@ export default function AddProjectNeedModal({
                   <button
                     type="button"
                     onClick={() => setShowCreateCustomListModal(true)}
-                    className="text-sm font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap"
+                    className="text-sm font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap flex-shrink-0"
+                    title="Ändra befintlig lista"
                   >
-                    Ändra befintlig lista
+                    Ändra lista
                   </button>
                 )}
               </div>
@@ -563,17 +605,20 @@ export default function AddProjectNeedModal({
           instrumentName={instruments.find(i => i.id === parseInt(formData.instrumentId))?.name || ''}
           existingCustomListId={existingCustomListForPosition || undefined}
           onClose={() => setShowCreateCustomListModal(false)}
-          onSuccess={(customListId) => {
+          onSuccess={async (customListId) => {
             setShowCreateCustomListModal(false)
             // Refresh ranking lists to include the new custom list
-            fetchRankingLists(parseInt(formData.positionId))
-            // Select the custom list
-            setFormData(prev => ({ 
-              ...prev, 
-              rankingListId: customListId.toString(),
-              customRankingListId: customListId.toString()
-            }))
-            setCustomList({ id: customListId })
+            await fetchRankingLists(parseInt(formData.positionId))
+            // Select the custom list after lists are loaded
+            setTimeout(() => {
+              setFormData(prev => ({ 
+                ...prev, 
+                rankingListId: customListId.toString(),
+                customRankingListId: customListId.toString()
+              }))
+              // Also update the existing custom list ID for the position
+              setExistingCustomListForPosition(customListId)
+            }, 100)
           }}
         />
       )}

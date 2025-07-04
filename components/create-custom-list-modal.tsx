@@ -288,13 +288,18 @@ export default function CreateCustomListModal({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Listnamn
               </label>
-              <input
-                type="text"
-                value={listName}
-                onChange={(e) => setListName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Ange listnamn..."
-              />
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-medium text-gray-700 px-3 py-2 bg-gray-100 rounded-l-lg border border-r-0 border-gray-300">
+                  V. {project?.weekNumber || ''}
+                </span>
+                <input
+                  type="text"
+                  value={listName.replace(/^V\.\s*\d+\s*/, '')}
+                  onChange={(e) => setListName(`V. ${project?.weekNumber || ''} ${e.target.value}`)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-r-lg focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Beskrivning..."
+                />
+              </div>
             </div>
           )}
 
@@ -304,10 +309,10 @@ export default function CreateCustomListModal({
               <div className="px-4 py-3 border-b bg-gray-50">
                 <div className="flex items-center justify-between mb-1">
                   <h2 className="font-semibold text-gray-900">
-                    {listName || `V. ${project?.weekNumber}`} {project?.name}
+                    {isEditMode ? listName : `V. ${project?.weekNumber || ''}`} {!isEditMode && project?.name}
                   </h2>
                   <span className="text-xs font-medium px-2 py-1 bg-blue-100 text-blue-700 rounded">
-                    Din nya lista
+                    {isEditMode ? 'Redigerar lista' : 'Din nya lista'}
                   </span>
                 </div>
                 <p className="text-sm text-gray-600">

@@ -154,7 +154,7 @@ export async function POST(
         customListId,
         projectId: parseInt(projectId),
         positionId: parseInt(positionId),
-        name: `V. ${project.weekNumber}`,
+        name: `V. ${project.weekNumber} ${project.name}`,
         isTemplate: saveAsTemplate || false,
         templateName: saveAsTemplate ? templateName : null,
         customRankings: {
