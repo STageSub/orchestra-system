@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import { getPrismaClient } from '@/lib/database-config'
+import { checkSuperadminAuth } from '@/lib/auth-superadmin'
 
 const prisma = new PrismaClient()
 
-export async function GET() {
+export async function GET(request: Request) {
   // Check superadmin authentication
-  // TODO: Re-enable auth check after testing
-  // const authResult = await checkSuperadminAuth()
-  // if (!authResult.authorized) {
-  //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  // }
+  const authResult = await checkSuperadminAuth()
+  if (!authResult.authorized) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
   try {
     // Get all orchestras from main database
@@ -120,27 +120,25 @@ export async function GET() {
     // Calculate total MRR (mock for now)
     const totalMRR = orchestraMetrics.filter(o => o.subscription).length * 4990
 
-    // Create recent events (mock for now)
-    const recentEvents = [
-      {
-        id: '1',
-        type: 'orchestra_created',
-        severity: 'info',
-        title: 'SCO Admin tillagd',
-        description: 'Ny orkester registrerad i systemet',
-        createdAt: new Date().toISOString(),
-        orchestra: { name: 'SCO Admin' }
-      },
-      {
-        id: '2',
-        type: 'orchestra_created',
-        severity: 'info',
-        title: 'SCOSO Admin tillagd',
-        description: 'Ny orkester registrerad i systemet',
-        createdAt: new Date().toISOString(),
-        orchestra: { name: 'SCOSO Admin' }
+    // Fetch recent events from activity API
+    let recentEvents = []
+    try {
+      // Make internal API call to activity endpoint
+      const activityResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/api/superadmin/activity?limit=10`, {
+        headers: {
+          cookie: request.headers.get('cookie') || '' // Pass through auth cookies
+        }
+      })
+      
+      if (activityResponse.ok) {
+        const activityData = await activityResponse.json()
+        recentEvents = activityData.events
       }
-    ]
+    } catch (error) {
+      console.error('Failed to fetch activity:', error)
+      // Fall back to empty events rather than fail the whole request
+      recentEvents = []
+    }
 
     return NextResponse.json({
       orchestras: orchestraMetrics,

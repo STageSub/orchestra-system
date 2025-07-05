@@ -1,9 +1,14 @@
 import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+import { checkSuperadminAuth } from '@/lib/auth-superadmin'
 
 const prisma = new PrismaClient()
 
 export async function GET() {
+  const authResult = await checkSuperadminAuth()
+  if (!authResult.authorized) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   try {
     const health = {
       api: 'operational',

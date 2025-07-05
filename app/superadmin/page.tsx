@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Users, CreditCard, Activity, Database, Building } from 'lucide-react'
 import CustomerManagement from '@/components/superadmin/CustomerManagement'
 import OrchestraManagement from '@/components/superadmin/OrchestraManagement'
+import UserManagement from '@/components/superadmin/UserManagement'
 
 interface OrchestraData {
   id: string
@@ -57,7 +58,7 @@ interface MetricsData {
 export default function SuperAdminDashboard() {
   const [metricsData, setMetricsData] = useState<MetricsData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'customers' | 'orchestras'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'customers' | 'orchestras' | 'users'>('overview')
 
   useEffect(() => {
     fetchMetrics()
@@ -66,6 +67,11 @@ export default function SuperAdminDashboard() {
   const fetchMetrics = async () => {
     try {
       const response = await fetch('/api/superadmin/metrics')
+      if (response.status === 401) {
+        // Unauthorized - redirect to login
+        window.location.href = '/admin/login'
+        return
+      }
       if (response.ok) {
         const data = await response.json()
         setMetricsData(data)
@@ -115,6 +121,16 @@ export default function SuperAdminDashboard() {
             }`}
           >
             Orkestrar
+          </button>
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`px-4 py-2 rounded-md transition-colors ${
+              activeTab === 'users'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Användare
           </button>
         </div>
       </div>
@@ -307,8 +323,10 @@ export default function SuperAdminDashboard() {
         </>
       ) : activeTab === 'customers' ? (
         <CustomerManagement />
-      ) : (
+      ) : activeTab === 'orchestras' ? (
         <OrchestraManagement />
+      ) : (
+        <UserManagement />
       )}
     </div>
   )

@@ -38,6 +38,10 @@ export default function CustomerManagement() {
   const fetchOrchestras = async () => {
     try {
       const response = await fetch('/api/superadmin/metrics')
+      if (response.status === 401) {
+        window.location.href = '/admin/login'
+        return
+      }
       if (response.ok) {
         const data = await response.json()
         setOrchestras(data.orchestras || [])

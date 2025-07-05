@@ -24,6 +24,10 @@ export default function OrchestraManagement() {
   const fetchSystemHealth = async () => {
     try {
       const response = await fetch('/api/superadmin/health')
+      if (response.status === 401) {
+        window.location.href = '/admin/login'
+        return
+      }
       if (response.ok) {
         const data = await response.json()
         setSystemHealth(data)
