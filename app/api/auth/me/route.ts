@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth-db'
-import { neonPrisma } from '@/lib/prisma-dynamic'
+import { PrismaClient } from '@prisma/client'
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,7 +14,15 @@ export async function GET(request: NextRequest) {
     let orchestra = null
     if (user.orchestraId) {
       try {
-        orchestra = await neonPrisma.orchestra.findUnique({
+        const prisma = new PrismaClient({
+          datasources: {
+            db: {
+              url: process.env.CENTRAL_DATABASE_URL || process.env.DATABASE_URL,
+            },
+          },
+        })
+        
+        orchestra = await prisma.orchestra.findUnique({
           where: { id: user.orchestraId },
           select: {
             id: true,
@@ -26,6 +34,8 @@ export async function GET(request: NextRequest) {
             status: true
           }
         })
+        
+        await prisma.$disconnect()
       } catch (error) {
         console.error('Error fetching orchestra:', error)
       }

@@ -46,6 +46,7 @@ export default function AdminLayout({
   const [showSettings, setShowSettings] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
+  const [loadingUserInfo, setLoadingUserInfo] = useState(true)
   const settingsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -61,25 +62,52 @@ export default function AdminLayout({
     }
   }, [])
 
-  // Fetch user info
+  // Fetch user info with retry
   useEffect(() => {
-    const fetchUserInfo = async () => {
+    // Skip fetching user info on login page
+    if (pathname === '/admin/login') {
+      setLoadingUserInfo(false)
+      return
+    }
+
+    const fetchUserInfo = async (retryCount = 0) => {
       try {
-        const response = await fetch('/api/auth/me')
+        const response = await fetch('/api/auth/me', {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache'
+          }
+        })
         if (response.ok) {
           const data = await response.json()
           console.log('User info fetched:', data)
           setUserInfo(data)
+          setLoadingUserInfo(false)
+        } else if (response.status === 401) {
+          // Don't retry for authentication errors
+          console.log('User not authenticated')
+          setLoadingUserInfo(false)
+        } else if (retryCount < 3) {
+          console.log(`Failed to fetch user info, retrying... (attempt ${retryCount + 1})`)
+          setTimeout(() => fetchUserInfo(retryCount + 1), 500)
         } else {
-          console.error('Failed to fetch user info, status:', response.status)
+          console.error('Failed to fetch user info after 3 attempts, status:', response.status)
+          setLoadingUserInfo(false)
         }
       } catch (error) {
-        console.error('Failed to fetch user info:', error)
+        if (retryCount < 3) {
+          console.log(`Error fetching user info, retrying... (attempt ${retryCount + 1})`)
+          setTimeout(() => fetchUserInfo(retryCount + 1), 500)
+        } else {
+          console.error('Failed to fetch user info after 3 attempts:', error)
+          setLoadingUserInfo(false)
+        }
       }
     }
 
-    fetchUserInfo()
-  }, [])
+    // Add small delay to ensure cookie is set after login
+    setTimeout(() => fetchUserInfo(), 200)
+  }, [pathname])
 
   // Check if this is first time login
   useEffect(() => {
@@ -125,6 +153,11 @@ export default function AdminLayout({
   }
 
 
+  // Return minimal layout for login page
+  if (pathname === '/admin/login') {
+    return <>{children}</>
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -138,6 +171,27 @@ export default function AdminLayout({
               </h1>
             </div>
             <div className="flex items-center space-x-4">
+              <div className="flex items-center gap-2">
+                {loadingUserInfo ? (
+                  <div className="flex items-center gap-2">
+                    <div className="h-7 w-7 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-4 w-32 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                ) : (
+                  <>
+                    {userInfo?.orchestra?.logoUrl && (
+                      <img 
+                        src={userInfo.orchestra.logoUrl} 
+                        alt="" 
+                        className="h-7 w-7 object-contain rounded"
+                      />
+                    )}
+                    <span className="text-sm text-gray-900 font-semibold">
+                      {userInfo ? `${userInfo.user.username} - ${userInfo.orchestra?.name || 'Admin'}` : 'Admin'}
+                    </span>
+                  </>
+                )}
+              </div>
               <div className="relative" ref={settingsRef}>
                 <button
                   onClick={() => setShowSettings(!showSettings)}
@@ -192,15 +246,12 @@ export default function AdminLayout({
                   </div>
                 )}
               </div>
-              <span className="text-sm text-gray-600">
-                {userInfo ? `${userInfo.user.username} - ${userInfo.orchestra?.name || 'Admin'}` : 'Admin'}
-              </span>
               <button
                 onClick={async () => {
                   await fetch('/api/auth/logout', { method: 'POST' })
                   window.location.href = '/admin/login'
                 }}
-                className="text-sm text-gray-700 hover:text-gray-900"
+                className="text-sm text-gray-500 hover:text-gray-700"
               >
                 Logga ut
               </button>
@@ -220,23 +271,6 @@ export default function AdminLayout({
                 alt="StageSub" 
                 className="h-24 w-auto mx-auto"
               />
-              {userInfo?.orchestra && (
-                <div className="mt-3">
-                  {userInfo.orchestra.logoUrl ? (
-                    <img 
-                      src={userInfo.orchestra.logoUrl} 
-                      alt={userInfo.orchestra.name} 
-                      className="h-10 w-10 mx-auto object-contain rounded"
-                    />
-                  ) : (
-                    <div className="h-10 w-10 mx-auto bg-gray-200 rounded flex items-center justify-center">
-                      <span className="text-xs font-medium text-gray-600">
-                        {userInfo.orchestra.name.substring(0, 3).toUpperCase()}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
             
             <ul className="space-y-1">

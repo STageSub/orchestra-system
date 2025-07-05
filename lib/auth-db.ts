@@ -1,7 +1,7 @@
 import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 import bcrypt from 'bcryptjs'
-import { neonPrisma } from '@/lib/prisma-dynamic'
+import { PrismaClient } from '@prisma/client'
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'default-secret-change-in-production'
@@ -92,10 +92,20 @@ export async function getCurrentUser(): Promise<User | null> {
   if (!payload || !payload.userId) return null
   
   try {
-    // Always use neonPrisma for User table (auth database)
-    const user = await neonPrisma.user.findUnique({
+    // Create a local Prisma instance for the central database
+    const prisma = new PrismaClient({
+      datasources: {
+        db: {
+          url: process.env.CENTRAL_DATABASE_URL || process.env.DATABASE_URL,
+        },
+      },
+    })
+    
+    const user = await prisma.user.findUnique({
       where: { id: payload.userId }
     })
+    
+    await prisma.$disconnect()
     
     if (!user || !user.active) return null
     
@@ -116,8 +126,16 @@ export async function authenticateUser(username: string, password: string): Prom
   try {
     console.log(`[authenticateUser] Attempting login for username: ${username}`)
     
-    // Always use neonPrisma for authentication (User table is in main database)
-    const user = await neonPrisma.user.findUnique({
+    // Create a local Prisma instance for authentication
+    const prisma = new PrismaClient({
+      datasources: {
+        db: {
+          url: process.env.CENTRAL_DATABASE_URL || process.env.DATABASE_URL,
+        },
+      },
+    })
+    
+    const user = await prisma.user.findUnique({
       where: { username },
       include: { orchestra: true }
     })
@@ -134,6 +152,7 @@ export async function authenticateUser(username: string, password: string): Prom
     
     if (!user || !user.active) {
       console.log(`[authenticateUser] User not found or inactive`)
+      await prisma.$disconnect()
       return null
     }
     
@@ -141,14 +160,17 @@ export async function authenticateUser(username: string, password: string): Prom
     console.log(`[authenticateUser] Password verification:`, passwordValid ? 'Valid' : 'Invalid')
     
     if (!passwordValid) {
+      await prisma.$disconnect()
       return null
     }
     
     // Update last login
-    await neonPrisma.user.update({
+    await prisma.user.update({
       where: { id: user.id },
       data: { lastLogin: new Date() }
     })
+    
+    await prisma.$disconnect()
     
     console.log(`[authenticateUser] Login successful for ${username}`)
     return user
@@ -184,25 +206,34 @@ export async function verifySuperadminPassword(password: string): Promise<boolea
 // Migration helper to create initial superadmin user
 export async function createSuperadminUser(): Promise<void> {
   try {
-    // Always use neonPrisma for User table operations
-    const existingSuperadmin = await neonPrisma.user.findFirst({
+    const prisma = new PrismaClient({
+      datasources: {
+        db: {
+          url: process.env.CENTRAL_DATABASE_URL || process.env.DATABASE_URL,
+        },
+      },
+    })
+    
+    const existingSuperadmin = await prisma.user.findFirst({
       where: { role: 'superadmin' }
     })
     
     if (existingSuperadmin) {
       console.log('Superadmin user already exists')
+      await prisma.$disconnect()
       return
     }
     
     const superadminPassword = process.env.SUPERADMIN_PASSWORD
     if (!superadminPassword) {
       console.error('SUPERADMIN_PASSWORD not set, cannot create superadmin user')
+      await prisma.$disconnect()
       return
     }
     
     const passwordHash = await hashPassword(superadminPassword)
     
-    await neonPrisma.user.create({
+    await prisma.user.create({
       data: {
         username: 'superadmin',
         email: 'superadmin@stagesub.com',
@@ -211,6 +242,8 @@ export async function createSuperadminUser(): Promise<void> {
         active: true
       }
     })
+    
+    await prisma.$disconnect()
     
     console.log('Superadmin user created successfully')
   } catch (error) {

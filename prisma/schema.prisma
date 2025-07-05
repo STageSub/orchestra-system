@@ -265,6 +265,7 @@ model Orchestra {
   name          String
   subdomain     String   @unique
   databaseUrl   String?
+  logoUrl       String?
   status        String   @default("pending")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
