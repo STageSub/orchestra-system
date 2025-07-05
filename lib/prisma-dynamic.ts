@@ -12,7 +12,7 @@ const globalForNeonPrisma = globalThis as unknown as {
 const neonPrisma = globalForNeonPrisma.neonPrisma ?? new PrismaClient({
   datasources: {
     db: {
-      url: process.env.DATABASE_URL,
+      url: process.env.CENTRAL_DATABASE_URL || process.env.DATABASE_URL,
     },
   },
 })

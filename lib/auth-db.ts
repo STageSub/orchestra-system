@@ -96,7 +96,7 @@ export async function getCurrentUser(): Promise<User | null> {
     const prisma = new PrismaClient({
       datasources: {
         db: {
-          url: process.env.DATABASE_URL,
+          url: process.env.CENTRAL_DATABASE_URL || process.env.DATABASE_URL,
         },
       },
     })
@@ -130,7 +130,7 @@ export async function authenticateUser(username: string, password: string): Prom
     const prisma = new PrismaClient({
       datasources: {
         db: {
-          url: process.env.DATABASE_URL,
+          url: process.env.CENTRAL_DATABASE_URL || process.env.DATABASE_URL,
         },
       },
     })
@@ -209,7 +209,7 @@ export async function createSuperadminUser(): Promise<void> {
     const prisma = new PrismaClient({
       datasources: {
         db: {
-          url: process.env.DATABASE_URL,
+          url: process.env.CENTRAL_DATABASE_URL || process.env.DATABASE_URL,
         },
       },
     })
