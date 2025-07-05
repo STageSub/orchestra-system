@@ -65,10 +65,12 @@ export async function verifyToken(token: string): Promise<TokenPayload | null> {
 
 export async function setAuthCookie(token: string) {
   const cookieStore = await cookies()
+  const isProduction = process.env.NODE_ENV === 'production'
+  
   cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     maxAge: 60 * 60 * 24, // 24 hours
     path: '/'
   })
