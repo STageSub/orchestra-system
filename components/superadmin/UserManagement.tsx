@@ -33,14 +33,23 @@ export default function UserManagement() {
 
   const fetchUsers = async () => {
     try {
+      console.log('Fetching users...')
       const response = await fetch('/api/superadmin/users')
+      console.log('Users response status:', response.status)
+      
       if (response.status === 401) {
         window.location.href = '/admin/login'
         return
       }
+      
       if (response.ok) {
         const data = await response.json()
+        console.log('Users data:', data)
+        console.log('Number of users:', data.users?.length || 0)
         setUsers(data.users || [])
+      } else {
+        const error = await response.text()
+        console.error('Failed to fetch users:', error)
       }
     } catch (error) {
       console.error('Failed to fetch users:', error)

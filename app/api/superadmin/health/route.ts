@@ -5,10 +5,16 @@ import { checkSuperadminAuth } from '@/lib/auth-superadmin'
 const prisma = new PrismaClient()
 
 export async function GET() {
+  console.log('Health check endpoint called')
+  
   const authResult = await checkSuperadminAuth()
+  console.log('Auth result:', authResult)
+  
   if (!authResult.authorized) {
+    console.log('Health check unauthorized')
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  
   try {
     const health = {
       api: 'operational',
@@ -21,8 +27,9 @@ export async function GET() {
     try {
       await prisma.$queryRaw`SELECT 1`
       health.api = 'operational'
-    } catch (error) {
-      console.error('API health check failed:', error)
+      console.log('API health check passed')
+    } catch (error: any) {
+      console.error('API health check failed:', error.message)
       health.api = 'error'
     }
 

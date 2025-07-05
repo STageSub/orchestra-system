@@ -291,32 +291,50 @@ export default function SuperAdminDashboard() {
 
       {/* Recent Events */}
       <div className="bg-white rounded-lg shadow-sm border mt-8">
-        <div className="px-6 py-4 border-b">
+        <div className="px-6 py-4 border-b flex justify-between items-center">
           <h2 className="text-lg font-semibold text-gray-900">Senaste händelser</h2>
+          <select 
+            className="text-sm border-gray-300 rounded-md"
+            onChange={(e) => {
+              // TODO: Implement orchestra filter
+              console.log('Filter by orchestra:', e.target.value)
+            }}
+          >
+            <option value="">Alla orkestrar</option>
+            {metricsData?.orchestras.map(o => (
+              <option key={o.id} value={o.id}>{o.name}</option>
+            ))}
+          </select>
         </div>
         <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
-          {metricsData?.recentEvents.map((event) => (
-            <div key={event.id} className="px-6 py-4">
-              <div className="flex justify-between items-start">
-                <div>
+          {metricsData?.recentEvents.length === 0 ? (
+            <div className="px-6 py-8 text-center text-gray-500">
+              Inga händelser att visa
+            </div>
+          ) : metricsData?.recentEvents.map((event) => (
+            <div key={event.id} className="px-6 py-4 hover:bg-gray-50">
+              <div className="flex justify-between items-start gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    {event.orchestra && (
+                      <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded">
+                        {event.orchestra.name}
+                      </span>
+                    )}
+                    <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                      event.severity === 'error' ? 'bg-red-100 text-red-800' :
+                      event.severity === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-blue-100 text-blue-800'
+                    }`}>
+                      {event.severity === 'error' ? 'Fel' :
+                       event.severity === 'warning' ? 'Varning' : 'Info'}
+                    </span>
+                  </div>
                   <p className="text-sm font-medium text-gray-900">{event.title}</p>
-                  <p className="text-sm text-gray-500 mt-1">{event.description}</p>
-                  {event.orchestra && (
-                    <p className="text-xs text-gray-400 mt-1">{event.orchestra.name}</p>
-                  )}
+                  <p className="text-xs text-gray-500 mt-1">{event.description}</p>
                 </div>
-                <div className="flex flex-col items-end">
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    event.severity === 'error' ? 'bg-red-100 text-red-800' :
-                    event.severity === 'warning' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-blue-100 text-blue-800'
-                  }`}>
-                    {event.severity === 'error' ? 'Fel' :
-                     event.severity === 'warning' ? 'Varning' : 'Info'}
-                  </span>
-                  <p className="text-xs text-gray-400 mt-2">
-                    {new Date(event.createdAt).toLocaleDateString('sv-SE')}
-                  </p>
+                <div className="text-xs text-gray-400 whitespace-nowrap">
+                  {new Date(event.createdAt).toLocaleDateString('sv-SE')} {new Date(event.createdAt).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
             </div>

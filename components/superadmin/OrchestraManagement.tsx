@@ -23,14 +23,22 @@ export default function OrchestraManagement() {
 
   const fetchSystemHealth = async () => {
     try {
+      console.log('Fetching system health...')
       const response = await fetch('/api/superadmin/health')
+      console.log('Health response status:', response.status)
+      
       if (response.status === 401) {
         window.location.href = '/admin/login'
         return
       }
+      
       if (response.ok) {
         const data = await response.json()
+        console.log('System health data:', data)
         setSystemHealth(data)
+      } else {
+        const error = await response.text()
+        console.error('Health check failed:', error)
       }
     } catch (error) {
       console.error('Failed to fetch system health:', error)
@@ -141,19 +149,34 @@ export default function OrchestraManagement() {
             <h3 className="text-lg font-semibold">Databashälsa</h3>
           </div>
           <div className="space-y-3">
-            {systemHealth?.databases.map((db) => (
-              <div key={db.name} className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">{db.name}</span>
-                {db.status === 'healthy' ? (
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                ) : db.status === 'no-database' ? (
-                  <AlertCircle className="w-4 h-4 text-gray-400" />
-                ) : (
-                  <XCircle className="w-4 h-4 text-red-500" />
-                )}
-              </div>
-            )) || (
+            {!systemHealth ? (
               <div className="text-sm text-gray-400">Laddar...</div>
+            ) : systemHealth.databases?.length === 0 ? (
+              <div className="text-sm text-gray-500">Inga databaser konfigurerade</div>
+            ) : (
+              systemHealth.databases.map((db) => (
+                <div key={db.name} className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">{db.name}</span>
+                  <div className="flex items-center gap-2">
+                    {db.status === 'healthy' ? (
+                      <>
+                        <span className="text-xs text-green-600">OK</span>
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                      </>
+                    ) : db.status === 'no-database' ? (
+                      <>
+                        <span className="text-xs text-gray-400">Ingen DB</span>
+                        <AlertCircle className="w-4 h-4 text-gray-400" />
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-xs text-red-600">Fel</span>
+                        <XCircle className="w-4 h-4 text-red-500" />
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>
