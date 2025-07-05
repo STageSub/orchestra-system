@@ -114,16 +114,32 @@ export async function isAuthenticated(): Promise<boolean> {
 
 export async function authenticateUser(username: string, password: string): Promise<User | null> {
   try {
+    console.log(`[authenticateUser] Attempting login for username: ${username}`)
+    
     // Always use neonPrisma for authentication (User table is in main database)
     const user = await neonPrisma.user.findUnique({
-      where: { username }
+      where: { username },
+      include: { orchestra: true }
     })
     
+    console.log(`[authenticateUser] User found:`, user ? {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      orchestraId: user.orchestraId,
+      orchestraName: (user as any).orchestra?.name,
+      active: user.active,
+      hasPasswordHash: !!user.passwordHash
+    } : 'Not found')
+    
     if (!user || !user.active) {
+      console.log(`[authenticateUser] User not found or inactive`)
       return null
     }
     
     const passwordValid = await verifyPasswordHash(password, user.passwordHash)
+    console.log(`[authenticateUser] Password verification:`, passwordValid ? 'Valid' : 'Invalid')
+    
     if (!passwordValid) {
       return null
     }
@@ -134,6 +150,7 @@ export async function authenticateUser(username: string, password: string): Prom
       data: { lastLogin: new Date() }
     })
     
+    console.log(`[authenticateUser] Login successful for ${username}`)
     return user
   } catch (error) {
     console.error('Authentication error:', error)

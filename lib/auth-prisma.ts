@@ -35,7 +35,7 @@ export async function getPrismaForUser(request: NextRequest | Request): Promise<
       try {
         const orchestra = await prisma.orchestra.findUnique({
           where: { id: payload.orchestraId },
-          select: { subdomain: true, databaseUrl: true }
+          select: { databaseUrl: true, name: true, orchestraId: true }
         })
         
         if (!orchestra) {
@@ -43,17 +43,28 @@ export async function getPrismaForUser(request: NextRequest | Request): Promise<
           return prisma
         }
         
-        if (orchestra.subdomain) {
-          console.log(`[getPrismaForUser] Found orchestra: ${orchestra.subdomain}, has databaseUrl: ${!!orchestra.databaseUrl}`)
-          
+        console.log(`[getPrismaForUser] Found orchestra: ${orchestra.name} (${orchestra.orchestraId}), has databaseUrl: ${!!orchestra.databaseUrl}`)
+        
+        if (orchestra.databaseUrl) {
           try {
-            const client = await getPrismaClient(orchestra.subdomain)
-            console.log(`[getPrismaForUser] Successfully got client for ${orchestra.subdomain}`)
+            // Create a new Prisma client directly with the database URL
+            const { PrismaClient } = require('@prisma/client')
+            const client = new PrismaClient({
+              datasources: {
+                db: {
+                  url: orchestra.databaseUrl
+                }
+              }
+            })
+            console.log(`[getPrismaForUser] Successfully created client for ${orchestra.name}`)
             return client
           } catch (clientError) {
-            console.error(`[getPrismaForUser] Failed to get client for ${orchestra.subdomain}:`, clientError)
+            console.error(`[getPrismaForUser] Failed to create client for ${orchestra.name}:`, clientError)
             return prisma
           }
+        } else {
+          console.log('[getPrismaForUser] Orchestra has no database URL, using default')
+          return prisma
         }
       } catch (error) {
         console.error('[getPrismaForUser] Error fetching orchestra:', error)
