@@ -6,11 +6,7 @@ export function setAuthCookieOnResponse(response: NextResponse, token: string, i
     secure: isProduction || process.env.NODE_ENV === 'production',
     sameSite: 'lax' as const,
     maxAge: 60 * 60 * 24, // 24 hours
-    path: '/',
-    // Add domain for production to work across subdomains
-    ...(isProduction && {
-      domain: '.stagesub.com' // This allows cookie to work on all subdomains
-    })
+    path: '/'
   }
   
   response.cookies.set('orchestra-admin-session', token, cookieOptions)
@@ -21,8 +17,7 @@ export function setAuthCookieOnResponse(response: NextResponse, token: string, i
     `Max-Age=${cookieOptions.maxAge}; ` +
     `Path=/; ` +
     `SameSite=Lax` +
-    (cookieOptions.secure ? '; Secure' : '') +
-    (cookieOptions.domain ? `; Domain=${cookieOptions.domain}` : '')
+    (cookieOptions.secure ? '; Secure' : '')
   
   response.headers.set('Set-Cookie', cookieString)
   

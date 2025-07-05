@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createToken, setAuthCookie, verifyPassword, verifySuperadminPassword } from '@/lib/auth'
 import { authenticateUser, createToken as createDbToken } from '@/lib/auth-db'
-import { getSubdomain } from '@/lib/database-config'
 import { setAuthCookieOnResponse } from '@/lib/auth-cookie-fix'
 import { logger } from '@/lib/logger'
 
@@ -58,9 +57,8 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Get subdomain
-    const hostname = request.headers.get('host') || 'localhost:3001'
-    const subdomain = getSubdomain(hostname)
+    // No subdomains used in this system
+    const subdomain = undefined
     
     let token: string
     let role = 'admin'
@@ -103,8 +101,7 @@ export async function POST(request: NextRequest) {
         await logger.warn('auth', 'Failed login attempt - invalid password', {
           metadata: {
             ip,
-            loginType,
-            subdomain
+            loginType
           }
         })
         return NextResponse.json(
@@ -125,7 +122,6 @@ export async function POST(request: NextRequest) {
       metadata: {
         username: username || 'legacy-admin',
         role,
-        subdomain,
         ip,
         loginType: username ? 'database' : loginType
       }
@@ -139,7 +135,7 @@ export async function POST(request: NextRequest) {
     
     // Add debug logging in development
     if (process.env.NODE_ENV !== 'production') {
-      console.log('Login successful:', { username, role, subdomain })
+      console.log('Login successful:', { username, role })
     }
     
     return response
