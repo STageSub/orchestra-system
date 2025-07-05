@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth-db'
 import { PrismaClient } from '@prisma/client'
+import { isSafari } from '@/lib/safari-utils'
 
 export async function GET(request: NextRequest) {
   try {
     console.log('[/api/auth/me] Starting...')
+    
+    // Check if this is Safari
+    const userAgent = request.headers.get('user-agent') || ''
+    const isSafariBrowser = isSafari(userAgent)
+    console.log('[/api/auth/me] User agent:', userAgent.substring(0, 50), 'Safari:', isSafariBrowser)
     
     // Log cookies for debugging
     const cookieHeader = request.headers.get('cookie')
@@ -22,7 +28,8 @@ export async function GET(request: NextRequest) {
     
     let user = null
     try {
-      user = await getCurrentUser()
+      // Pass the request to getCurrentUser for Safari detection
+      user = await getCurrentUser(request as unknown as Request)
     } catch (error) {
       console.error('[/api/auth/me] Error in getCurrentUser:', error)
     }
@@ -31,6 +38,12 @@ export async function GET(request: NextRequest) {
     
     if (!user) {
       console.log('[/api/auth/me] No user found, returning 401')
+      console.log('[/api/auth/me] Debug info:', {
+        userAgent: userAgent.substring(0, 100),
+        isSafari: isSafariBrowser,
+        cookieHeader: cookieHeader ? 'present' : 'missing',
+        timestamp: new Date().toISOString()
+      })
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 

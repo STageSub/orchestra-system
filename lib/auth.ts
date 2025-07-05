@@ -40,19 +40,29 @@ export async function verifyToken(token: string): Promise<TokenPayload | null> {
 }
 
 export async function setAuthCookie(token: string) {
-  const cookieStore = await cookies()
-  cookieStore.set(COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24, // 24 hours
-    path: '/'
-  })
+  try {
+    const cookieStore = await cookies()
+    cookieStore.set(COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24, // 24 hours
+      path: '/'
+    })
+  } catch (error) {
+    console.error('[setAuthCookie] Error setting cookie:', error)
+    throw error
+  }
 }
 
 export async function getAuthCookie(): Promise<string | undefined> {
-  const cookieStore = await cookies()
-  return cookieStore.get(COOKIE_NAME)?.value
+  try {
+    const cookieStore = await cookies()
+    return cookieStore.get(COOKIE_NAME)?.value
+  } catch (error) {
+    console.error('[getAuthCookie] Error getting cookie:', error)
+    return undefined
+  }
 }
 
 export async function removeAuthCookie() {

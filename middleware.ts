@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { verifyToken } from '@/lib/auth'
+import { isSafari } from '@/lib/user-agent'
 
 // Inline getSubdomain to avoid importing database-config which has Prisma
 function getSubdomain(hostname: string): string {
@@ -30,10 +31,13 @@ const COOKIE_NAME = 'orchestra-admin-session'
 export async function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || 'localhost:3001'
   const subdomain = getSubdomain(hostname)
+  const userAgent = request.headers.get('user-agent') || ''
+  const isSafariBrowser = isSafari(userAgent)
   
   // Clone the request headers
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-subdomain', subdomain)
+  requestHeaders.set('x-is-safari', String(isSafariBrowser))
   
   // Create response with modified request
   const response = NextResponse.next({
@@ -41,6 +45,13 @@ export async function middleware(request: NextRequest) {
       headers: requestHeaders,
     }
   })
+  
+  // Safari fix: Add cache control headers for authenticated pages
+  if (isSafariBrowser && request.nextUrl.pathname.startsWith('/admin') && request.nextUrl.pathname !== '/admin/login') {
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
+  }
   
   // Handle superadmin routes
   if (request.nextUrl.pathname.startsWith('/superadmin')) {
@@ -84,6 +95,10 @@ export async function middleware(request: NextRequest) {
     const token = request.cookies.get(COOKIE_NAME)?.value
     
     if (!token) {
+      // Log Safari cookie issues
+      if (isSafariBrowser) {
+        console.log('[Middleware] Safari detected, no cookie found for path:', request.nextUrl.pathname)
+      }
       return NextResponse.redirect(new URL('/admin/login', request.url))
     }
     
@@ -91,7 +106,15 @@ export async function middleware(request: NextRequest) {
     const payload = await verifyToken(token)
     
     if (!payload || !payload.authenticated) {
-      // Clear invalid cookie for Safari
+      // Log validation failure
+      console.log('[Middleware] Token validation failed:', {
+        path: request.nextUrl.pathname,
+        isSafari: isSafariBrowser,
+        tokenPresent: !!token,
+        payloadValid: !!payload
+      })
+      
+      // Clear invalid cookie
       const redirectResponse = NextResponse.redirect(new URL('/admin/login', request.url))
       redirectResponse.cookies.delete(COOKIE_NAME)
       return redirectResponse

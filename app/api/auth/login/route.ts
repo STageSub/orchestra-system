@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createToken, setAuthCookie, verifyPassword, verifySuperadminPassword } from '@/lib/auth'
-import { authenticateUser, createToken as createDbToken } from '@/lib/auth-db'
+import { authenticateUser, createToken as createDbToken, removeAuthCookie } from '@/lib/auth-db'
 import { setAuthCookieOnResponse } from '@/lib/auth-cookie-fix'
 import { logger } from '@/lib/logger'
+import { isSafari } from '@/lib/user-agent'
 
 // Rate limiting: Track login attempts
 const loginAttempts = new Map<string, { count: number; resetTime: number }>()
@@ -33,6 +34,16 @@ function checkRateLimit(ip: string): boolean {
 export async function POST(request: NextRequest) {
   try {
     const ip = getClientIp(request)
+    const userAgent = request.headers.get('user-agent')
+    const isSafariBrowser = isSafari(userAgent)
+    
+    // Safari fix: Clear any existing cookies before login
+    if (isSafariBrowser) {
+      console.log('[login] Safari detected, clearing existing cookies first')
+      await removeAuthCookie()
+      // Small delay to ensure cookie is cleared
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
     
     // Check rate limit
     if (!checkRateLimit(ip)) {
@@ -133,9 +144,14 @@ export async function POST(request: NextRequest) {
     // Use improved cookie setting for production
     setAuthCookieOnResponse(response, token, process.env.NODE_ENV === 'production')
     
+    // Safari fix: Add cache control headers
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
+    
     // Add debug logging in development
     if (process.env.NODE_ENV !== 'production') {
-      console.log('Login successful:', { username, role })
+      console.log('Login successful:', { username, role, isSafari: isSafariBrowser })
     }
     
     return response

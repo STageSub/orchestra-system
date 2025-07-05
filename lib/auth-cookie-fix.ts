@@ -6,7 +6,7 @@ export function setAuthCookieOnResponse(response: NextResponse, token: string, i
   const cookieOptions = {
     httpOnly: true,
     secure: isSecure,
-    sameSite: isSecure ? 'none' as const : 'lax' as const,
+    sameSite: 'lax' as const, // Always use 'lax' for Safari compatibility
     maxAge: 60 * 60 * 24, // 24 hours
     path: '/'
   }

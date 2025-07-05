@@ -2,6 +2,7 @@ import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 import bcrypt from 'bcryptjs'
 import { PrismaClient } from '@prisma/client'
+import { isSafari, safariCookieDelay } from './safari-utils'
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'default-secret-change-in-production'
@@ -70,40 +71,76 @@ export async function setAuthCookie(token: string) {
   cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
+    sameSite: 'lax', // Use 'lax' for Safari compatibility
     maxAge: 60 * 60 * 24, // 24 hours
     path: '/'
   })
 }
 
-export async function getAuthCookie(): Promise<string | undefined> {
-  console.log('[getAuthCookie] Getting cookie:', COOKIE_NAME)
-  const cookieStore = await cookies()
-  const cookie = cookieStore.get(COOKIE_NAME)
-  console.log('[getAuthCookie] Cookie found:', cookie ? 'yes' : 'no')
-  return cookie?.value
+export async function getAuthCookie(retryCount = 0): Promise<string | undefined> {
+  console.log('[getAuthCookie] Getting cookie:', COOKIE_NAME, 'retry:', retryCount)
+  
+  try {
+    const cookieStore = await cookies()
+    const cookie = cookieStore.get(COOKIE_NAME)
+    console.log('[getAuthCookie] Cookie found:', cookie ? 'yes' : 'no')
+    
+    // If no cookie found and this is Safari, retry once after a delay
+    if (!cookie && retryCount === 0) {
+      console.log('[getAuthCookie] No cookie found, retrying after delay...')
+      await safariCookieDelay()
+      return getAuthCookie(1)
+    }
+    
+    return cookie?.value
+  } catch (error) {
+    console.error('[getAuthCookie] Error accessing cookies:', error)
+    // Return undefined instead of throwing
+    return undefined
+  }
 }
 
 export async function removeAuthCookie() {
   const cookieStore = await cookies()
+  const isProduction = process.env.NODE_ENV === 'production'
   
-  // Safari fix: Set cookie to empty value with past expiration
+  console.log('[removeAuthCookie] Clearing cookie for Safari compatibility')
+  
+  // Safari fix: Multiple approaches to ensure cookie is cleared
+  // 1. Set to empty value with immediate expiration
   cookieStore.set(COOKIE_NAME, '', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 0, // Expire immediately
+    secure: isProduction,
+    sameSite: 'lax', // Match the same sameSite as when setting
+    maxAge: -1, // Negative value to ensure deletion
     expires: new Date(0), // January 1, 1970
-    path: '/'
+    path: '/',
+    // Add domain for production to match set cookie
+    ...(isProduction && { domain: '.stagesub.com' })
   })
   
-  // Also try to delete it
+  // 2. Also explicitly delete
   cookieStore.delete(COOKIE_NAME)
+  
+  // 3. Try one more time with different approach for Safari
+  cookieStore.set(COOKIE_NAME, 'deleted', {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'lax',
+    maxAge: 0,
+    path: '/',
+    ...(isProduction && { domain: '.stagesub.com' })
+  })
 }
 
-export async function getCurrentUser(): Promise<User | null> {
+export async function getCurrentUser(request?: Request): Promise<User | null> {
   try {
     console.log('[getCurrentUser] Starting...')
+    
+    // Check if this is a Safari request
+    const userAgent = request?.headers.get('user-agent') || ''
+    const isSafariBrowser = isSafari(userAgent)
+    console.log('[getCurrentUser] User agent:', userAgent.substring(0, 50), 'Safari:', isSafariBrowser)
     
     let token
     try {

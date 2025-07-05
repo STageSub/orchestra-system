@@ -1,5 +1,6 @@
 import { jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
+import { safariCookieDelay } from './safari-utils'
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'default-secret-change-in-production'
@@ -16,10 +17,26 @@ interface AuthResult {
 
 export async function checkSuperadminAuth(): Promise<AuthResult> {
   try {
-    const cookieStore = await cookies()
-    const token = cookieStore.get('orchestra-admin-session')?.value
+    let token: string | undefined
+    
+    try {
+      const cookieStore = await cookies()
+      const cookie = cookieStore.get('orchestra-admin-session')
+      token = cookie?.value
+      
+      // Retry once for Safari if no cookie found
+      if (!token) {
+        await safariCookieDelay()
+        const retryCookie = cookieStore.get('orchestra-admin-session')
+        token = retryCookie?.value
+      }
+    } catch (error) {
+      console.error('[checkSuperadminAuth] Error accessing cookies:', error)
+      return { authorized: false }
+    }
 
     if (!token) {
+      console.log('[checkSuperadminAuth] No token found')
       return { authorized: false }
     }
 
