@@ -3,6 +3,8 @@ import { sendEmail } from '@/lib/email'
 import { getPrismaForUser } from '@/lib/auth-prisma'
 import { apiLogger } from '@/lib/logger'
 import { EmailRateLimiter } from '@/lib/email/rate-limiter'
+import { sendGroupSms } from '@/lib/sms'
+import { getSubdomainFromPrismaClient } from '@/lib/database-config'
 
 export async function POST(request: NextRequest) {
   let recipients: any[] = []
@@ -54,7 +56,8 @@ export async function POST(request: NextRequest) {
                   Detta meddelande skickades via StageSub Orchestra System.
                 </p>
               </div>
-            `
+            `,
+            subdomain: getSubdomainFromPrismaClient(prisma)
           })
           return { email: recipient.email, success: true }
         } catch (error) {
@@ -89,6 +92,30 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    // Send SMS if configured
+    let smsSent = 0
+    let smsFailed = 0
+    try {
+      // Get recipients with phone numbers
+      const smsRecipients = recipients.filter((r: any) => r.phone)
+      
+      if (smsRecipients.length > 0) {
+        console.log(`Sending SMS to ${smsRecipients.length} recipients with phone numbers`)
+        
+        // Create a shortened SMS message
+        const smsMessage = `Nytt meddelande från orkestern: ${subject}. Kolla din e-post för mer information.`
+        
+        const smsResult = await sendGroupSms(smsRecipients, smsMessage, prisma)
+        smsSent = smsResult.sent
+        smsFailed = smsResult.failed
+        
+        console.log(`SMS sent: ${smsSent}, failed: ${smsFailed}`)
+      }
+    } catch (smsError) {
+      console.error('Failed to send group SMS:', smsError)
+      // Don't fail the whole operation if SMS fails
+    }
+    
     // Log the group email activity
     try {
       await prisma.groupEmailLog.create({
@@ -121,12 +148,18 @@ export async function POST(request: NextRequest) {
 
     // Return response
     if (failureCount === 0) {
+      let message = `E-post skickad till ${successCount} mottagare!`
+      if (smsSent > 0) {
+        message += ` SMS skickat till ${smsSent} mottagare.`
+      }
       return NextResponse.json({
         success: true,
-        message: `E-post skickad till ${successCount} mottagare!`,
+        message,
         details: {
           sent: successCount,
-          failed: failureCount
+          failed: failureCount,
+          smsSent,
+          smsFailed
         }
       })
     } else if (successCount === 0) {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Mail, Key, Globe, Webhook, Save, TestTube, Eye, EyeOff } from 'lucide-react'
+import { Mail, Key, Globe, Webhook, Save, TestTube, Eye, EyeOff, MessageSquare } from 'lucide-react'
 
 interface OrchestraConfigProps {
   orchestraId: string
@@ -14,6 +14,15 @@ interface ConfigData {
   emailFromAddress?: string | null
   emailFromName?: string | null
   emailReplyTo?: string | null
+  // SMS Configuration
+  twilioAccountSid?: string | null
+  twilioAuthToken?: string | null
+  twilioFromNumber?: string | null
+  smsOnRequest?: boolean
+  smsOnReminder?: boolean
+  smsOnConfirmation?: boolean
+  smsOnPositionFilled?: boolean
+  smsOnGroupEmail?: boolean
   // Feature Toggles
   features?: any
   // Branding
@@ -218,6 +227,99 @@ export default function OrchestraConfig({ orchestraId, orchestraName }: Orchestr
               {isTesting ? 'Skickar...' : 'Testa'}
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* SMS Configuration */}
+      <div className="bg-white rounded-lg shadow-sm border p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <MessageSquare className="w-5 h-5 text-purple-500" />
+          <h3 className="text-lg font-semibold">SMS-konfiguration (Twilio)</h3>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Twilio Account SID
+            </label>
+            <input
+              type="password"
+              value={config.twilioAccountSid || ''}
+              onChange={(e) => setConfig({ ...config, twilioAccountSid: e.target.value })}
+              className="w-full px-3 py-2 border rounded-md"
+              placeholder="AC..."
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Finns i Twilio Console
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Twilio Auth Token
+            </label>
+            <input
+              type="password"
+              value={config.twilioAuthToken || ''}
+              onChange={(e) => setConfig({ ...config, twilioAuthToken: e.target.value })}
+              className="w-full px-3 py-2 border rounded-md"
+              placeholder="..."
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Hemlig nyckel från Twilio
+            </p>
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Från-nummer
+            </label>
+            <input
+              type="tel"
+              value={config.twilioFromNumber || ''}
+              onChange={(e) => setConfig({ ...config, twilioFromNumber: e.target.value })}
+              className="w-full px-3 py-2 border rounded-md"
+              placeholder="+46701234567"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Verifierat telefonnummer i Twilio
+            </p>
+          </div>
+        </div>
+
+        <div className="border-t pt-4">
+          <h4 className="text-sm font-medium text-gray-700 mb-3">När ska SMS skickas?</h4>
+          <div className="space-y-2">
+            {[
+              { key: 'smsOnRequest', label: 'Vid förfrågan', desc: 'Skicka SMS när musiker får en förfrågan' },
+              { key: 'smsOnReminder', label: 'Vid påminnelse', desc: 'Skicka SMS-påminnelse om obesvarad förfrågan' },
+              { key: 'smsOnConfirmation', label: 'Vid bekräftelse', desc: 'Skicka SMS när musiker accepterar' },
+              { key: 'smsOnPositionFilled', label: 'Vid fylld position', desc: 'Skicka SMS när position är tillsatt' },
+              { key: 'smsOnGroupEmail', label: 'Vid gruppmail', desc: 'Skicka SMS när gruppmail skickas' },
+            ].map(smsOption => (
+              <label key={smsOption.key} className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={config[smsOption.key as keyof ConfigData] ?? false}
+                  onChange={(e) => setConfig({
+                    ...config,
+                    [smsOption.key]: e.target.checked
+                  })}
+                  className="mt-1"
+                  disabled={!config.twilioAccountSid || !config.twilioAuthToken || !config.twilioFromNumber}
+                />
+                <div>
+                  <div className="font-medium text-sm">{smsOption.label}</div>
+                  <div className="text-xs text-gray-500">{smsOption.desc}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+          {(!config.twilioAccountSid || !config.twilioAuthToken || !config.twilioFromNumber) && (
+            <p className="text-xs text-amber-600 mt-3">
+              ⚠️ Konfigurera Twilio-uppgifter för att aktivera SMS-funktioner
+            </p>
+          )}
         </div>
       </div>
 

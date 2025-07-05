@@ -31,6 +31,16 @@ model Orchestra {
   emailFromName     String?
   emailReplyTo      String?
   
+  // SMS Configuration
+  twilioAccountSid  String?
+  twilioAuthToken   String?
+  twilioFromNumber  String?
+  smsOnRequest      Boolean  @default(false)
+  smsOnReminder     Boolean  @default(false)
+  smsOnConfirmation Boolean  @default(false)
+  smsOnPositionFilled Boolean @default(false)
+  smsOnGroupEmail   Boolean  @default(false)
+  
   // Feature Toggles
   features          Json?    @default("{}")
   

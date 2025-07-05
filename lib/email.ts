@@ -1,15 +1,125 @@
 import { Resend } from 'resend'
 import { PrismaClient } from '@prisma/client'
+import { PrismaClient as PrismaCentralClient } from '@prisma/client-central'
 import { getFile } from '@/lib/file-handler-db'
 import { getLogStorage } from '@/lib/log-storage'
 import { logger } from '@/lib/logger'
+import { getSubdomainFromPrismaClient } from '@/lib/database-config'
+import { sendRequestSms, sendReminderSms, sendConfirmationSms, sendPositionFilledSms } from '@/lib/sms'
 
 // Initialize log storage for email module
 if (process.env.NODE_ENV === 'development') {
   getLogStorage()
 }
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Cache for Resend instances per orchestra
+const resendInstances: Record<string, Resend> = {}
+
+// Get orchestra-specific Resend instance
+async function getResendInstance(subdomain: string | null): Promise<{ resend: Resend; config: any }> {
+  // If no subdomain or using default, use environment variable
+  if (!subdomain) {
+    return {
+      resend: new Resend(process.env.RESEND_API_KEY),
+      config: {
+        from: 'Orchestra System <no-reply@stagesub.com>',
+        fromName: 'Orchestra System',
+        replyTo: undefined
+      }
+    }
+  }
+  
+  // Check cache first
+  if (resendInstances[subdomain]) {
+    // Still need to fetch config for from address etc
+    try {
+      const centralPrisma = new PrismaCentralClient({
+        datasources: {
+          db: {
+            url: process.env.CENTRAL_DATABASE_URL
+          }
+        }
+      })
+      
+      const orchestra = await centralPrisma.orchestra.findUnique({
+        where: { subdomain },
+        select: { 
+          emailFromAddress: true,
+          emailFromName: true,
+          emailReplyTo: true
+        }
+      })
+      
+      return {
+        resend: resendInstances[subdomain],
+        config: {
+          from: orchestra?.emailFromAddress || 'no-reply@stagesub.com',
+          fromName: orchestra?.emailFromName || 'Orchestra System',
+          replyTo: orchestra?.emailReplyTo
+        }
+      }
+    } catch (error) {
+      console.error(`Failed to get orchestra email config for ${subdomain}:`, error)
+      return {
+        resend: resendInstances[subdomain],
+        config: {
+          from: 'no-reply@stagesub.com',
+          fromName: 'Orchestra System',
+          replyTo: undefined
+        }
+      }
+    }
+  }
+  
+  try {
+    // Get orchestra configuration from central database
+    const centralPrisma = new PrismaCentralClient({
+      datasources: {
+        db: {
+          url: process.env.CENTRAL_DATABASE_URL
+        }
+      }
+    })
+    
+    const orchestra = await centralPrisma.orchestra.findUnique({
+      where: { subdomain },
+      select: { 
+        resendApiKey: true,
+        emailFromAddress: true,
+        emailFromName: true,
+        emailReplyTo: true
+      }
+    })
+    
+    // Use orchestra's API key if configured, otherwise fall back to default
+    const apiKey = orchestra?.resendApiKey || process.env.RESEND_API_KEY
+    
+    if (apiKey) {
+      const instance = new Resend(apiKey)
+      resendInstances[subdomain] = instance
+      return {
+        resend: instance,
+        config: {
+          from: orchestra?.emailFromAddress || 'no-reply@stagesub.com',
+          fromName: orchestra?.emailFromName || 'Orchestra System',
+          replyTo: orchestra?.emailReplyTo
+        }
+      }
+    }
+  } catch (error) {
+    console.error(`Failed to get orchestra Resend configuration for ${subdomain}:`, error)
+  }
+  
+  // Fallback to default
+  return {
+    resend: new Resend(process.env.RESEND_API_KEY),
+    config: {
+      from: 'no-reply@stagesub.com',
+      fromName: 'Orchestra System',
+      replyTo: undefined
+    }
+  }
+}
 
 interface SendEmailParams {
   to: string
@@ -20,18 +130,20 @@ interface SendEmailParams {
     filename: string
     content: string
   }>
+  subdomain?: string | null
 }
 
-export async function sendEmail({ to, subject, html, from = 'Orchestra System <no-reply@stagesub.com>', attachments }: SendEmailParams) {
+export async function sendEmail({ to, subject, html, from, attachments, subdomain }: SendEmailParams) {
   // Check if we should send real emails
   const forceRealEmails = process.env.FORCE_REAL_EMAILS === 'true'
-  const hasApiKey = !!process.env.RESEND_API_KEY
+  const hasApiKey = !!process.env.RESEND_API_KEY || subdomain // Orchestra might have its own key
   const shouldSimulate = (process.env.NODE_ENV === 'development' && !forceRealEmails) || !hasApiKey
   
   console.log('=== EMAIL DEBUG ===')
   console.log('NODE_ENV:', process.env.NODE_ENV)
   console.log('FORCE_REAL_EMAILS:', process.env.FORCE_REAL_EMAILS)
   console.log('Has API Key:', hasApiKey)
+  console.log('Orchestra subdomain:', subdomain)
   console.log('Should Simulate:', shouldSimulate)
   console.log('==================')
   
@@ -54,25 +166,37 @@ export async function sendEmail({ to, subject, html, from = 'Orchestra System <n
         subject,
         from,
         attachmentCount: attachments?.length || 0,
-        mode: 'simulation'
+        mode: 'simulation',
+        subdomain
       }
     })
     
     return { id: 'simulated-' + Date.now() }
   }
 
+  // Get orchestra-specific Resend instance and config
+  const { resend, config } = await getResendInstance(subdomain)
+  
+  // Use orchestra config for from address if not specified
+  const finalFrom = from || `${config.fromName} <${config.from}>`
+
   console.log('=== SENDING REAL EMAIL ===')
-  console.log('From:', from)
+  console.log('From:', finalFrom)
   console.log('To:', to)
   console.log('Subject:', subject)
+  console.log('Orchestra:', subdomain || 'default')
   console.log('=========================')
 
   try {
     const emailData: any = {
-      from,
+      from: finalFrom,
       to,
       subject,
       html,
+    }
+    
+    if (config.replyTo) {
+      emailData.reply_to = config.replyTo
     }
     
     if (attachments && attachments.length > 0) {
@@ -90,9 +214,10 @@ export async function sendEmail({ to, subject, html, from = 'Orchestra System <n
         metadata: {
           to,
           subject,
-          from,
+          from: finalFrom,
           error: error,
-          attachmentCount: attachments?.length || 0
+          attachmentCount: attachments?.length || 0,
+          subdomain
         }
       })
       
@@ -106,9 +231,10 @@ export async function sendEmail({ to, subject, html, from = 'Orchestra System <n
       metadata: {
         to,
         subject,
-        from,
+        from: finalFrom,
         emailId: data?.id,
-        attachmentCount: attachments?.length || 0
+        attachmentCount: attachments?.length || 0,
+        subdomain
       }
     })
     
@@ -121,9 +247,10 @@ export async function sendEmail({ to, subject, html, from = 'Orchestra System <n
       metadata: {
         to,
         subject,
-        from,
+        from: finalFrom,
         error: error instanceof Error ? error.message : String(error),
-        attachmentCount: attachments?.length || 0
+        attachmentCount: attachments?.length || 0,
+        subdomain
       }
     })
     
@@ -227,11 +354,16 @@ export async function sendTemplatedEmail(
 
   console.log('Final subject:', subject)
   console.log('Calling sendEmail...')
+  
+  // Get subdomain from prisma client to use correct Resend instance
+  const subdomain = getSubdomainFromPrismaClient(prisma)
+  
   const result = await sendEmail({
     to,
     subject,
     html: fullHtml,
-    attachments
+    attachments,
+    subdomain
   })
   console.log('=== SEND TEMPLATED EMAIL - END ===\n')
   return result
@@ -457,6 +589,23 @@ export async function sendRequestEmail(
   
   await sendTemplatedEmail('request', musician.email, variables, prisma, attachments, language)
   console.log('✅ Request email sent successfully')
+  
+  // Send SMS if configured and musician has phone number
+  if (musician.phone) {
+    try {
+      await sendRequestSms(
+        musician.phone,
+        musician.firstName,
+        projectNeed.project.name,
+        projectNeed.position.name,
+        prisma
+      )
+      console.log('✅ Request SMS sent successfully')
+    } catch (error) {
+      console.error('Failed to send request SMS:', error)
+      // Don't fail the whole operation if SMS fails
+    }
+  }
 
   // Log the communication
   await prisma.communicationLog.create({
@@ -517,6 +666,21 @@ export async function sendReminderEmail(request: RequestWithRelations, token: st
 
   const language = (musician.preferredLanguage || 'sv') as 'sv' | 'en'
   await sendTemplatedEmail('reminder', musician.email, variables, prisma, undefined, language)
+  
+  // Send SMS if configured and musician has phone number
+  if (musician.phone) {
+    try {
+      await sendReminderSms(
+        musician.phone,
+        musician.firstName,
+        projectNeed.project.name,
+        prisma
+      )
+      console.log('✅ Reminder SMS sent successfully')
+    } catch (error) {
+      console.error('Failed to send reminder SMS:', error)
+    }
+  }
 
   // Update reminder sent timestamp
   await prisma.request.update({
@@ -638,6 +802,22 @@ export async function sendConfirmationEmail(request: RequestWithRelations, prism
   console.error('- language:', language)
   await sendTemplatedEmail('confirmation', musician.email, variables, prisma, attachments, language)
   console.error('✅ Confirmation email sent successfully')
+  
+  // Send SMS if configured and musician has phone number
+  if (musician.phone) {
+    try {
+      await sendConfirmationSms(
+        musician.phone,
+        musician.firstName,
+        projectNeed.project.name,
+        projectNeed.position.name,
+        prisma
+      )
+      console.log('✅ Confirmation SMS sent successfully')
+    } catch (error) {
+      console.error('Failed to send confirmation SMS:', error)
+    }
+  }
 
   // Update confirmation sent flag (skip for test requests)
   if (request.id !== 999) {
@@ -718,6 +898,22 @@ export async function sendPositionFilledEmail(request: RequestWithRelations, pri
 
   const language = (musician.preferredLanguage || 'sv') as 'sv' | 'en'
   await sendTemplatedEmail('position_filled', musician.email, variables, prisma, undefined, language)
+  
+  // Send SMS if configured and musician has phone number
+  if (musician.phone) {
+    try {
+      await sendPositionFilledSms(
+        musician.phone,
+        musician.firstName,
+        projectNeed.project.name,
+        projectNeed.position.name,
+        prisma
+      )
+      console.log('✅ Position filled SMS sent successfully')
+    } catch (error) {
+      console.error('Failed to send position filled SMS:', error)
+    }
+  }
 
   // Log the communication
   await prisma.communicationLog.create({

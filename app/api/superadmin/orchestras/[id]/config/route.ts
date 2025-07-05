@@ -34,6 +34,15 @@ export async function GET(
         emailFromAddress: true,
         emailFromName: true,
         emailReplyTo: true,
+        // SMS Configuration
+        twilioAccountSid: true,
+        twilioAuthToken: true,
+        twilioFromNumber: true,
+        smsOnRequest: true,
+        smsOnReminder: true,
+        smsOnConfirmation: true,
+        smsOnPositionFilled: true,
+        smsOnGroupEmail: true,
         // Feature Toggles
         features: true,
         // Branding
@@ -56,6 +65,8 @@ export async function GET(
     const config = {
       ...orchestra,
       resendApiKey: orchestra.resendApiKey ? '***' + orchestra.resendApiKey.slice(-4) : null,
+      twilioAccountSid: orchestra.twilioAccountSid ? '***' + orchestra.twilioAccountSid.slice(-4) : null,
+      twilioAuthToken: orchestra.twilioAuthToken ? '***' + orchestra.twilioAuthToken.slice(-4) : null,
       webhookSecret: orchestra.webhookSecret ? '***' + orchestra.webhookSecret.slice(-4) : null,
     }
     
@@ -106,6 +117,32 @@ export async function PUT(
     }
     if (data.emailReplyTo !== undefined) {
       updateData.emailReplyTo = data.emailReplyTo
+    }
+    
+    // SMS Configuration
+    if (data.twilioAccountSid !== undefined && !data.twilioAccountSid.includes('***')) {
+      updateData.twilioAccountSid = data.twilioAccountSid
+    }
+    if (data.twilioAuthToken !== undefined && !data.twilioAuthToken.includes('***')) {
+      updateData.twilioAuthToken = data.twilioAuthToken
+    }
+    if (data.twilioFromNumber !== undefined) {
+      updateData.twilioFromNumber = data.twilioFromNumber
+    }
+    if (data.smsOnRequest !== undefined) {
+      updateData.smsOnRequest = data.smsOnRequest
+    }
+    if (data.smsOnReminder !== undefined) {
+      updateData.smsOnReminder = data.smsOnReminder
+    }
+    if (data.smsOnConfirmation !== undefined) {
+      updateData.smsOnConfirmation = data.smsOnConfirmation
+    }
+    if (data.smsOnPositionFilled !== undefined) {
+      updateData.smsOnPositionFilled = data.smsOnPositionFilled
+    }
+    if (data.smsOnGroupEmail !== undefined) {
+      updateData.smsOnGroupEmail = data.smsOnGroupEmail
     }
     
     // Feature Toggles
