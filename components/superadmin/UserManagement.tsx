@@ -22,6 +22,8 @@ export default function UserManagement() {
   const [users, setUsers] = useState<UserData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingUser, setEditingUser] = useState<UserData | null>(null)
   const [orchestras, setOrchestras] = useState<any[]>([])
 
   useEffect(() => {
@@ -106,6 +108,65 @@ export default function UserManagement() {
       }
     } catch (error) {
       console.error('Error creating user:', error)
+      alert('Ett fel uppstod')
+    }
+  }
+
+  const handleEditUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingUser) return
+    
+    const form = e.target as HTMLFormElement
+    const formData = new FormData(form)
+    
+    try {
+      const response = await fetch(`/api/superadmin/users/${editingUser.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: formData.get('username'),
+          email: formData.get('email'),
+          password: formData.get('password') || undefined,
+          role: formData.get('role'),
+          active: formData.get('active') === 'true',
+          orchestraId: formData.get('orchestraId') || null
+        })
+      })
+
+      if (response.ok) {
+        alert('Användare uppdaterad!')
+        setShowEditModal(false)
+        setEditingUser(null)
+        fetchUsers()
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Kunde inte uppdatera användare')
+      }
+    } catch (error) {
+      console.error('Error updating user:', error)
+      alert('Ett fel uppstod')
+    }
+  }
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm('Är du säker på att du vill ta bort denna användare?')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/superadmin/users/${userId}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        alert('Användare borttagen!')
+        fetchUsers()
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Kunde inte ta bort användare')
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error)
       alert('Ett fel uppstod')
     }
   }
@@ -202,17 +263,17 @@ export default function UserManagement() {
                       <button
                         className="text-gray-600 hover:text-gray-900"
                         title="Redigera"
+                        onClick={() => {
+                          setEditingUser(user)
+                          setShowEditModal(true)
+                        }}
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
                         className="text-red-600 hover:text-red-900"
                         title="Ta bort"
-                        onClick={() => {
-                          if (confirm('Är du säker på att du vill ta bort denna användare?')) {
-                            alert('Ta bort användare (kommer snart)')
-                          }
-                        }}
+                        onClick={() => handleDeleteUser(user.id)}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -303,6 +364,110 @@ export default function UserManagement() {
                   className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md"
                 >
                   Skapa användare
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditModal && editingUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Redigera användare</h3>
+            
+            <form onSubmit={handleEditUser} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Användarnamn</label>
+                <input
+                  type="text"
+                  name="username"
+                  defaultValue={editingUser.username}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">E-post</label>
+                <input
+                  type="email"
+                  name="email"
+                  defaultValue={editingUser.email}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Nytt lösenord (lämna tomt för att behålla)</label>
+                <input
+                  type="password"
+                  name="password"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                  minLength={6}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Roll</label>
+                <select
+                  name="role"
+                  defaultValue={editingUser.role}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                  required
+                >
+                  <option value="user">Användare</option>
+                  <option value="admin">Admin</option>
+                  <option value="superadmin">Superadmin</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Status</label>
+                <select
+                  name="active"
+                  defaultValue={editingUser.active ? 'true' : 'false'}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                  required
+                >
+                  <option value="true">Aktiv</option>
+                  <option value="false">Inaktiv</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Orkester</label>
+                <select
+                  name="orchestraId"
+                  defaultValue={editingUser.orchestra?.id || ''}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                >
+                  <option value="">-- Ingen orkester --</option>
+                  {orchestras.map(o => (
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false)
+                    setEditingUser(null)
+                  }}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+                >
+                  Avbryt
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md"
+                >
+                  Spara ändringar
                 </button>
               </div>
             </form>
