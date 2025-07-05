@@ -90,23 +90,36 @@ export async function removeAuthCookie() {
 }
 
 export async function getCurrentUser(): Promise<User | null> {
-  console.log('[getCurrentUser] Starting...')
-  
-  const token = await getAuthCookie()
-  console.log('[getCurrentUser] Token from cookie:', token ? `${token.substring(0, 20)}...` : 'null')
-  
-  if (!token) {
-    console.log('[getCurrentUser] No token found in cookie')
-    return null
-  }
-  
-  const payload = await verifyToken(token)
-  console.log('[getCurrentUser] Token payload:', payload ? { userId: payload.userId, authenticated: payload.authenticated } : 'null')
-  
-  if (!payload || !payload.userId) {
-    console.log('[getCurrentUser] Invalid payload or missing userId')
-    return null
-  }
+  try {
+    console.log('[getCurrentUser] Starting...')
+    
+    let token
+    try {
+      token = await getAuthCookie()
+      console.log('[getCurrentUser] Token from cookie:', token ? `${token.substring(0, 20)}...` : 'null')
+    } catch (error) {
+      console.error('[getCurrentUser] Error getting cookie:', error)
+      return null
+    }
+    
+    if (!token) {
+      console.log('[getCurrentUser] No token found in cookie')
+      return null
+    }
+    
+    let payload
+    try {
+      payload = await verifyToken(token)
+      console.log('[getCurrentUser] Token payload:', payload ? { userId: payload.userId, authenticated: payload.authenticated } : 'null')
+    } catch (error) {
+      console.error('[getCurrentUser] Error verifying token:', error)
+      return null
+    }
+    
+    if (!payload || !payload.userId) {
+      console.log('[getCurrentUser] Invalid payload or missing userId')
+      return null
+    }
   
   try {
     // Create a local Prisma instance for the central database
@@ -130,6 +143,10 @@ export async function getCurrentUser(): Promise<User | null> {
   } catch (error) {
     // If User table doesn't exist yet, return null
     console.error('Error fetching user:', error)
+    return null
+  }
+  } catch (error) {
+    console.error('[getCurrentUser] Unexpected error:', error)
     return null
   }
 }

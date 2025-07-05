@@ -10,7 +10,23 @@ export async function GET(request: NextRequest) {
     const cookieHeader = request.headers.get('cookie')
     console.log('[/api/auth/me] Cookie header:', cookieHeader)
     
-    const user = await getCurrentUser()
+    // Try to parse cookie manually
+    if (cookieHeader) {
+      const cookies = cookieHeader.split(';').map(c => c.trim())
+      const sessionCookie = cookies.find(c => c.startsWith('orchestra-admin-session='))
+      console.log('[/api/auth/me] Session cookie found:', sessionCookie ? 'yes' : 'no')
+      if (sessionCookie) {
+        console.log('[/api/auth/me] Session cookie value:', sessionCookie.substring(0, 50) + '...')
+      }
+    }
+    
+    let user = null
+    try {
+      user = await getCurrentUser()
+    } catch (error) {
+      console.error('[/api/auth/me] Error in getCurrentUser:', error)
+    }
+    
     console.log('[/api/auth/me] getCurrentUser result:', user ? `User ${user.id}` : 'null')
     
     if (!user) {
