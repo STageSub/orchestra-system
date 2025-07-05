@@ -261,12 +261,17 @@ model Customer {
 
 model Orchestra {
   id           String   @id @default(cuid())
+  orchestraId  String   @unique @default(cuid())
   name         String
   subdomain    String   @unique
   contactName  String
   contactEmail String
   databaseUrl  String?
-  status       String   @default("pending") // pending, active, inactive
+  status       String   @default("pending") // pending, active, inactive, suspended
+  plan         String   @default("medium") // small, medium, enterprise
+  maxMusicians Int      @default(200)
+  maxProjects  Int      @default(20)
+  pricePerMonth Int     @default(4990)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   users        User[]

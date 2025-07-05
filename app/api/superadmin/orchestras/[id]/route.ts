@@ -1,0 +1,111 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { PrismaClient } from '@prisma/client'
+
+const prisma = new PrismaClient()
+
+// GET orchestra by ID
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+
+  try {
+    const orchestra = await prisma.orchestra.findUnique({
+      where: { id }
+    })
+
+    if (!orchestra) {
+      return NextResponse.json(
+        { error: 'Orchestra not found' },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json(orchestra)
+  } catch (error) {
+    console.error('Error fetching orchestra:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch orchestra' },
+      { status: 500 }
+    )
+  }
+}
+
+// PUT update orchestra
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+
+  try {
+    const body = await request.json()
+    
+    // Update orchestra details including subscription
+    const updatedOrchestra = await prisma.orchestra.update({
+      where: { id },
+      data: {
+        name: body.name,
+        contactName: body.contactName || undefined,
+        contactEmail: body.contactEmail || undefined,
+        plan: body.plan || undefined,
+        maxMusicians: body.maxMusicians !== undefined ? parseInt(body.maxMusicians) : undefined,
+        maxProjects: body.maxProjects !== undefined ? parseInt(body.maxProjects) : undefined,
+        pricePerMonth: body.pricePerMonth !== undefined ? parseInt(body.pricePerMonth) : undefined,
+        updatedAt: new Date()
+      }
+    })
+    
+    return NextResponse.json({
+      success: true,
+      orchestra: updatedOrchestra
+    })
+  } catch (error) {
+    console.error('Error updating orchestra:', error)
+    return NextResponse.json(
+      { error: 'Failed to update orchestra' },
+      { status: 500 }
+    )
+  }
+}
+
+// PATCH update orchestra status
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+
+  try {
+    const body = await request.json()
+    
+    if (!body.status || !['active', 'inactive', 'suspended'].includes(body.status)) {
+      return NextResponse.json(
+        { error: 'Invalid status' },
+        { status: 400 }
+      )
+    }
+
+    const updatedOrchestra = await prisma.orchestra.update({
+      where: { id },
+      data: {
+        status: body.status,
+        updatedAt: new Date()
+      }
+    })
+
+    return NextResponse.json({
+      success: true,
+      orchestra: updatedOrchestra
+    })
+  } catch (error) {
+    console.error('Error updating orchestra status:', error)
+    return NextResponse.json(
+      { error: 'Failed to update orchestra status' },
+      { status: 500 }
+    )
+  } finally {
+    await prisma.$disconnect()
+  }
+}

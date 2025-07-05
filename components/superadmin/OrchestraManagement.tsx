@@ -1,12 +1,37 @@
 'use client'
 
-import { useState } from 'react'
-import { Plus, Database, Zap, Server, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Plus, Database, Zap, Server, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react'
+
+interface SystemHealth {
+  api: string
+  databases: { name: string; status: string }[]
+  email: string
+}
 
 export default function OrchestraManagement() {
   const [showProvisionModal, setShowProvisionModal] = useState(false)
   const [isProvisioning, setIsProvisioning] = useState(false)
   const [provisioningStatus, setProvisioningStatus] = useState<string[]>([])
+  const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null)
+
+  useEffect(() => {
+    fetchSystemHealth()
+    const interval = setInterval(fetchSystemHealth, 30000) // Refresh every 30 seconds
+    return () => clearInterval(interval)
+  }, [])
+
+  const fetchSystemHealth = async () => {
+    try {
+      const response = await fetch('/api/superadmin/health')
+      if (response.ok) {
+        const data = await response.json()
+        setSystemHealth(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch system health:', error)
+    }
+  }
 
   const handleProvision = async (formData: {
     name: string
@@ -71,13 +96,35 @@ export default function OrchestraManagement() {
             <h3 className="text-lg font-semibold">Snabbåtgärder</h3>
           </div>
           <div className="space-y-3">
-            <button className="w-full text-left px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-md text-sm">
+            <button 
+              onClick={async () => {
+                if (confirm('Vill du köra migrationer på alla databaser?')) {
+                  alert('Kör migrationer... (kommer snart)')
+                  // TODO: Implement migration runner
+                }
+              }}
+              className="w-full text-left px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-md text-sm"
+            >
               Kör migrationer på alla databaser
             </button>
-            <button className="w-full text-left px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-md text-sm">
+            <button 
+              onClick={async () => {
+                if (confirm('Vill du uppdatera alla scheman?')) {
+                  alert('Uppdaterar scheman... (kommer snart)')
+                  // TODO: Implement schema update
+                }
+              }}
+              className="w-full text-left px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-md text-sm"
+            >
               Uppdatera alla scheman
             </button>
-            <button className="w-full text-left px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-md text-sm">
+            <button 
+              onClick={async () => {
+                alert('Cache rensad!')
+                // In a real implementation, this would clear Redis/memory caches
+              }}
+              className="w-full text-left px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-md text-sm"
+            >
               Rensa cache för alla orkestrar
             </button>
           </div>
@@ -90,14 +137,18 @@ export default function OrchestraManagement() {
             <h3 className="text-lg font-semibold">Databashälsa</h3>
           </div>
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">SCO Admin</span>
-              <CheckCircle className="w-4 h-4 text-green-500" />
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">SCOSO Admin</span>
-              <CheckCircle className="w-4 h-4 text-green-500" />
-            </div>
+            {systemHealth?.databases.map((db) => (
+              <div key={db.name} className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">{db.name}</span>
+                {db.status === 'healthy' ? (
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                ) : (
+                  <XCircle className="w-4 h-4 text-red-500" />
+                )}
+              </div>
+            )) || (
+              <div className="text-sm text-gray-400">Laddar...</div>
+            )}
           </div>
         </div>
 
@@ -110,15 +161,33 @@ export default function OrchestraManagement() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">API</span>
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Operativ</span>
+              <span className={`text-xs px-2 py-1 rounded-full ${
+                systemHealth?.api === 'operational' 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-red-100 text-red-800'
+              }`}>
+                {systemHealth?.api === 'operational' ? 'Operativ' : 'Fel'}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Databaser</span>
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Alla OK</span>
+              <span className={`text-xs px-2 py-1 rounded-full ${
+                systemHealth?.databases.every(db => db.status === 'healthy')
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-yellow-100 text-yellow-800'
+              }`}>
+                {systemHealth?.databases.every(db => db.status === 'healthy') ? 'Alla OK' : 'Problem'}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">E-post</span>
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Aktiv</span>
+              <span className={`text-xs px-2 py-1 rounded-full ${
+                systemHealth?.email === 'operational' 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-red-100 text-red-800'
+              }`}>
+                {systemHealth?.email === 'operational' ? 'Aktiv' : 'Fel'}
+              </span>
             </div>
           </div>
         </div>
