@@ -12,6 +12,7 @@ interface OrchestraData {
   name: string
   subdomain: string
   status: string
+  logoUrl?: string
   subscription: {
     plan: string
     status: string
@@ -60,6 +61,9 @@ export default function SuperAdminDashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'overview' | 'customers' | 'orchestras' | 'users'>('overview')
   const [selectedOrchestra, setSelectedOrchestra] = useState<string>('')
+  const [resetModalOpen, setResetModalOpen] = useState(false)
+  const [resetConfirmText, setResetConfirmText] = useState('')
+  const [isResetting, setIsResetting] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -88,6 +92,44 @@ export default function SuperAdminDashboard() {
       console.error('Failed to fetch data:', error)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleResetDemo = async () => {
+    if (resetConfirmText !== 'RESET SCOSO') {
+      alert('Du måste skriva "RESET SCOSO" för att bekräfta')
+      return
+    }
+
+    setIsResetting(true)
+    try {
+      // Find SCOSO orchestra
+      const scoscoOrchestra = metricsData?.orchestras.find(o => o.subdomain === 'scosco')
+      if (!scoscoOrchestra) {
+        alert('SCOSO orchestra hittades inte')
+        return
+      }
+
+      const response = await fetch(`/api/superadmin/orchestras/${scoscoOrchestra.id}/reset-demo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (response.ok) {
+        alert('SCOSO demo har återställts!')
+        setResetModalOpen(false)
+        setResetConfirmText('')
+        // Refresh data
+        await fetchData()
+      } else {
+        const error = await response.json()
+        alert(`Fel: ${error.error || 'Kunde inte återställa demo'}`)
+      }
+    } catch (error) {
+      console.error('Reset error:', error)
+      alert('Ett fel uppstod vid återställning')
+    } finally {
+      setIsResetting(false)
     }
   }
 
@@ -211,8 +253,15 @@ export default function SuperAdminDashboard() {
 
       {/* Customer Table */}
       <div className="bg-white rounded-lg shadow-sm border">
-        <div className="px-6 py-4 border-b">
+        <div className="px-6 py-4 border-b flex justify-between items-center">
           <h2 className="text-lg font-semibold text-gray-900">Kunder</h2>
+          <a
+            href="/superadmin/orchestras/new"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700"
+          >
+            <Building className="w-4 h-4" />
+            Skapa ny orkester
+          </a>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -246,7 +295,19 @@ export default function SuperAdminDashboard() {
                 <tr key={orchestra.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <Database className="w-8 h-8 text-gray-400 mr-3" />
+                      {orchestra.logoUrl ? (
+                        <img 
+                          src={orchestra.logoUrl} 
+                          alt="" 
+                          className="w-8 h-8 object-contain mr-3 rounded"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center mr-3 flex-shrink-0">
+                          <span className="text-xs font-medium text-gray-600">
+                            {orchestra.name.substring(0, 3).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
                       <div>
                         <div className="text-sm font-medium text-gray-900">
                           {orchestra.name}
@@ -290,10 +351,18 @@ export default function SuperAdminDashboard() {
                     </button>
                     <button 
                       onClick={() => setActiveTab('customers')}
-                      className="text-gray-600 hover:text-gray-900"
+                      className="text-gray-600 hover:text-gray-900 mr-4"
                     >
                       Hantera
                     </button>
+                    {orchestra.subdomain === 'scosco' && (
+                      <button 
+                        onClick={() => setResetModalOpen(true)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        Återställ Demo
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -361,6 +430,51 @@ export default function SuperAdminDashboard() {
         <OrchestraManagement />
       ) : (
         <UserManagement />
+      )}
+
+      {/* Reset Demo Modal */}
+      {resetModalOpen && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Återställ SCOSO Demo
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Detta kommer att ta bort alla musiker och projekt från SCOSO-orkestern. 
+              Denna åtgärd kan inte ångras.
+            </p>
+            <p className="text-sm text-gray-600 mb-4">
+              För att bekräfta, skriv <span className="font-mono font-semibold">RESET SCOSO</span> nedan:
+            </p>
+            <input
+              type="text"
+              value={resetConfirmText}
+              onChange={(e) => setResetConfirmText(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 mb-4"
+              placeholder="Skriv här..."
+              disabled={isResetting}
+            />
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setResetModalOpen(false)
+                  setResetConfirmText('')
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                disabled={isResetting}
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleResetDemo}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50"
+                disabled={resetConfirmText !== 'RESET SCOSO' || isResetting}
+              >
+                {isResetting ? 'Återställer...' : 'Återställ Demo'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

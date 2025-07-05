@@ -31,14 +31,46 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (response.ok) {
-        // Add small delay to ensure cookie is set
-        await new Promise(resolve => setTimeout(resolve, 100))
-        // Navigate based on user role
-        if (data.role === 'superadmin' || (useOldLogin && loginType === 'superadmin')) {
-          window.location.href = '/superadmin'
-        } else {
-          window.location.href = '/admin'
+        // Add longer delay to ensure cookie is properly set
+        await new Promise(resolve => setTimeout(resolve, 300))
+        
+        // Verify authentication was successful by calling verify endpoint
+        try {
+          const verifyResponse = await fetch('/api/auth/verify')
+          const verifyData = await verifyResponse.json()
+          
+          if (!verifyData.authenticated) {
+            console.error('Cookie verification failed:', verifyData.error)
+            // Retry login one more time
+            const retryResponse = await fetch('/api/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                username: useOldLogin ? undefined : username,
+                password, 
+                loginType: useOldLogin ? loginType : undefined
+              })
+            })
+            
+            if (!retryResponse.ok) {
+              setError('Authentication failed. Please try again.')
+              return
+            }
+            
+            // Wait a bit more after retry
+            await new Promise(resolve => setTimeout(resolve, 500))
+          }
+        } catch (error) {
+          console.error('Verification error:', error)
         }
+        
+        // Navigate based on user role
+        const targetPath = (data.role === 'superadmin' || (useOldLogin && loginType === 'superadmin')) 
+          ? '/superadmin' 
+          : '/admin'
+        
+        // Use router.replace to prevent back button issues
+        router.replace(targetPath)
       } else {
         setError(data.error || 'Fel lösenord')
       }

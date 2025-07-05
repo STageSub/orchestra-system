@@ -18,6 +18,25 @@ const navigation = [
   { name: 'Gruppmail', href: '/admin/group-email' },
 ]
 
+interface UserInfo {
+  user: {
+    id: string
+    username: string
+    email: string
+    role: string
+    orchestraId?: string
+  }
+  orchestra?: {
+    id: string
+    name: string
+    orchestraId: string
+    subdomain: string
+    logoUrl?: string
+    plan: string
+    status: string
+  }
+}
+
 export default function AdminLayout({
   children,
 }: {
@@ -26,6 +45,7 @@ export default function AdminLayout({
   const pathname = usePathname()
   const [showSettings, setShowSettings] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
   const settingsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -39,6 +59,23 @@ export default function AdminLayout({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
+  }, [])
+
+  // Fetch user info
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const response = await fetch('/api/auth/me')
+        if (response.ok) {
+          const data = await response.json()
+          setUserInfo(data)
+        }
+      } catch (error) {
+        console.error('Failed to fetch user info:', error)
+      }
+    }
+
+    fetchUserInfo()
   }, [])
 
   // Check if this is first time login
@@ -152,7 +189,9 @@ export default function AdminLayout({
                   </div>
                 )}
               </div>
-              <span className="text-sm text-gray-500">Admin</span>
+              <span className="text-sm text-gray-600">
+                {userInfo ? `${userInfo.user.username} - ${userInfo.orchestra?.name || 'Admin'}` : 'Admin'}
+              </span>
               <button
                 onClick={async () => {
                   await fetch('/api/auth/logout', { method: 'POST' })
@@ -178,6 +217,23 @@ export default function AdminLayout({
                 alt="StageSub" 
                 className="h-24 w-auto mx-auto"
               />
+              {userInfo?.orchestra && (
+                <div className="mt-3">
+                  {userInfo.orchestra.logoUrl ? (
+                    <img 
+                      src={userInfo.orchestra.logoUrl} 
+                      alt={userInfo.orchestra.name} 
+                      className="h-10 w-10 mx-auto object-contain rounded"
+                    />
+                  ) : (
+                    <div className="h-10 w-10 mx-auto bg-gray-200 rounded flex items-center justify-center">
+                      <span className="text-xs font-medium text-gray-600">
+                        {userInfo.orchestra.name.substring(0, 3).toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             
             <ul className="space-y-1">

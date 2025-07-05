@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client-central"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("CENTRAL_DATABASE_URL")
+}
+
+model Orchestra {
+  id            String   @id @default(cuid())
+  orchestraId   String   @unique @default(cuid())
+  name          String
+  subdomain     String   @unique
+  databaseUrl   String?
+  status        String   @default("pending")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  contactName   String
+  contactEmail  String
+  plan          String   @default("medium")
+  maxMusicians  Int      @default(200)
+  maxProjects   Int      @default(20)
+  pricePerMonth Int      @default(4990)
+  logoUrl       String?
+  users         User[]
+}
+
+model User {
+  id                String     @id @default(cuid())
+  email             String     @unique
+  role              String     @default("user")
+  orchestraId       String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  passwordHash      String
+  active            Boolean    @default(true)
+  username          String     @unique
+  lastLogin         DateTime?
+  isArchived        Boolean    @default(false)
+  localResident     Boolean    @default(false)
+  preferredLanguage String?    @default("sv")
+  orchestra         Orchestra? @relation(fields: [orchestraId], references: [id], onDelete: Cascade)
+
+  @@index([orchestraId])
+  @@index([username])
+  @@index([email])
+}
+
+model Customer {
+  id           String   @id @default(cuid())
+  name         String
+  subdomain    String   @unique
+  databaseUrl  String
+  status       String   @default("active")
+  contactEmail String
+  plan         String   @default("small")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model SystemLog {
+  id          String   @id @default(cuid())
+  timestamp   DateTime @default(now())
+  level       String
+  category    String
+  message     String
+  metadata    Json?
+  userId      String?
+  orchestraId String?
+  subdomain   String?
+  ip          String?
+  userAgent   String?
+  requestId   String?
+  duration    Int?
+
+  @@index([timestamp])
+  @@index([category])
+  @@index([level])
+  @@index([userId])
+  @@index([orchestraId])
+}

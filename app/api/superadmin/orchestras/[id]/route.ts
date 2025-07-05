@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
 import { checkSuperadminAuth } from '@/lib/auth-superadmin'
-
-const prisma = new PrismaClient()
+import { neonPrisma } from '@/lib/prisma-dynamic'
 
 // GET orchestra by ID
 export async function GET(
@@ -17,7 +15,7 @@ export async function GET(
   const { id } = await params
 
   try {
-    const orchestra = await prisma.orchestra.findUnique({
+    const orchestra = await neonPrisma.orchestra.findUnique({
       where: { id }
     })
 
@@ -54,12 +52,13 @@ export async function PUT(
     const body = await request.json()
     
     // Update orchestra details including subscription
-    const updatedOrchestra = await prisma.orchestra.update({
+    const updatedOrchestra = await neonPrisma.orchestra.update({
       where: { id },
       data: {
         name: body.name,
         contactName: body.contactName || undefined,
         contactEmail: body.contactEmail || undefined,
+        logoUrl: body.logoUrl !== undefined ? body.logoUrl : undefined,
         plan: body.plan || undefined,
         maxMusicians: body.maxMusicians !== undefined ? parseInt(body.maxMusicians) : undefined,
         maxProjects: body.maxProjects !== undefined ? parseInt(body.maxProjects) : undefined,
@@ -103,7 +102,7 @@ export async function PATCH(
       )
     }
 
-    const updatedOrchestra = await prisma.orchestra.update({
+    const updatedOrchestra = await neonPrisma.orchestra.update({
       where: { id },
       data: {
         status: body.status,
@@ -122,6 +121,6 @@ export async function PATCH(
       { status: 500 }
     )
   } finally {
-    await prisma.$disconnect()
+    await neonPrisma.$disconnect()
   }
 }

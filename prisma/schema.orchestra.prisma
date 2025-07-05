@@ -1,5 +1,9 @@
+// This is the schema for ORCHESTRA databases (Supabase)
+// Contains all tables for orchestra-specific data
+
 generator client {
   provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client-orchestra"
 }
 
 datasource db {
@@ -16,16 +20,16 @@ model Musician {
   phone             String?
   preferredLanguage String?                 @default("sv")
   localResidence    Boolean                 @default(false)
-  notes             String?
+  notes             String?                 @db.Text
   isActive          Boolean                 @default(true)
   isArchived        Boolean                 @default(false)
   archivedAt        DateTime?
   restoredAt        DateTime?
   createdAt         DateTime                @default(now())
   updatedAt         DateTime                @updatedAt
-  customRankings    CustomRanking[]
   qualifications    MusicianQualification[]
   rankings          Ranking[]
+  customRankings    CustomRanking[]
   requests          Request[]
 }
 
@@ -40,16 +44,16 @@ model Instrument {
 }
 
 model Position {
-  id                 Int                     @id @default(autoincrement())
-  positionId         String                  @unique @default(cuid())
-  instrumentId       Int
-  name               String
-  hierarchyLevel     Int
+  id                Int                     @id @default(autoincrement())
+  positionId        String                  @unique @default(cuid())
+  instrumentId      Int
+  name              String
+  hierarchyLevel    Int
+  qualifications    MusicianQualification[]
+  instrument        Instrument              @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  projectNeeds      ProjectNeed[]
+  rankingLists      RankingList[]
   customRankingLists CustomRankingList[]
-  qualifications     MusicianQualification[]
-  instrument         Instrument              @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
-  projectNeeds       ProjectNeed[]
-  rankingLists       RankingList[]
 
   @@unique([instrumentId, name])
 }
@@ -91,21 +95,21 @@ model Ranking {
 }
 
 model Project {
-  id                 Int                 @id @default(autoincrement())
-  projectId          String              @unique @default(cuid())
-  name               String
-  startDate          DateTime
-  weekNumber         Int
-  rehearsalSchedule  String?
-  concertInfo        String?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  notes              String?
+  id                Int                 @id @default(autoincrement())
+  projectId         String              @unique @default(cuid())
+  name              String
+  startDate         DateTime
+  weekNumber        Int
+  rehearsalSchedule String?
+  concertInfo       String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  notes             String?
+  projectFiles      ProjectFile[]
+  projectNeeds      ProjectNeed[]
+  groupEmailLogs    GroupEmailLog[]
+  fileStorage       FileStorage[]
   customRankingLists CustomRankingList[]
-  fileStorage        FileStorage[]
-  groupEmailLogs     GroupEmailLog[]
-  projectFiles       ProjectFile[]
-  projectNeeds       ProjectNeed[]
 }
 
 model ProjectNeed {
@@ -114,8 +118,8 @@ model ProjectNeed {
   projectId             Int
   positionId            Int
   quantity              Int                @default(1)
-  rankingListId         Int?
-  customRankingListId   Int?
+  rankingListId         Int?               // Now optional
+  customRankingListId   Int?               // New field for custom lists
   requestStrategy       String
   maxRecipients         Int?
   responseTimeHours     Int?               @default(24)
@@ -123,10 +127,10 @@ model ProjectNeed {
   archivedAt            DateTime?
   status                String             @default("active")
   projectFiles          ProjectFile[]
-  customRankingList     CustomRankingList? @relation(fields: [customRankingListId], references: [id], onDelete: Cascade)
   position              Position           @relation(fields: [positionId], references: [id], onDelete: Cascade)
   project               Project            @relation(fields: [projectId], references: [id])
   rankingList           RankingList?       @relation(fields: [rankingListId], references: [id], onDelete: Cascade)
+  customRankingList     CustomRankingList? @relation(fields: [customRankingListId], references: [id], onDelete: Cascade)
   requests              Request[]
 }
 
@@ -182,8 +186,8 @@ model ProjectFile {
   projectFileId    String       @unique @default(cuid())
   projectId        Int
   fileName         String
-  originalFileName String?
-  mimeType         String?
+  originalFileName String? // New: peter.pdf
+  mimeType         String? // New: application/pdf
   fileUrl          String
   fileType         String
   uploadedAt       DateTime     @default(now())
@@ -239,42 +243,12 @@ model GroupEmailLog {
   projectId   Int?
   subject     String
   message     String
-  recipients  Json
+  recipients  Json // Array of {email, name}
   sentCount   Int
   failedCount Int
-  filters     Json?
+  filters     Json? // {instruments: [], positions: []}
   createdAt   DateTime @default(now())
-  project     Project? @relation(fields: [projectId], references: [id])
-}
-
-model Customer {
-  id           String   @id @default(cuid())
-  name         String
-  subdomain    String   @unique
-  databaseUrl  String
-  status       String   @default("active")
-  contactEmail String
-  plan         String   @default("small")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-}
-
-model Orchestra {
-  id            String   @id @default(cuid())
-  orchestraId   String   @unique @default(cuid())
-  name          String
-  subdomain     String   @unique
-  databaseUrl   String?
-  status        String   @default("pending")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  contactName   String
-  contactEmail  String
-  plan          String   @default("medium")
-  maxMusicians  Int      @default(200)
-  maxProjects   Int      @default(20)
-  pricePerMonth Int      @default(4990)
-  users         User[]
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
 }
 
 model FileStorage {
@@ -283,82 +257,44 @@ model FileStorage {
   originalName String
   mimeType     String
   size         Int
-  content      Bytes
+  content      Bytes // Store file content as binary
   projectId    Int?
   needId       Int?
   createdAt    DateTime @default(now())
   project      Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
-model User {
-  id           String     @id @default(cuid())
-  email        String     @unique
-  role         String     @default("user")
-  orchestraId  String?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  passwordHash String
-  active       Boolean    @default(true)
-  username     String     @unique
-  lastLogin    DateTime?
-  orchestra    Orchestra? @relation(fields: [orchestraId], references: [id], onDelete: Cascade)
-
-  @@index([orchestraId])
-  @@index([username])
-  @@index([email])
-}
-
-model SystemLog {
-  id          String   @id @default(cuid())
-  timestamp   DateTime @default(now())
-  level       String
-  category    String
-  message     String
-  metadata    Json?
-  userId      String?
-  orchestraId String?
-  subdomain   String?
-  ip          String?
-  userAgent   String?
-  requestId   String?
-  duration    Int?
-
-  @@index([timestamp])
-  @@index([category])
-  @@index([level])
-  @@index([userId])
-  @@index([orchestraId])
-}
-
 model CustomRankingList {
-  id             Int             @id @default(autoincrement())
-  customListId   String          @unique @default(cuid())
-  projectId      Int
-  positionId     Int
-  name           String
-  isTemplate     Boolean         @default(false)
-  templateName   String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  customRankings CustomRanking[]
-  position       Position        @relation(fields: [positionId], references: [id], onDelete: Cascade)
-  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  projectNeeds   ProjectNeed[]
-
+  id                  Int                     @id @default(autoincrement())
+  customListId        String                  @unique @default(cuid())
+  projectId           Int
+  positionId          Int
+  name                String                  // e.g., "V. 25"
+  isTemplate          Boolean                 @default(false) // For saving as template
+  templateName        String?                 // Name if saved as template
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  
+  project             Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  position            Position                @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  customRankings      CustomRanking[]
+  projectNeeds        ProjectNeed[]
+  
   @@index([projectId])
   @@index([positionId])
   @@index([isTemplate])
 }
 
 model CustomRanking {
-  id                Int               @id @default(autoincrement())
-  customListId      Int
-  musicianId        Int
-  rank              Int
-  addedAt           DateTime          @default(now())
-  customRankingList CustomRankingList @relation(fields: [customListId], references: [id], onDelete: Cascade)
-  musician          Musician          @relation(fields: [musicianId], references: [id])
-
+  id                  Int                @id @default(autoincrement())
+  customListId        Int
+  musicianId          Int
+  rank                Int
+  addedAt             DateTime           @default(now())
+  
+  customRankingList   CustomRankingList  @relation(fields: [customListId], references: [id], onDelete: Cascade)
+  musician            Musician           @relation(fields: [musicianId], references: [id])
+  
   @@unique([customListId, musicianId])
   @@unique([customListId, rank])
   @@index([customListId])

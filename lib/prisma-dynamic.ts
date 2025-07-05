@@ -1,18 +1,19 @@
 import { PrismaClient } from '@prisma/client'
+import { PrismaClient as CentralPrismaClient } from '../node_modules/.prisma/client-central'
 import { cookies } from 'next/headers'
 import { verifyToken } from './auth-db'
 import { getPrismaClient } from './database-config'
 
 // Global singleton for Neon (main database)
 const globalForNeonPrisma = globalThis as unknown as {
-  neonPrisma: PrismaClient | undefined
+  neonPrisma: CentralPrismaClient | undefined
 }
 
 // Neon prisma för auth och Orchestra/User tabeller
-const neonPrisma = globalForNeonPrisma.neonPrisma ?? new PrismaClient({
+const neonPrisma = globalForNeonPrisma.neonPrisma ?? new CentralPrismaClient({
   datasources: {
     db: {
-      url: process.env.DATABASE_URL,
+      url: process.env.CENTRAL_DATABASE_URL || process.env.DATABASE_URL,
     },
   },
 })
@@ -50,7 +51,7 @@ async function getCurrentSubdomain(): Promise<string | null> {
     
     // Om användaren har orchestraId, hämta subdomain
     if (payload.orchestraId) {
-      const orchestra = await neonPrisma.orchestra.findUnique({
+      const orchestra = await (neonPrisma as any).orchestra.findUnique({
         where: { id: payload.orchestraId },
         select: { subdomain: true }
       })

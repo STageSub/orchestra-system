@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Database, Users, Activity, Edit2, Eye, Pause, Play } from 'lucide-react'
+import { Database, Users, Activity, Edit2, Eye, Pause, Play, Upload, X } from 'lucide-react'
 
 interface Orchestra {
   id: string
@@ -10,6 +10,7 @@ interface Orchestra {
   subdomain: string
   status: string
   createdAt: string
+  logoUrl?: string
   subscription?: {
     plan: string
     status: string
@@ -30,6 +31,8 @@ export default function CustomerManagement() {
   const [isLoading, setIsLoading] = useState(true)
   const [selectedOrchestra, setSelectedOrchestra] = useState<Orchestra | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false)
 
   useEffect(() => {
     fetchOrchestras()
@@ -93,6 +96,44 @@ export default function CustomerManagement() {
       case 'small': return 'Small'
       default: return plan
     }
+  }
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Vänligen välj en bildfil (PNG eller JPG)')
+      return
+    }
+
+    // Validate file size (2MB max)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Bilden får inte vara större än 2MB')
+      return
+    }
+
+    setIsUploadingLogo(true)
+
+    try {
+      // Convert to base64
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        const base64 = reader.result as string
+        setLogoPreview(base64)
+        setIsUploadingLogo(false)
+      }
+      reader.readAsDataURL(file)
+    } catch (error) {
+      console.error('Error uploading logo:', error)
+      alert('Kunde inte ladda upp logotypen')
+      setIsUploadingLogo(false)
+    }
+  }
+
+  const handleRemoveLogo = () => {
+    setLogoPreview(null)
   }
 
   if (isLoading) {
@@ -207,6 +248,7 @@ export default function CustomerManagement() {
                         <button
                           onClick={() => {
                             setSelectedOrchestra(orchestra)
+                            setLogoPreview(orchestra.logoUrl || null)
                             setShowEditModal(true)
                           }}
                           className="text-gray-600 hover:text-gray-900"
@@ -289,11 +331,54 @@ export default function CustomerManagement() {
                   />
                 </div>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Logotyp</label>
+                <div className="space-y-3">
+                  {logoPreview && (
+                    <div className="flex items-center gap-4">
+                      <img 
+                        src={logoPreview} 
+                        alt="Orchestra logo" 
+                        className="w-20 h-20 object-contain border rounded"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleRemoveLogo}
+                        className="text-red-600 hover:text-red-700 text-sm flex items-center gap-1"
+                      >
+                        <X className="w-4 h-4" />
+                        Ta bort
+                      </button>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <label className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md cursor-pointer inline-flex items-center gap-2 text-sm">
+                      <Upload className="w-4 h-4" />
+                      {logoPreview ? 'Byt logotyp' : 'Ladda upp logotyp'}
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg"
+                        onChange={handleLogoUpload}
+                        className="hidden"
+                        disabled={isUploadingLogo}
+                      />
+                    </label>
+                    {isUploadingLogo && (
+                      <span className="text-sm text-gray-500">Laddar upp...</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500">PNG eller JPG, max 2MB</p>
+                </div>
+              </div>
             </form>
 
             <div className="mt-6 flex justify-end gap-3">
               <button
-                onClick={() => setShowEditModal(false)}
+                onClick={() => {
+                  setShowEditModal(false)
+                  setLogoPreview(null)
+                }}
                 className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
               >
                 Avbryt
@@ -312,13 +397,15 @@ export default function CustomerManagement() {
                         plan: formData.get('plan'),
                         maxMusicians: formData.get('maxMusicians'),
                         maxProjects: formData.get('maxProjects'),
-                        pricePerMonth: formData.get('pricePerMonth')
+                        pricePerMonth: formData.get('pricePerMonth'),
+                        logoUrl: logoPreview
                       })
                     })
 
                     if (response.ok) {
                       alert('Ändringar sparade!')
                       setShowEditModal(false)
+                      setLogoPreview(null)
                       fetchOrchestras() // Refresh the list
                     } else {
                       alert('Kunde inte spara ändringar')

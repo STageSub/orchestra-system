@@ -9,17 +9,8 @@ export function setAuthCookieOnResponse(response: NextResponse, token: string, i
     path: '/'
   }
   
+  // Use Next.js built-in cookie handling which properly manages Set-Cookie headers
   response.cookies.set('orchestra-admin-session', token, cookieOptions)
-  
-  // Also try setting it as a header for compatibility
-  const cookieString = `orchestra-admin-session=${token}; ` +
-    `HttpOnly; ` +
-    `Max-Age=${cookieOptions.maxAge}; ` +
-    `Path=/; ` +
-    `SameSite=Lax` +
-    (cookieOptions.secure ? '; Secure' : '')
-  
-  response.headers.set('Set-Cookie', cookieString)
   
   return response
 }

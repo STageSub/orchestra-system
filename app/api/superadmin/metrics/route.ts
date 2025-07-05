@@ -19,10 +19,9 @@ export async function GET(request: Request) {
   try {
     console.log('Fetching metrics...')
     // Get all orchestras from main database
-    const orchestras = await neonPrisma.$queryRaw`
-      SELECT * FROM "Orchestra" 
-      ORDER BY "orchestraId"
-    ` as any[]
+    const orchestras = await neonPrisma.orchestra.findMany({
+      orderBy: { orchestraId: 'asc' }
+    })
 
     // Fetch metrics from each orchestra's database
     const orchestraMetrics = []
@@ -47,6 +46,7 @@ export async function GET(request: Request) {
             name: orchestra.name,
             subdomain: orchestra.subdomain,
             status: 'pending', // Show as pending if no database
+            logoUrl: orchestra.logoUrl,
             subscription: {
               plan: orchestra.plan || 'medium',
               status: 'pending',
@@ -113,6 +113,7 @@ export async function GET(request: Request) {
           name: orchestra.name,
           subdomain: orchestra.subdomain,
           status: orchestra.status,
+          logoUrl: orchestra.logoUrl,
           subscription: {
             plan: orchestra.plan || 'medium',
             status: 'active',
@@ -142,6 +143,7 @@ export async function GET(request: Request) {
           name: orchestra.name,
           subdomain: orchestra.subdomain,
           status: 'error',
+          logoUrl: orchestra.logoUrl,
           subscription: {
             plan: orchestra.plan || 'medium',
             status: 'error',

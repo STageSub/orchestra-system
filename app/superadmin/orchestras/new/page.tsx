@@ -2,12 +2,20 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, Building } from 'lucide-react'
+import { AlertCircle, Building, CheckCircle, Loader2 } from 'lucide-react'
+
+interface AdminCredentials {
+  username: string
+  password: string
+  email: string
+}
 
 export default function NewOrchestraPage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
+  const [adminCredentials, setAdminCredentials] = useState<AdminCredentials | null>(null)
   
   const [formData, setFormData] = useState({
     name: '',
@@ -35,31 +43,12 @@ export default function NewOrchestraPage() {
 
       const result = await response.json()
       
-      let message = result.message || 'Orkester skapad!'
-      
+      // Store admin credentials if provided
       if (result.adminCredentials) {
-        message += '\n\n=== ADMIN INLOGGNING ===\n'
-        message += `Användarnamn: ${result.adminCredentials.username}\n`
-        message += `Lösenord: ${result.adminCredentials.password}\n`
-        message += `E-post: ${result.adminCredentials.email}\n`
+        setAdminCredentials(result.adminCredentials)
       }
       
-      if (result.migrationInstructions) {
-        message += '\n\n=== MIGRATIONER KRÄVS ===\n'
-        message += 'Kör följande kommando för att skapa tabeller:\n\n'
-        message += result.migrationInstructions.command + '\n'
-        
-        if (result.migrationInstructions.projectId) {
-          message += `\nSupabase projekt-ID: ${result.migrationInstructions.projectId}\n`
-        }
-        
-        message += '\nOBS: Orkestern kan inte användas förrän migrationer har körts!'
-      }
-      
-      message += '\n\nVIKTIGT: Spara dessa uppgifter säkert!'
-      
-      alert(message)
-      router.push('/superadmin')
+      setSuccess(true)
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -79,6 +68,57 @@ export default function NewOrchestraPage() {
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '')
     }))
+  }
+
+  // Show success screen if orchestra was created
+  if (success && adminCredentials) {
+    return (
+      <div className="max-w-2xl">
+        <div className="bg-white rounded-lg shadow-sm border p-8">
+          <div className="text-center mb-6">
+            <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900">Orkester skapad!</h2>
+            <p className="mt-2 text-gray-600">
+              {formData.name} har skapats framgångsrikt
+            </p>
+          </div>
+
+          <div className="bg-gray-50 rounded-lg p-6 mb-6">
+            <h3 className="font-semibold mb-4">Administratörsinloggning</h3>
+            <div className="space-y-2 text-sm">
+              <p><span className="font-medium">Användarnamn:</span> {adminCredentials.username}</p>
+              <p><span className="font-medium">Lösenord:</span> {adminCredentials.password}</p>
+              <p><span className="font-medium">E-post:</span> {adminCredentials.email}</p>
+            </div>
+            <p className="mt-4 text-xs text-gray-500">
+              ⚠️ Spara dessa uppgifter säkert! Lösenordet visas bara denna gång.
+            </p>
+          </div>
+
+          <div className="text-center">
+            <button
+              onClick={() => router.push('/superadmin')}
+              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              Tillbaka till översikten
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show loading state
+  if (isSubmitting) {
+    return (
+      <div className="max-w-2xl">
+        <div className="bg-white rounded-lg shadow-sm border p-8 text-center">
+          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-blue-600" />
+          <h2 className="text-xl font-semibold mb-2">Skapar orkester...</h2>
+          <p className="text-gray-600">Detta kan ta några sekunder</p>
+        </div>
+      </div>
+    )
   }
 
   return (
