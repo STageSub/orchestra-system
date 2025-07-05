@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Database, Users, Activity, Edit2, Eye, Pause, Play, Upload, X } from 'lucide-react'
+import { Database, Users, Activity, Edit2, Eye, Pause, Play, Upload, X, Settings } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 interface Orchestra {
   id: string
@@ -27,6 +28,7 @@ interface Orchestra {
 }
 
 export default function CustomerManagement() {
+  const router = useRouter()
   const [orchestras, setOrchestras] = useState<Orchestra[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedOrchestra, setSelectedOrchestra] = useState<Orchestra | null>(null)
@@ -246,13 +248,20 @@ export default function CustomerManagement() {
                           <Eye className="w-4 h-4" />
                         </button>
                         <button
+                          onClick={() => router.push(`/superadmin/orchestras/${orchestra.id}`)}
+                          className="text-purple-600 hover:text-purple-900"
+                          title="Konfiguration"
+                        >
+                          <Settings className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => {
                             setSelectedOrchestra(orchestra)
                             setLogoPreview(orchestra.logoUrl || null)
                             setShowEditModal(true)
                           }}
                           className="text-gray-600 hover:text-gray-900"
-                          title="Redigera"
+                          title="Redigera logo"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>

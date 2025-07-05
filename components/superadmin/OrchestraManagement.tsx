@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Database, Zap, Server, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 interface SystemHealth {
   api: string
@@ -10,10 +11,9 @@ interface SystemHealth {
 }
 
 export default function OrchestraManagement() {
-  const [showProvisionModal, setShowProvisionModal] = useState(false)
-  const [isProvisioning, setIsProvisioning] = useState(false)
-  const [provisioningStatus, setProvisioningStatus] = useState<string[]>([])
+  const router = useRouter()
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null)
+  const [isRunningAction, setIsRunningAction] = useState<string | null>(null)
 
   useEffect(() => {
     fetchSystemHealth()
@@ -45,44 +45,88 @@ export default function OrchestraManagement() {
     }
   }
 
-  const handleProvision = async (formData: {
-    name: string
-    email: string
-    plan: string
-  }) => {
-    setIsProvisioning(true)
-    setProvisioningStatus(['Skapar orkester...'])
+  const runMigrations = async () => {
+    if (!confirm('Vill du köra migrationer på alla aktiva databaser? Detta kan ta några minuter.')) {
+      return
+    }
 
+    setIsRunningAction('migrations')
     try {
-      // Simulate provisioning steps
-      const steps = [
-        'Skapar orkester i central databas...',
-        'Konfigurerar databas...',
-        'Skapar tabeller och schema...',
-        'Seedar grunddata...',
-        'Konfigurerar prenumeration...',
-        'Skickar välkomstmail...'
-      ]
+      const response = await fetch('/api/superadmin/orchestras/run-migrations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      })
 
-      for (const step of steps) {
-        setProvisioningStatus(prev => [...prev, step])
-        await new Promise(resolve => setTimeout(resolve, 1000))
-      }
-
-      setProvisioningStatus(prev => [...prev, '✅ Orkester skapad!'])
+      const data = await response.json()
       
-      setTimeout(() => {
-        setShowProvisionModal(false)
-        setIsProvisioning(false)
-        setProvisioningStatus([])
-        alert('Orkester skapad framgångsrikt!')
-      }, 2000)
-
+      if (response.ok) {
+        alert(`Migrationer körda!\n\nResultat:\n- Totalt: ${data.summary.total}\n- Lyckade: ${data.summary.successful}\n- Misslyckade: ${data.summary.failed}`)
+      } else {
+        alert(`Fel vid körning av migrationer: ${data.error}`)
+      }
     } catch (error) {
-      setProvisioningStatus(prev => [...prev, '❌ Fel vid skapande av orkester'])
-      setIsProvisioning(false)
+      alert('Ett fel uppstod vid körning av migrationer')
+      console.error('Migration error:', error)
+    } finally {
+      setIsRunningAction(null)
     }
   }
+
+  const updateSchemas = async () => {
+    if (!confirm('Vill du uppdatera alla databas-scheman? Detta synkroniserar Prisma-schemat med databaserna.')) {
+      return
+    }
+
+    setIsRunningAction('schemas')
+    try {
+      // For now, this uses the same endpoint as migrations
+      // In a real implementation, this might run prisma db push or similar
+      const response = await fetch('/api/superadmin/orchestras/run-migrations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      })
+
+      const data = await response.json()
+      
+      if (response.ok) {
+        alert('Databas-scheman uppdaterade!')
+      } else {
+        alert(`Fel vid uppdatering av scheman: ${data.error}`)
+      }
+    } catch (error) {
+      alert('Ett fel uppstod vid uppdatering av scheman')
+      console.error('Schema update error:', error)
+    } finally {
+      setIsRunningAction(null)
+    }
+  }
+
+  const clearCache = async () => {
+    setIsRunningAction('cache')
+    try {
+      const response = await fetch('/api/superadmin/orchestras/clear-cache', {
+        method: 'POST'
+      })
+
+      const data = await response.json()
+      
+      if (response.ok) {
+        alert(`Cache rensad!\n\n- ${data.clearedPaths} sökvägar rensade\n- ${data.orchestras} orkestrar påverkade`)
+        // Refresh system health after clearing cache
+        fetchSystemHealth()
+      } else {
+        alert(`Fel vid rensning av cache: ${data.error}`)
+      }
+    } catch (error) {
+      alert('Ett fel uppstod vid rensning av cache')
+      console.error('Cache clear error:', error)
+    } finally {
+      setIsRunningAction(null)
+    }
+  }
+
 
   return (
     <div>
@@ -92,7 +136,7 @@ export default function OrchestraManagement() {
           <p className="text-sm text-gray-600 mt-1">Skapa och hantera nya orkestrar</p>
         </div>
         <button
-          onClick={() => setShowProvisionModal(true)}
+          onClick={() => router.push('/superadmin/orchestras/new')}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
@@ -109,35 +153,34 @@ export default function OrchestraManagement() {
           </div>
           <div className="space-y-3">
             <button 
-              onClick={async () => {
-                if (confirm('Vill du köra migrationer på alla databaser?')) {
-                  alert('Kör migrationer... (kommer snart)')
-                  // TODO: Implement migration runner
-                }
-              }}
-              className="w-full text-left px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-md text-sm"
+              onClick={runMigrations}
+              disabled={isRunningAction === 'migrations'}
+              className="w-full text-left px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between"
             >
-              Kör migrationer på alla databaser
+              <span>Kör migrationer på alla databaser</span>
+              {isRunningAction === 'migrations' && (
+                <Clock className="w-4 h-4 animate-spin text-blue-500" />
+              )}
             </button>
             <button 
-              onClick={async () => {
-                if (confirm('Vill du uppdatera alla scheman?')) {
-                  alert('Uppdaterar scheman... (kommer snart)')
-                  // TODO: Implement schema update
-                }
-              }}
-              className="w-full text-left px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-md text-sm"
+              onClick={updateSchemas}
+              disabled={isRunningAction === 'schemas'}
+              className="w-full text-left px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between"
             >
-              Uppdatera alla scheman
+              <span>Uppdatera alla scheman</span>
+              {isRunningAction === 'schemas' && (
+                <Clock className="w-4 h-4 animate-spin text-blue-500" />
+              )}
             </button>
             <button 
-              onClick={async () => {
-                alert('Cache rensad!')
-                // In a real implementation, this would clear Redis/memory caches
-              }}
-              className="w-full text-left px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-md text-sm"
+              onClick={clearCache}
+              disabled={isRunningAction === 'cache'}
+              className="w-full text-left px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between"
             >
-              Rensa cache för alla orkestrar
+              <span>Rensa cache för alla orkestrar</span>
+              {isRunningAction === 'cache' && (
+                <Clock className="w-4 h-4 animate-spin text-blue-500" />
+              )}
             </button>
           </div>
         </div>
@@ -222,97 +265,6 @@ export default function OrchestraManagement() {
         </div>
       </div>
 
-      {/* Provision Modal */}
-      {showProvisionModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Skapa ny orkester</h3>
-            
-            {!isProvisioning ? (
-              <form onSubmit={(e) => {
-                e.preventDefault()
-                const formData = new FormData(e.currentTarget)
-                handleProvision({
-                  name: formData.get('name') as string,
-                  email: formData.get('email') as string,
-                  plan: formData.get('plan') as string
-                })
-              }}>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Orkesternamn</label>
-                    <input
-                      type="text"
-                      name="name"
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                      placeholder="Exempel Symfoniorkester"
-                      required
-                    />
-                  </div>
-
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Admin e-post</label>
-                    <input
-                      type="email"
-                      name="email"
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                      placeholder="admin@exempel.se"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Plan</label>
-                    <select
-                      name="plan"
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                      required
-                    >
-                      <option value="small">Small - 50 musiker, 5 projekt</option>
-                      <option value="medium">Medium - 200 musiker, 20 projekt</option>
-                      <option value="enterprise">Enterprise - Obegränsat</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="mt-6 flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowProvisionModal(false)}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
-                  >
-                    Avbryt
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md"
-                  >
-                    Skapa orkester
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="space-y-3">
-                <div className="text-sm text-gray-600">
-                  {provisioningStatus.map((status, index) => (
-                    <div key={index} className="flex items-center gap-2 py-1">
-                      {status.includes('✅') ? (
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                      ) : status.includes('❌') ? (
-                        <XCircle className="w-4 h-4 text-red-500" />
-                      ) : (
-                        <Clock className="w-4 h-4 text-blue-500 animate-spin" />
-                      )}
-                      <span>{status}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

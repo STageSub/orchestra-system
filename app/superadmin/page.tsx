@@ -255,13 +255,13 @@ export default function SuperAdminDashboard() {
       <div className="bg-white rounded-lg shadow-sm border">
         <div className="px-6 py-4 border-b flex justify-between items-center">
           <h2 className="text-lg font-semibold text-gray-900">Kunder</h2>
-          <a
-            href="/superadmin/orchestras/new"
+          <button
+            onClick={() => window.location.href = '/superadmin/orchestras/new'}
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700"
           >
             <Building className="w-4 h-4" />
             Skapa ny orkester
-          </a>
+          </button>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -350,10 +350,10 @@ export default function SuperAdminDashboard() {
                       Öppna
                     </button>
                     <button 
-                      onClick={() => setActiveTab('customers')}
-                      className="text-gray-600 hover:text-gray-900 mr-4"
+                      onClick={() => window.location.href = `/superadmin/orchestras/${orchestra.id}`}
+                      className="text-purple-600 hover:text-purple-900 mr-4"
                     >
-                      Hantera
+                      Konfigurera
                     </button>
                     {orchestra.subdomain === 'scosco' && (
                       <button 

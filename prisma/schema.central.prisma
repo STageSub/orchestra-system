@@ -24,6 +24,27 @@ model Orchestra {
   maxProjects   Int      @default(20)
   pricePerMonth Int      @default(4990)
   logoUrl       String?
+  
+  // Email Configuration
+  resendApiKey      String?
+  emailFromAddress  String?  @default("no-reply@stagesub.com")
+  emailFromName     String?
+  emailReplyTo      String?
+  
+  // Feature Toggles
+  features          Json?    @default("{}")
+  
+  // Branding
+  primaryColor      String?  @default("#3B82F6")
+  secondaryColor    String?  @default("#1E40AF")
+  customDomain      String?
+  faviconUrl        String?
+  
+  // API & Integrations
+  apiKey            String?  @unique
+  webhookUrl        String?
+  webhookSecret     String?
+  
   users         User[]
 }
 
