@@ -21,8 +21,7 @@ export async function GET(request: Request) {
     // Get all orchestras from main database
     const orchestras = await neonPrisma.$queryRaw`
       SELECT * FROM "Orchestra" 
-      WHERE status = 'active' 
-      ORDER BY subdomain
+      ORDER BY "orchestraId"
     ` as any[]
 
     // Fetch metrics from each orchestra's database

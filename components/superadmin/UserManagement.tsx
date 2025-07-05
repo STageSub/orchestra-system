@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { User, Mail, Shield, Calendar, Edit2, Trash2, Plus } from 'lucide-react'
+import { User, Mail, Shield, Calendar, Edit2, Trash2, Plus, Key } from 'lucide-react'
 
 interface UserData {
   id: string
@@ -180,6 +180,28 @@ export default function UserManagement() {
     }
   }
 
+  const handleResetPassword = async (user: UserData) => {
+    if (!confirm(`Återställ lösenord för ${user.username}?`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/superadmin/users/${user.id}/reset-password`, {
+        method: 'POST'
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        alert(`Nytt lösenord för ${user.username}:\n\n${data.password}\n\nSpara detta lösenord säkert!`)
+      } else {
+        const error = await response.json()
+        alert(`Fel: ${error.error}`)
+      }
+    } catch (error) {
+      alert('Kunde inte återställa lösenord')
+    }
+  }
+
   if (isLoading) {
     return <div className="p-8">Laddar användare...</div>
   }
@@ -270,11 +292,26 @@ export default function UserManagement() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <div className="flex items-center gap-1">
                       <Calendar className="w-4 h-4" />
-                      {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('sv-SE') : 'Aldrig'}
+                      {user.lastLogin 
+                        ? new Date(user.lastLogin).toLocaleString('sv-SE', { 
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })
+                        : 'Aldrig'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end gap-2">
+                      <button
+                        className="text-blue-600 hover:text-blue-900"
+                        title="Återställ lösenord"
+                        onClick={() => handleResetPassword(user)}
+                      >
+                        <Key className="w-4 h-4" />
+                      </button>
                       <button
                         className="text-gray-600 hover:text-gray-900"
                         title="Redigera"

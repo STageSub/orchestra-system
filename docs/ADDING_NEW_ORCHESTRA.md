@@ -1,259 +1,103 @@
-# Adding a New Orchestra - Practical Guide
+# Adding New Orchestra Guide
 
-This guide walks through the exact steps to add a new orchestra to the StageSub system.
+## Overview
+This guide explains how to properly add a new orchestra to the StageSub system.
 
 ## Prerequisites
-- Access to Supabase to create new projects
-- Access to the central database (Neon)
-- Superadmin credentials
+- Superadmin access
+- Database URLs for the new orchestra (Supabase/Neon)
 
-## Step 1: Create Orchestra Database (Supabase)
-
-1. **Create Supabase Project**
-   - Go to https://app.supabase.com
-   - Click "New project"
-   - Name: `stagesub-[orchestra-code]` (e.g., `stagesub-rso`)
-   - Generate a strong password
-   - Region: Choose closest to orchestra location
-
-2. **Get Connection String**
-   - Go to Settings → Database
-   - Copy the "Connection pooling" URL (not direct connection)
-   - Should look like: `postgresql://postgres.xxxxx:password@aws-0-eu-north-1.pooler.supabase.com:6543/postgres?pgbouncer=true`
-
-3. **Save Credentials Securely**
-   ```
-   Orchestra: [Name]
-   Code: [RSO]
-   Database URL: [connection string]
-   Created: [date]
-   ```
-
-## Step 2: Deploy Schema to New Database
-
-1. **Update .env.local temporarily**
+## Step 1: Create Orchestra Database
+1. Create a new database in Supabase for the orchestra
+2. Get the connection string (pooler URL recommended)
+3. Run the orchestra schema setup:
    ```bash
-   DATABASE_URL_TEMP=[new-orchestra-connection-string]
+   npm run setup-orchestra -- --url "YOUR_DATABASE_URL"
    ```
 
-2. **Generate Migration SQL**
-   ```bash
-   npx prisma migrate diff \
-     --from-empty \
-     --to-schema-datamodel prisma/schema.prisma \
-     --script > orchestra-schema.sql
-   ```
+## Step 2: Add Orchestra via API or Script
 
-3. **Apply Schema**
-   - Go to Supabase SQL Editor
-   - Paste and run the generated SQL
-   - Verify all tables are created
+### Option A: Using a Script (Recommended)
+Create a script like this:
 
-4. **Seed Basic Data**
-   ```sql
-   -- Add default instruments
-   INSERT INTO "Instrument" (name, "displayOrder") VALUES
-   ('Violin', 1),
-   ('Viola', 2),
-   ('Cello', 3),
-   ('Kontrabas', 4),
-   ('Flöjt', 5),
-   ('Oboe', 6),
-   ('Klarinett', 7),
-   ('Fagott', 8),
-   ('Valthorn', 9),
-   ('Trumpet', 10),
-   ('Trombon', 11),
-   ('Tuba', 12),
-   ('Slagverk', 13),
-   ('Harpa', 14);
+```javascript
+const { PrismaClient } = require('@prisma/client')
+const bcrypt = require('bcryptjs')
 
-   -- Add email templates
-   INSERT INTO "EmailTemplate" (type, subject, body) VALUES
-   ('request', 'Förfrågan om vikariat - {{projectName}}', 'Hej {{firstName}}! ...'),
-   ('reminder', 'Påminnelse: Vikariat - {{projectName}}', 'Hej {{firstName}}! ...'),
-   ('confirmation', 'Bekräftelse - {{projectName}}', 'Hej {{firstName}}! ...');
-   ```
+const prisma = new PrismaClient()
 
-## Step 3: Register Orchestra in Central Database
+async function addOrchestra() {
+  // 1. Create the orchestra
+  const orchestra = await prisma.orchestra.create({
+    data: {
+      orchestraId: 'UNI',  // 3-letter code
+      name: 'Universitetsorkestern',
+      subdomain: 'uni',  // Not used but required
+      contactName: 'Admin',
+      contactEmail: 'admin@uni.se',
+      databaseUrl: 'postgresql://...',  // Your Supabase URL
+      status: 'active',
+      plan: 'medium',
+      maxMusicians: 200,
+      maxProjects: 20,
+      pricePerMonth: 4990
+    }
+  })
+  
+  // 2. Create admin user for the orchestra
+  const passwordHash = await bcrypt.hash('Orchestra123!', 10)
+  const user = await prisma.user.create({
+    data: {
+      username: 'uni-admin',
+      email: 'uni-admin@stagesub.com',
+      passwordHash,
+      role: 'admin',
+      orchestraId: orchestra.id,
+      active: true
+    }
+  })
+  
+  console.log('Orchestra created:', orchestra.name)
+  console.log('Admin user created:', user.username)
+}
+```
 
-1. **Connect to Central Database**
-   ```bash
-   # Use your preferred PostgreSQL client
-   psql [CENTRAL_DATABASE_URL]
-   ```
+### Option B: Via Superadmin Dashboard (Coming Soon)
+The "Ny orkester" button in superadmin dashboard will handle this automatically.
 
-2. **Insert Orchestra Record**
-   ```sql
-   INSERT INTO "Orchestra" (
-     id,
-     "orchestraId",
-     name,
-     subdomain,
-     "contactName",
-     "contactEmail",
-     "databaseUrl",
-     status,
-     plan,
-     "maxMusicians",
-     "maxProjects",
-     "pricePerMonth"
-   ) VALUES (
-     gen_random_uuid(),
-     'RSO',  -- Unique orchestra code
-     'Radiosymfoniorkestern',
-     'rso',  -- Not used for routing but required
-     'Admin Kontakt',
-     'admin@rso.se',
-     'postgresql://postgres.xxxxx:password@....', -- From step 1
-     'active',
-     'medium',
-     200,
-     20,
-     4990
-   ) RETURNING *;
-   ```
+## Step 3: Verify Setup
+1. Login to superadmin dashboard
+2. Check that the orchestra appears in the list
+3. Test login with the orchestra admin credentials
+4. Verify data isolation is working
 
-3. **Verify Orchestra Added**
-   ```sql
-   SELECT "orchestraId", name, status FROM "Orchestra" 
-   WHERE "orchestraId" = 'RSO';
-   ```
+## Important Fields
 
-## Step 4: Create Admin User
+### Orchestra Fields
+- **orchestraId**: Unique 3-letter code (e.g., 'SCO', 'GOT')
+- **name**: Full orchestra name
+- **databaseUrl**: Connection string to orchestra's database
+- **plan**: 'small', 'medium', or 'enterprise'
+- **status**: 'active', 'inactive', or 'suspended'
 
-1. **Generate Password Hash**
-   ```javascript
-   // In Node.js or use online bcrypt generator
-   const bcrypt = require('bcryptjs');
-   const password = 'temporary-password-123';
-   const hash = bcrypt.hashSync(password, 10);
-   console.log(hash);
-   ```
-
-2. **Create User in Central Database**
-   ```sql
-   INSERT INTO "User" (
-     id,
-     username,
-     email,
-     "passwordHash",
-     role,
-     "orchestraId",
-     active
-   ) VALUES (
-     gen_random_uuid(),
-     'rso-admin',
-     'admin@rso.se',
-     '$2a$10$...', -- bcrypt hash from step 1
-     'admin',
-     (SELECT id FROM "Orchestra" WHERE "orchestraId" = 'RSO'),
-     true
-   ) RETURNING username, email;
-   ```
-
-## Step 5: Verify Setup
-
-1. **Check Superadmin Dashboard**
-   - Login as superadmin at https://stagesub.com/admin/login
-   - Go to /superadmin
-   - New orchestra should appear in the list
-   - Check that metrics load (will be 0 initially)
-
-2. **Test Orchestra Admin Login**
-   - Logout from superadmin
-   - Login with new orchestra admin credentials
-   - Should land in orchestra admin dashboard
-   - Verify can create musicians, projects, etc.
-
-3. **Test Health Check**
-   - In superadmin → Orkestrar tab
-   - Check "Databashälsa" shows green checkmark
-   - System status should show "Alla OK"
-
-## Step 6: Production Setup
-
-1. **Environment Variables (Vercel/Production)**
-   ```bash
-   DATABASE_URL_RSO=postgresql://postgres.xxxxx:password@....
-   ```
-
-2. **Update Documentation**
-   - Add to internal orchestra list
-   - Document any special requirements
-   - Update billing records
-
-3. **Inform Orchestra Admin**
-   ```
-   Subject: StageSub Orchestra System - Kontouppgifter
-
-   Hej [Name],
-
-   Ert StageSub-konto är nu aktiverat!
-
-   Inloggning: https://stagesub.com/admin/login
-   Användarnamn: [username]
-   Temporärt lösenord: [password]
-
-   Vänligen byt lösenord vid första inloggningen.
-
-   Vid frågor, kontakta support@stagesub.com
-
-   Med vänliga hälsningar,
-   StageSub Team
-   ```
+### Subscription Limits
+- **Small** ($79): 50 musicians, 5 projects, 10 instruments
+- **Medium** ($499): 200 musicians, 20 projects, unlimited instruments  
+- **Enterprise** ($1500): Unlimited everything
 
 ## Troubleshooting
 
-### Orchestra Not Showing in Superadmin
-- Check Orchestra status is 'active'
-- Verify databaseUrl is correct
-- Check for typos in orchestraId
+### Missing columns error
+If you get "column does not exist" errors:
+1. Check that all migrations have been run
+2. Use the production migration script in `/prisma/migrations/`
 
-### Cannot Connect to Orchestra Database
-- Verify connection string is pooler URL (not direct)
-- Check password is properly URL-encoded
-- Test connection with psql directly
+### Authentication issues
+1. Ensure user has correct orchestraId
+2. Password must be hashed with bcrypt
+3. User must be active = true
 
-### User Cannot Login
-- Verify orchestraId in User table matches Orchestra.id
-- Check password hash is correct
-- Ensure user.active = true
-
-### No Metrics Showing
-- Check tables exist in orchestra database
-- Verify SystemLog table has correct schema
-- Look for errors in browser console
-
-## Rollback Procedure
-
-If something goes wrong:
-
-1. **Remove from Central Database**
-   ```sql
-   DELETE FROM "User" WHERE "orchestraId" = 
-     (SELECT id FROM "Orchestra" WHERE "orchestraId" = 'RSO');
-   DELETE FROM "Orchestra" WHERE "orchestraId" = 'RSO';
-   ```
-
-2. **Delete Supabase Project** (if needed)
-   - Go to Supabase dashboard
-   - Project settings → Delete project
-
-## Best Practices
-
-1. **Always test locally first** with DATABASE_URL_TEMP
-2. **Use strong passwords** for database and admin user
-3. **Document everything** including special requirements
-4. **Backup central database** before adding new orchestras
-5. **Monitor first 24 hours** for any issues
-
-## Security Checklist
-
-- [ ] Database password is strong and unique
-- [ ] Admin password is temporary and must be changed
-- [ ] Connection string uses pooler (not direct)
-- [ ] SSL is enabled (should be automatic)
-- [ ] No credentials committed to git
-- [ ] Environment variables set in production
-- [ ] Access logged in SystemLog
+### Data not showing
+1. Check DATABASE_URL points to Neon (central database)
+2. Orchestra must have valid databaseUrl
+3. Run test queries to verify connections
