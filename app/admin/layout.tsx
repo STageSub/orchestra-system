@@ -62,52 +62,25 @@ export default function AdminLayout({
     }
   }, [])
 
-  // Fetch user info with retry
+  // Fetch user info
   useEffect(() => {
-    // Skip fetching user info on login page
-    if (pathname === '/admin/login') {
-      setLoadingUserInfo(false)
-      return
-    }
-
-    const fetchUserInfo = async (retryCount = 0) => {
+    const fetchUserInfo = async () => {
       try {
-        const response = await fetch('/api/auth/me', {
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-cache'
-          }
-        })
+        const response = await fetch('/api/auth/me')
         if (response.ok) {
           const data = await response.json()
           console.log('User info fetched:', data)
           setUserInfo(data)
-          setLoadingUserInfo(false)
-        } else if (response.status === 401) {
-          // Don't retry for authentication errors
-          console.log('User not authenticated')
-          setLoadingUserInfo(false)
-        } else if (retryCount < 3) {
-          console.log(`Failed to fetch user info, retrying... (attempt ${retryCount + 1})`)
-          setTimeout(() => fetchUserInfo(retryCount + 1), 500)
-        } else {
-          console.error('Failed to fetch user info after 3 attempts, status:', response.status)
-          setLoadingUserInfo(false)
         }
       } catch (error) {
-        if (retryCount < 3) {
-          console.log(`Error fetching user info, retrying... (attempt ${retryCount + 1})`)
-          setTimeout(() => fetchUserInfo(retryCount + 1), 500)
-        } else {
-          console.error('Failed to fetch user info after 3 attempts:', error)
-          setLoadingUserInfo(false)
-        }
+        console.error('Failed to fetch user info:', error)
+      } finally {
+        setLoadingUserInfo(false)
       }
     }
 
-    // Add small delay to ensure cookie is set after login
-    setTimeout(() => fetchUserInfo(), 200)
-  }, [pathname])
+    fetchUserInfo()
+  }, [])
 
   // Check if this is first time login
   useEffect(() => {
@@ -152,11 +125,6 @@ export default function AdminLayout({
     setShowOnboarding(false)
   }
 
-
-  // Return minimal layout for login page
-  if (pathname === '/admin/login') {
-    return <>{children}</>
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
