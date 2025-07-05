@@ -38,7 +38,7 @@ export async function GET() {
 
     // Check orchestra databases
     const orchestras = await neonPrisma.orchestra.findMany({
-      orderBy: { orchestraId: 'asc' }
+      orderBy: { id: 'asc' }
     })
 
     for (const orchestra of orchestras) {
