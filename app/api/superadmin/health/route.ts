@@ -105,14 +105,15 @@ export async function GET() {
     }
 
     return NextResponse.json(health)
-  } catch (error) {
-    console.error('Health check error:', error)
+  } catch (error: any) {
+    console.error('Health check error:', error.message)
     return NextResponse.json(
       { 
         api: 'error',
         databases: [],
         email: 'unknown',
-        error: 'Health check failed' 
+        error: 'Health check failed',
+        details: error.message
       },
       { status: 500 }
     )

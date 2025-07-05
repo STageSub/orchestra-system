@@ -59,6 +59,7 @@ export default function SuperAdminDashboard() {
   const [metricsData, setMetricsData] = useState<MetricsData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'overview' | 'customers' | 'orchestras' | 'users'>('overview')
+  const [selectedOrchestra, setSelectedOrchestra] = useState<string>('')
 
   useEffect(() => {
     fetchMetrics()
@@ -295,10 +296,8 @@ export default function SuperAdminDashboard() {
           <h2 className="text-lg font-semibold text-gray-900">Senaste händelser</h2>
           <select 
             className="text-sm border-gray-300 rounded-md"
-            onChange={(e) => {
-              // TODO: Implement orchestra filter
-              console.log('Filter by orchestra:', e.target.value)
-            }}
+            value={selectedOrchestra}
+            onChange={(e) => setSelectedOrchestra(e.target.value)}
           >
             <option value="">Alla orkestrar</option>
             {metricsData?.orchestras.map(o => (
@@ -311,7 +310,9 @@ export default function SuperAdminDashboard() {
             <div className="px-6 py-8 text-center text-gray-500">
               Inga händelser att visa
             </div>
-          ) : metricsData?.recentEvents.map((event) => (
+          ) : metricsData?.recentEvents
+            .filter(event => !selectedOrchestra || event.orchestra?.id === selectedOrchestra)
+            .map((event) => (
             <div key={event.id} className="px-6 py-4 hover:bg-gray-50">
               <div className="flex justify-between items-start gap-4">
                 <div className="flex-1">
