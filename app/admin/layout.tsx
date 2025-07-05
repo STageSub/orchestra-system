@@ -64,6 +64,12 @@ export default function AdminLayout({
 
   // Fetch user info
   useEffect(() => {
+    // Skip fetching user info on login page
+    if (pathname === '/admin/login') {
+      setLoadingUserInfo(false)
+      return
+    }
+
     const fetchUserInfo = async () => {
       try {
         const response = await fetch('/api/auth/me')
@@ -80,7 +86,7 @@ export default function AdminLayout({
     }
 
     fetchUserInfo()
-  }, [])
+  }, [pathname])
 
   // Check if this is first time login
   useEffect(() => {
@@ -125,6 +131,11 @@ export default function AdminLayout({
     setShowOnboarding(false)
   }
 
+
+  // Return minimal layout for login page
+  if (pathname === '/admin/login') {
+    return <>{children}</>
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
