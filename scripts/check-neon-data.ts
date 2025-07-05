@@ -1,4 +1,4 @@
-import { PrismaClient } from '../node_modules/.prisma/client-central'
+import { PrismaClient } from '@prisma/client'
 
 async function checkNeonData() {
   const prisma = new PrismaClient({
