@@ -80,36 +80,46 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if user already exists using raw query due to schema mismatch
-    const existingUser = await prisma.$queryRaw`
-      SELECT id FROM "User" 
-      WHERE email = ${body.email}
-      LIMIT 1
-    ` as any[]
+    // Check if user already exists
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: body.email },
+          { username: body.username }
+        ]
+      }
+    })
 
-    if (existingUser.length > 0) {
+    if (existingUser) {
       return NextResponse.json(
-        { error: 'User with this email already exists' },
+        { error: 'User with this email or username already exists' },
         { status: 400 }
       )
     }
 
-    // Create user using raw query due to schema mismatch
-    const newUser = await prisma.$queryRaw`
-      INSERT INTO "User" (id, name, email, role, "orchestraId", "createdAt", "updatedAt")
-      VALUES (
-        ${body.username + '_' + Date.now()},
-        ${body.username},
-        ${body.email},
-        ${body.role},
-        ${body.orchestraId || null},
-        NOW(),
-        NOW()
-      )
-      RETURNING *
-    ` as any[]
+    // Hash the password
+    const passwordHash = await bcrypt.hash(body.password, 10)
 
-    const user = newUser[0]
+    // Create user using Prisma
+    const user = await prisma.user.create({
+      data: {
+        username: body.username,
+        email: body.email,
+        passwordHash: passwordHash,
+        role: body.role,
+        orchestraId: body.orchestraId || null,
+        active: true
+      },
+      include: {
+        orchestra: {
+          select: {
+            id: true,
+            name: true,
+            orchestraId: true
+          }
+        }
+      }
+    })
 
     // Remove password hash from response
     const { passwordHash: _, ...userWithoutPassword } = user

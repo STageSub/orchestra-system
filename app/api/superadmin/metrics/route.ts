@@ -6,13 +6,19 @@ import { checkSuperadminAuth } from '@/lib/auth-superadmin'
 const prisma = new PrismaClient()
 
 export async function GET(request: Request) {
+  console.log('Metrics endpoint called')
+  
   // Check superadmin authentication
   const authResult = await checkSuperadminAuth()
+  console.log('Auth result:', authResult)
+  
   if (!authResult.authorized) {
+    console.log('Metrics endpoint unauthorized')
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
+    console.log('Fetching metrics...')
     // Get all orchestras from main database
     const orchestras = await prisma.$queryRaw`
       SELECT * FROM "Orchestra" 
@@ -36,6 +42,30 @@ export async function GET(request: Request) {
         // Skip if no real database URL
         if (!orchestra.databaseUrl || orchestra.databaseUrl.includes('dummy')) {
           console.log(`  Skipping - no valid database URL`)
+          // Add orchestra with placeholder metrics
+          orchestraMetrics.push({
+            id: orchestra.id,
+            orchestraId: orchestra.orchestraId,
+            name: orchestra.name,
+            subdomain: orchestra.subdomain,
+            status: 'pending', // Show as pending if no database
+            subscription: {
+              plan: orchestra.plan || 'medium',
+              status: 'pending',
+              pricePerMonth: orchestra.pricePerMonth || 4990,
+              maxMusicians: orchestra.maxMusicians || 200,
+              maxProjects: orchestra.maxProjects || 20
+            },
+            metrics: [{
+              totalMusicians: 0,
+              activeMusicians: 0,
+              totalProjects: 0,
+              activeProjects: 0,
+              totalRequests: 0,
+              acceptedRequests: 0,
+              createdAt: new Date().toISOString()
+            }]
+          })
           continue
         }
 
@@ -47,6 +77,9 @@ export async function GET(request: Request) {
             },
           },
         })
+
+        // Test connection first
+        await orchestraPrisma.$queryRaw`SELECT 1`
 
         // Fetch metrics from orchestra database
         const musicians = await orchestraPrisma.musician.count()
@@ -102,17 +135,32 @@ export async function GET(request: Request) {
         
         // Disconnect the orchestra prisma client
         await orchestraPrisma.$disconnect()
-      } catch (error) {
-        console.error(`Error fetching metrics for ${orchestra.subdomain}:`, error)
-        // Add orchestra without metrics
+      } catch (error: any) {
+        console.error(`Error fetching metrics for ${orchestra.subdomain}:`, error.message)
+        // Add orchestra with error status
         orchestraMetrics.push({
           id: orchestra.id,
           orchestraId: orchestra.orchestraId,
           name: orchestra.name,
           subdomain: orchestra.subdomain,
-          status: orchestra.status,
-          subscription: null,
-          metrics: []
+          status: 'error',
+          subscription: {
+            plan: orchestra.plan || 'medium',
+            status: 'error',
+            pricePerMonth: orchestra.pricePerMonth || 4990,
+            maxMusicians: orchestra.maxMusicians || 200,
+            maxProjects: orchestra.maxProjects || 20
+          },
+          metrics: [{
+            totalMusicians: 0,
+            activeMusicians: 0,
+            totalProjects: 0,
+            activeProjects: 0,
+            totalRequests: 0,
+            acceptedRequests: 0,
+            createdAt: new Date().toISOString(),
+            error: error.message
+          }]
         })
       }
     }

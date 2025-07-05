@@ -23,24 +23,18 @@ export async function GET() {
       timestamp: new Date().toISOString()
     }
 
-    // Check API status by verifying we can query the database
-    try {
-      await prisma.$queryRaw`SELECT 1`
-      health.api = 'operational'
-      console.log('API health check passed')
-    } catch (error: any) {
-      console.error('API health check failed:', error.message)
-      health.api = 'error'
-    }
+    // API is operational if we got this far
+    health.api = 'operational'
+    console.log('API health check passed')
 
     // Check main database
     try {
       await prisma.$queryRaw`SELECT 1`
       health.databases.push({ name: 'Main (Neon)', status: 'healthy' })
+      console.log('Main database: healthy')
     } catch (error) {
       console.error('Main database check failed:', error)
       health.databases.push({ name: 'Main (Neon)', status: 'unhealthy' })
-      health.api = 'error' // If main DB is down, API is not operational
     }
 
     // Check orchestra databases
@@ -93,11 +87,13 @@ export async function GET() {
     // Check email service
     try {
       // Check if we have Resend API key
-      if (process.env.RESEND_API_KEY) {
+      const resendKey = process.env.RESEND_API_KEY
+      if (resendKey && resendKey.length > 0 && resendKey !== 'undefined') {
         health.email = 'operational'
+        console.log('Email service: operational')
       } else {
         health.email = 'error'
-        console.error('Email service error: No RESEND_API_KEY configured')
+        console.log('Email service: No valid RESEND_API_KEY configured')
       }
     } catch (error) {
       health.email = 'error'

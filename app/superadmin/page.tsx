@@ -62,23 +62,30 @@ export default function SuperAdminDashboard() {
   const [selectedOrchestra, setSelectedOrchestra] = useState<string>('')
 
   useEffect(() => {
-    fetchMetrics()
+    fetchData()
   }, [])
 
-  const fetchMetrics = async () => {
+  const fetchData = async () => {
     try {
-      const response = await fetch('/api/superadmin/metrics')
-      if (response.status === 401) {
+      const metricsResponse = await fetch('/api/superadmin/metrics')
+      
+      if (metricsResponse.status === 401) {
         // Unauthorized - redirect to login
         window.location.href = '/admin/login'
         return
       }
-      if (response.ok) {
-        const data = await response.json()
+      
+      if (metricsResponse.ok) {
+        const data = await metricsResponse.json()
+        console.log('Metrics data received:', data)
+        console.log('Number of orchestras:', data.orchestras?.length || 0)
+        console.log('Number of recent events:', data.recentEvents?.length || 0)
         setMetricsData(data)
+      } else {
+        console.error('Failed to fetch metrics:', metricsResponse.status)
       }
     } catch (error) {
-      console.error('Failed to fetch metrics:', error)
+      console.error('Failed to fetch data:', error)
     } finally {
       setIsLoading(false)
     }
@@ -138,7 +145,6 @@ export default function SuperAdminDashboard() {
 
       {activeTab === 'overview' ? (
         <>
-
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-6 rounded-lg shadow-sm border">
@@ -261,9 +267,15 @@ export default function SuperAdminDashboard() {
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       orchestra.status === 'active' 
                         ? 'bg-green-100 text-green-800' 
+                        : orchestra.status === 'pending'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : orchestra.status === 'error'
+                        ? 'bg-red-100 text-red-800'
                         : 'bg-gray-100 text-gray-800'
                     }`}>
-                      {orchestra.status === 'active' ? 'Aktiv' : 'Inaktiv'}
+                      {orchestra.status === 'active' ? 'Aktiv' : 
+                       orchestra.status === 'pending' ? 'Väntar' :
+                       orchestra.status === 'error' ? 'Fel' : 'Inaktiv'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -306,11 +318,11 @@ export default function SuperAdminDashboard() {
           </select>
         </div>
         <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
-          {metricsData?.recentEvents.length === 0 ? (
+          {!metricsData?.recentEvents || metricsData.recentEvents.length === 0 ? (
             <div className="px-6 py-8 text-center text-gray-500">
               Inga händelser att visa
             </div>
-          ) : metricsData?.recentEvents
+          ) : metricsData.recentEvents
             .filter(event => !selectedOrchestra || event.orchestra?.id === selectedOrchestra)
             .map((event) => (
             <div key={event.id} className="px-6 py-4 hover:bg-gray-50">
