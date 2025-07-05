@@ -122,24 +122,94 @@ export async function GET(request: Request) {
       .filter(o => o.subscription && o.status === 'active')
       .reduce((sum, o) => sum + (o.subscription?.pricePerMonth || 0), 0)
 
-    // Fetch recent events from activity API
+    // Fetch recent events directly instead of HTTP call
     let recentEvents = []
     try {
-      // Make internal API call to activity endpoint
-      const activityResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/api/superadmin/activity?limit=10`, {
-        headers: {
-          cookie: request.headers.get('cookie') || '' // Pass through auth cookies
+      // Collect logs from each orchestra's database
+      for (const orchestra of orchestras) {
+        try {
+          // Skip if no valid database URL
+          if (!orchestra.databaseUrl || orchestra.databaseUrl.includes('dummy')) {
+            continue
+          }
+
+          const orchestraPrisma = new PrismaClient({
+            datasources: {
+              db: { url: orchestra.databaseUrl }
+            }
+          })
+
+          // Check if SystemLog table exists
+          try {
+            await orchestraPrisma.$queryRaw`SELECT 1 FROM "SystemLog" LIMIT 1`
+          } catch (tableError: any) {
+            if (tableError.message?.includes('does not exist')) {
+              await orchestraPrisma.$disconnect()
+              continue
+            }
+            throw tableError
+          }
+
+          const logs = await orchestraPrisma.systemLog.findMany({
+            where: {
+              category: { in: ['auth', 'system', 'request', 'email', 'user'] }
+            },
+            orderBy: { timestamp: 'desc' },
+            take: 5 // Get 5 from each orchestra
+          })
+
+          // Add orchestra info to each log
+          logs.forEach(log => {
+            const severity = log.level === 'error' ? 'error' : 
+                            log.level === 'warn' ? 'warning' : 'info'
+            
+            recentEvents.push({
+              id: log.id,
+              type: log.category,
+              severity,
+              title: log.message,
+              description: log.metadata ? JSON.stringify(log.metadata) : log.message,
+              createdAt: log.timestamp.toISOString(),
+              orchestra: { 
+                id: orchestra.id,
+                name: orchestra.name 
+              }
+            })
+          })
+
+          await orchestraPrisma.$disconnect()
+        } catch (error: any) {
+          console.error(`Failed to fetch logs from ${orchestra.name}:`, error.message)
         }
-      })
-      
-      if (activityResponse.ok) {
-        const activityData = await activityResponse.json()
-        recentEvents = activityData.events
+      }
+
+      // Sort by timestamp and take latest 10
+      recentEvents.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      recentEvents = recentEvents.slice(0, 10)
+
+      // If no events found, add a default event
+      if (recentEvents.length === 0) {
+        recentEvents.push({
+          id: '1',
+          type: 'system',
+          severity: 'info',
+          title: 'System startat',
+          description: 'Superadmin dashboard aktiverat',
+          createdAt: new Date().toISOString(),
+          orchestra: null
+        })
       }
     } catch (error) {
       console.error('Failed to fetch activity:', error)
-      // Fall back to empty events rather than fail the whole request
-      recentEvents = []
+      recentEvents = [{
+        id: '1',
+        type: 'system',
+        severity: 'info',
+        title: 'Kunde inte hämta händelser',
+        description: 'Kontrollera databasanslutningarna',
+        createdAt: new Date().toISOString(),
+        orchestra: null
+      }]
     }
 
     return NextResponse.json({

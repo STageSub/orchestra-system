@@ -13,27 +13,73 @@ export async function GET() {
   }
 
   try {
-    const users = await prisma.user.findMany({
-      include: {
-        orchestra: {
-          select: {
-            id: true,
-            name: true,
-            orchestraId: true
-          }
-        }
-      },
-      orderBy: [
-        { role: 'desc' }, // superadmin first
-        { createdAt: 'desc' }
-      ]
-    })
+    // First check if User table exists
+    try {
+      await prisma.$queryRaw`SELECT 1 FROM "User" LIMIT 1`
+    } catch (tableError: any) {
+      console.error('User table check failed:', tableError)
+      if (tableError.message?.includes('does not exist')) {
+        console.error('User table does not exist in database')
+        return NextResponse.json({ 
+          users: [],
+          error: 'User table not found' 
+        })
+      }
+    }
 
-    return NextResponse.json({ users })
-  } catch (error) {
+    // Use raw query due to schema mismatch
+    const users = await prisma.$queryRaw`
+      SELECT 
+        u.id,
+        u.name as username,
+        u.email,
+        u.role,
+        u."createdAt",
+        u."updatedAt",
+        u."lastLoginAt" as "lastLogin",
+        u."orchestraId",
+        COALESCE(u.active, true) as active,
+        o.id as "orchestra_id",
+        o.name as "orchestra_name",
+        o."orchestraId" as "orchestra_orchestraId"
+      FROM "User" u
+      LEFT JOIN "Orchestra" o ON u."orchestraId" = o.id
+      ORDER BY 
+        CASE u.role 
+          WHEN 'superadmin' THEN 1 
+          WHEN 'admin' THEN 2 
+          ELSE 3 
+        END,
+        u."createdAt" DESC
+    `
+    
+    // Transform the raw results to match expected format
+    const formattedUsers = users.map((user: any) => ({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      active: user.active,
+      lastLogin: user.lastLogin,
+      createdAt: user.createdAt,
+      orchestra: user.orchestra_id ? {
+        id: user.orchestra_id,
+        name: user.orchestra_name,
+        orchestraId: user.orchestra_orchestraId
+      } : null
+    }))
+
+    console.log(`Found ${formattedUsers.length} users`)
+    return NextResponse.json({ users: formattedUsers })
+  } catch (error: any) {
     console.error('Error fetching users:', error)
+    console.error('Error details:', error.message)
     return NextResponse.json(
-      { error: 'Failed to fetch users' },
+      { 
+        error: 'Failed to fetch users',
+        details: error.message,
+        users: []
+      },
       { status: 500 }
     )
   } finally {

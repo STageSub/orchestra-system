@@ -67,11 +67,13 @@ export default function CustomerManagement() {
         alert(`Status ändrad till ${newStatus}`)
         fetchOrchestras() // Refresh the list
       } else {
-        alert('Kunde inte ändra status')
+        const errorData = await response.json()
+        console.error('Status toggle failed:', errorData)
+        alert(`Kunde inte ändra status: ${errorData.error || 'Okänt fel'}`)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error toggling status:', error)
-      alert('Ett fel uppstod')
+      alert(`Ett fel uppstod: ${error.message || 'Okänt fel'}`)
     }
   }
 
