@@ -4,9 +4,17 @@ import { PrismaClient } from '@prisma/client'
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('[/api/auth/me] Starting...')
+    
+    // Log cookies for debugging
+    const cookieHeader = request.headers.get('cookie')
+    console.log('[/api/auth/me] Cookie header:', cookieHeader)
+    
     const user = await getCurrentUser()
+    console.log('[/api/auth/me] getCurrentUser result:', user ? `User ${user.id}` : 'null')
     
     if (!user) {
+      console.log('[/api/auth/me] No user found, returning 401')
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 

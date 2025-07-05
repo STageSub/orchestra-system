@@ -21,7 +21,27 @@ export async function getPrismaForUser(request: NextRequest | Request): Promise<
     const token = cookieStore.get('orchestra-admin-session')?.value
     
     if (!token) {
-      console.log('[getPrismaForUser] No auth token found, using default database')
+      console.log('[getPrismaForUser] No auth token found')
+      
+      // TEMPORARY: Use SCO database as fallback for testing
+      // This should be removed once auth is fixed
+      const fallbackUrl = process.env.DATABASE_URL_POOL_1
+      if (fallbackUrl) {
+        console.log('[getPrismaForUser] Using fallback database (SCO) for testing')
+        try {
+          const { PrismaClient } = require('@prisma/client')
+          return new PrismaClient({
+            datasources: {
+              db: {
+                url: fallbackUrl
+              }
+            }
+          })
+        } catch (error) {
+          console.error('[getPrismaForUser] Fallback failed:', error)
+        }
+      }
+      
       return prisma
     }
     

@@ -77,8 +77,11 @@ export async function setAuthCookie(token: string) {
 }
 
 export async function getAuthCookie(): Promise<string | undefined> {
+  console.log('[getAuthCookie] Getting cookie:', COOKIE_NAME)
   const cookieStore = await cookies()
-  return cookieStore.get(COOKIE_NAME)?.value
+  const cookie = cookieStore.get(COOKIE_NAME)
+  console.log('[getAuthCookie] Cookie found:', cookie ? 'yes' : 'no')
+  return cookie?.value
 }
 
 export async function removeAuthCookie() {
@@ -87,11 +90,23 @@ export async function removeAuthCookie() {
 }
 
 export async function getCurrentUser(): Promise<User | null> {
+  console.log('[getCurrentUser] Starting...')
+  
   const token = await getAuthCookie()
-  if (!token) return null
+  console.log('[getCurrentUser] Token from cookie:', token ? `${token.substring(0, 20)}...` : 'null')
+  
+  if (!token) {
+    console.log('[getCurrentUser] No token found in cookie')
+    return null
+  }
   
   const payload = await verifyToken(token)
-  if (!payload || !payload.userId) return null
+  console.log('[getCurrentUser] Token payload:', payload ? { userId: payload.userId, authenticated: payload.authenticated } : 'null')
+  
+  if (!payload || !payload.userId) {
+    console.log('[getCurrentUser] Invalid payload or missing userId')
+    return null
+  }
   
   try {
     // Create a local Prisma instance for the central database
