@@ -131,16 +131,10 @@ export default function AdminLayout({
     setShowOnboarding(false)
   }
 
-
-  // Return minimal layout for login page
-  if (pathname === '/admin/login') {
-    return <>{children}</>
-  }
-
   // Set cache headers for Safari
   useEffect(() => {
     // Prevent Safari from caching authenticated pages
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && pathname !== '/admin/login') {
       const meta = document.createElement('meta')
       meta.httpEquiv = 'Cache-Control'
       meta.content = 'no-cache, no-store, must-revalidate'
@@ -156,7 +150,13 @@ export default function AdminLayout({
       expires.content = '0'
       document.head.appendChild(expires)
     }
-  }, [])
+  }, [pathname])
+
+
+  // Return minimal layout for login page
+  if (pathname === '/admin/login') {
+    return <>{children}</>
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
