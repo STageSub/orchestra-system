@@ -31,8 +31,11 @@ export async function GET() {
 
     for (const orchestra of orchestras) {
       try {
+        console.log(`Processing orchestra: ${orchestra.orchestraId} - ${orchestra.name}`)
+        
         // Skip if no real database URL
         if (!orchestra.databaseUrl || orchestra.databaseUrl.includes('dummy')) {
+          console.log(`  Skipping - no valid database URL`)
           continue
         }
 
@@ -48,7 +51,7 @@ export async function GET() {
         // Fetch metrics from orchestra database
         const musicians = await orchestraPrisma.musician.count()
         const activeMusiciansCount = await orchestraPrisma.musician.count({
-          where: { active: true }
+          where: { isActive: true }
         })
         const projects = await orchestraPrisma.project.count()
         const activeProjectsCount = await orchestraPrisma.project.count({
@@ -60,6 +63,9 @@ export async function GET() {
         const acceptedRequestsCount = await orchestraPrisma.request.count({
           where: { status: 'accepted' }
         })
+        
+        console.log(`  Musicians: ${musicians} (${activeMusiciansCount} active)`)
+        console.log(`  Projects: ${projects} (${activeProjectsCount} active)`)
 
         // Add to totals
         totalMusicians += musicians
