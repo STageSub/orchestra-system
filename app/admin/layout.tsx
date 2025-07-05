@@ -130,16 +130,9 @@ export default function AdminLayout({
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-4">
           <div className="flex justify-between items-center h-16">
-            <div className="w-48"></div> {/* Spacer to match sidebar width */}
-            <div className="flex-1 flex justify-center">
-              <h1 className="text-2xl font-light tracking-wider text-gray-900">
-                StageSub
-              </h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
                 {loadingUserInfo ? (
                   <div className="flex items-center gap-2">
                     <div className="h-7 w-7 bg-gray-200 rounded animate-pulse"></div>
@@ -159,7 +152,13 @@ export default function AdminLayout({
                     </span>
                   </>
                 )}
-              </div>
+            </div>
+            <div className="flex-1 flex justify-center">
+              <h1 className="text-2xl font-light tracking-wider text-gray-900">
+                StageSub
+              </h1>
+            </div>
+            <div className="flex items-center space-x-4">
               <div className="relative" ref={settingsRef}>
                 <button
                   onClick={() => setShowSettings(!showSettings)}
