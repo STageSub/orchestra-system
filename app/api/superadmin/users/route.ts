@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
 import { checkSuperadminAuth } from '@/lib/auth-superadmin'
+import { neonPrisma } from '@/lib/prisma-dynamic'
 import bcrypt from 'bcryptjs'
-
-const prisma = new PrismaClient()
 
 // GET all users
 export async function GET() {
@@ -15,7 +13,7 @@ export async function GET() {
   try {
     // First check if User table exists
     try {
-      await prisma.$queryRaw`SELECT 1 FROM "User" LIMIT 1`
+      await neonPrisma.$queryRaw`SELECT 1 FROM "User" LIMIT 1`
     } catch (tableError: any) {
       console.error('User table check failed:', tableError)
       if (tableError.message?.includes('does not exist')) {
@@ -28,7 +26,7 @@ export async function GET() {
     }
 
     // Now that schema is fixed, use normal Prisma query
-    const users = await prisma.user.findMany({
+    const users = await neonPrisma.user.findMany({
       include: {
         orchestra: {
           select: {
@@ -58,7 +56,7 @@ export async function GET() {
       { status: 500 }
     )
   } finally {
-    await prisma.$disconnect()
+    // neonPrisma is a singleton, don't disconnect
   }
 }
 
@@ -81,7 +79,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already exists
-    const existingUser = await prisma.user.findFirst({
+    const existingUser = await neonPrisma.user.findFirst({
       where: {
         OR: [
           { email: body.email },
@@ -101,7 +99,7 @@ export async function POST(request: NextRequest) {
     const passwordHash = await bcrypt.hash(body.password, 10)
 
     // Create user using Prisma
-    const user = await prisma.user.create({
+    const user = await neonPrisma.user.create({
       data: {
         username: body.username,
         email: body.email,
@@ -135,6 +133,6 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   } finally {
-    await prisma.$disconnect()
+    // neonPrisma is a singleton, don't disconnect
   }
 }

@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import { getPrismaClient } from '@/lib/database-config'
 import { checkSuperadminAuth } from '@/lib/auth-superadmin'
-
-const prisma = new PrismaClient()
+import { neonPrisma } from '@/lib/prisma-dynamic'
 
 export async function GET(request: Request) {
   console.log('Metrics endpoint called')
@@ -20,7 +19,7 @@ export async function GET(request: Request) {
   try {
     console.log('Fetching metrics...')
     // Get all orchestras from main database
-    const orchestras = await prisma.$queryRaw`
+    const orchestras = await neonPrisma.$queryRaw`
       SELECT * FROM "Orchestra" 
       WHERE status = 'active' 
       ORDER BY subdomain
@@ -283,6 +282,6 @@ export async function GET(request: Request) {
       { status: 500 }
     )
   } finally {
-    await prisma.$disconnect()
+    await neonPrisma.$disconnect()
   }
 }

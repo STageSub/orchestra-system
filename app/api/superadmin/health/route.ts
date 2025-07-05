@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
 import { checkSuperadminAuth } from '@/lib/auth-superadmin'
-
-const prisma = new PrismaClient()
+import { neonPrisma } from '@/lib/prisma-dynamic'
+import { PrismaClient } from '@prisma/client'
 
 export async function GET() {
   console.log('Health check endpoint called')
@@ -29,7 +28,7 @@ export async function GET() {
 
     // Check main database
     try {
-      await prisma.$queryRaw`SELECT 1`
+      await neonPrisma.$queryRaw`SELECT 1`
       health.databases.push({ name: 'Main (Neon)', status: 'healthy' })
       console.log('Main database: healthy')
     } catch (error) {
@@ -38,7 +37,7 @@ export async function GET() {
     }
 
     // Check orchestra databases
-    const orchestras = await prisma.orchestra.findMany({
+    const orchestras = await neonPrisma.orchestra.findMany({
       where: { status: 'active' }
     })
 
@@ -114,6 +113,6 @@ export async function GET() {
       { status: 500 }
     )
   } finally {
-    await prisma.$disconnect()
+    // neonPrisma is a singleton, don't disconnect
   }
 }
