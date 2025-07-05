@@ -15,7 +15,7 @@ export async function withSuperadminAuth(
     }
 
     // Add user info to request headers for downstream use
-    const modifiedRequest = request.clone()
+    const modifiedRequest = request.clone() as NextRequest
     modifiedRequest.headers.set('x-user-id', authResult.user?.id || '')
     modifiedRequest.headers.set('x-user-email', authResult.user?.email || '')
     modifiedRequest.headers.set('x-user-role', authResult.user?.role || '')

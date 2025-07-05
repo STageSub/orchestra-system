@@ -719,3 +719,113 @@ The setting exists in System Settings but needs:
 - Fix archive redirect (should stay on page)
 - Add loading spinners for async operations
 - Fix strategy/quantity catch-22 (no default strategy)
+
+## 🚀 Superadmin Dashboard & Multi-Tenant Architecture (2025-07-05)
+
+### Architecture Overview
+The system implements a **separate database architecture** for complete data isolation:
+- **Central Database (Neon)**: Stores superadmin data, orchestra configurations, and aggregated metrics
+- **Orchestra Databases (Supabase)**: Individual databases for each orchestra's data
+- **No Direct Cross-Database Queries**: Complete isolation between tenants
+
+### Authentication System
+- **JWT-based authentication** using `jose` library
+- Secure httpOnly cookies for session management
+- Role-based access control (superadmin, admin, user, musician)
+- Rate limiting on login attempts (5 per 15 minutes)
+- 24-hour session timeout
+- Middleware protection for all admin routes
+
+### Database Architecture
+
+#### Central Database (Neon) - Superadmin Only
+- **Orchestra**: Configuration for all orchestras
+- **User**: Cross-orchestra user management
+- **OrchestraMetrics**: Daily aggregated metrics from each orchestra
+- **Subscription**: Billing plans and limits
+- **BillingHistory**: Payment records
+- **SystemEvent**: Activity logging
+- **SystemHealth**: Health monitoring data
+- **SystemLog**: Application logs
+- **Customer**: Dynamic customer configurations (Edge Runtime compatible)
+- **FileStorage**: Database-based file storage (replaced file system)
+
+#### Orchestra Databases (Supabase)
+- Complete musician, project, and request data
+- No awareness of other orchestras
+- Webhook endpoints for sending metrics to central system
+
+### Superadmin Dashboard Features
+
+#### 1. Overview Tab
+- **Key Metrics Cards**: Total orchestras, active users, system health, revenue
+- **Activity Feed**: Real-time events from all orchestras
+- **Charts**: User growth, request trends, response rates
+- **System Status**: Health indicators for all services
+
+#### 2. Orchestra Management (Orkestrar Tab)
+- **List View**: All orchestras with status, plan, usage metrics
+- **Detailed View**: Individual orchestra metrics, users, billing
+- **Actions**: Add new orchestra, manage subscriptions, access controls
+- **Database Provisioning**: Automated setup for new orchestras
+
+#### 3. Customer Management (Kundhantering Tab)
+- **CRUD Operations**: Add/edit/delete customers via UI
+- **Dynamic Configuration**: No code changes needed for new customers
+- **Environment Variable Support**: References like `env:DATABASE_URL_X`
+- **Validation**: Subdomain format and uniqueness checks
+
+#### 4. Financial Dashboard (Ekonomi Tab)
+- **Revenue Analytics**: MRR by plan, payment success rates
+- **Subscription Management**: Upcoming renewals, failed payments
+- **Usage Tracking**: Monitor resource consumption by orchestra
+- **Billing Integration**: Ready for Stripe webhook integration
+
+#### 5. System Health (Hälsa Tab)
+- **Infrastructure Monitoring**: Database connections, API endpoints
+- **Performance Metrics**: Response times, error rates
+- **Resource Usage**: Storage, bandwidth, API calls
+- **Alerts**: Automated notifications for issues
+
+#### 6. Logs Viewer (Loggar Tab)
+- **Real-time Logs**: Filterable by category and level
+- **Search Functionality**: Find specific events
+- **Test Features**: Email flow testing in production
+- **Debugging Tools**: Detailed error traces
+
+### Recent Implementation Fixes (2025-07-05)
+
+#### Database Schema Issues Resolved
+1. **Missing Columns in Neon**: 
+   - Added `preferredLanguage`, `localResident`, `isArchived` to central User table
+   - Created migration script at `/prisma/migrations/manual_fix_user_columns.sql`
+   - All user management now works correctly
+
+2. **SystemLog Implementation**:
+   - Added proper database logging with categories and levels
+   - Real-time log viewer with filtering and search
+   - Test features for email flows enabled in production
+
+3. **Orchestra Data Isolation**:
+   - Fixed cross-tenant data leaks
+   - Implemented subdomain-based routing
+   - Each orchestra has completely separate database
+
+### Security Features
+- **Complete Data Isolation**: No shared database tables
+- **Subdomain Routing**: `orchestra.stagesub.com` format
+- **API Key Authentication**: For webhook communications
+- **Audit Logging**: All superadmin actions tracked
+- **Environment Variables**: Sensitive data never in code
+
+### Edge Runtime Compatibility
+- **No Node.js Dependencies**: Compatible with Vercel Edge Runtime
+- **Database-Based Storage**: Files stored in database, not filesystem
+- **Dynamic Configuration**: Customer data in database, not JSON files
+- **Backward Compatibility**: Legacy file URLs still supported
+
+### Implementation Notes
+- **Data Flow**: Orchestra → Webhook → Superadmin API → Central Database
+- **No Direct Connections**: Superadmin never queries orchestra databases
+- **Historical Data**: Preserved centrally for analytics
+- **Scalable Architecture**: Designed for 100+ orchestras
