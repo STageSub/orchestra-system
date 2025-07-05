@@ -32,19 +32,39 @@ export async function GET() {
 
     for (const orchestra of orchestras) {
       try {
+        // Skip if no valid database URL
+        if (!orchestra.databaseUrl || orchestra.databaseUrl.includes('dummy')) {
+          health.databases.push({ 
+            name: orchestra.name, 
+            status: 'no-database' 
+          })
+          continue
+        }
+
         const orchestraPrisma = new PrismaClient({
           datasources: {
-            db: { url: orchestra.databaseUrl! }
+            db: { url: orchestra.databaseUrl }
           }
         })
-        await orchestraPrisma.$queryRaw`SELECT 1`
+        
+        // Set a timeout for the health check
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Connection timeout')), 5000)
+        )
+        
+        await Promise.race([
+          orchestraPrisma.$queryRaw`SELECT 1`,
+          timeoutPromise
+        ])
+        
         await orchestraPrisma.$disconnect()
         
         health.databases.push({ 
           name: orchestra.name, 
           status: 'healthy' 
         })
-      } catch (error) {
+      } catch (error: any) {
+        console.error(`Health check failed for ${orchestra.name}:`, error.message)
         health.databases.push({ 
           name: orchestra.name, 
           status: 'unhealthy' 

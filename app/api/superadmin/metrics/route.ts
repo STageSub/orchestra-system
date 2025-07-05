@@ -83,11 +83,11 @@ export async function GET(request: Request) {
           subdomain: orchestra.subdomain,
           status: orchestra.status,
           subscription: {
-            plan: 'medium', // Default for now
+            plan: orchestra.plan || 'medium',
             status: 'active',
-            pricePerMonth: 4990,
-            maxMusicians: 200,
-            maxProjects: 20
+            pricePerMonth: orchestra.pricePerMonth || 4990,
+            maxMusicians: orchestra.maxMusicians || 200,
+            maxProjects: orchestra.maxProjects || 20
           },
           metrics: [{
             totalMusicians: musicians,
@@ -117,8 +117,10 @@ export async function GET(request: Request) {
       }
     }
 
-    // Calculate total MRR (mock for now)
-    const totalMRR = orchestraMetrics.filter(o => o.subscription).length * 4990
+    // Calculate total MRR from actual subscription data
+    const totalMRR = orchestraMetrics
+      .filter(o => o.subscription && o.status === 'active')
+      .reduce((sum, o) => sum + (o.subscription?.pricePerMonth || 0), 0)
 
     // Fetch recent events from activity API
     let recentEvents = []

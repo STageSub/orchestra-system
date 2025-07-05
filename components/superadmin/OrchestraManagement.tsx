@@ -146,6 +146,8 @@ export default function OrchestraManagement() {
                 <span className="text-sm text-gray-600">{db.name}</span>
                 {db.status === 'healthy' ? (
                   <CheckCircle className="w-4 h-4 text-green-500" />
+                ) : db.status === 'no-database' ? (
+                  <AlertCircle className="w-4 h-4 text-gray-400" />
                 ) : (
                   <XCircle className="w-4 h-4 text-red-500" />
                 )}
@@ -176,11 +178,11 @@ export default function OrchestraManagement() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Databaser</span>
               <span className={`text-xs px-2 py-1 rounded-full ${
-                systemHealth?.databases.every(db => db.status === 'healthy')
+                systemHealth?.databases.every(db => db.status === 'healthy' || db.status === 'no-database')
                   ? 'bg-green-100 text-green-800' 
                   : 'bg-yellow-100 text-yellow-800'
               }`}>
-                {systemHealth?.databases.every(db => db.status === 'healthy') ? 'Alla OK' : 'Problem'}
+                {systemHealth?.databases.every(db => db.status === 'healthy' || db.status === 'no-database') ? 'Alla OK' : 'Problem'}
               </span>
             </div>
             <div className="flex items-center justify-between">

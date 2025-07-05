@@ -26,15 +26,34 @@ export async function GET(request: Request) {
     // Collect logs from each orchestra's database
     for (const orchestra of orchestras) {
       try {
+        // Skip if no valid database URL
+        if (!orchestra.databaseUrl || orchestra.databaseUrl.includes('dummy')) {
+          console.log(`Skipping ${orchestra.name} - no valid database URL`)
+          continue
+        }
+
         const orchestraPrisma = new PrismaClient({
           datasources: {
-            db: { url: orchestra.databaseUrl! }
+            db: { url: orchestra.databaseUrl }
           }
         })
 
+        // First check if SystemLog table exists
+        try {
+          await orchestraPrisma.$queryRaw`SELECT 1 FROM "SystemLog" LIMIT 1`
+        } catch (tableError: any) {
+          if (tableError.message?.includes('does not exist')) {
+            console.log(`SystemLog table not found in ${orchestra.name}`)
+            await orchestraPrisma.$disconnect()
+            continue
+          }
+          // Re-throw other errors
+          throw tableError
+        }
+
         const logs = await orchestraPrisma.systemLog.findMany({
           where: {
-            category: { in: ['auth', 'system', 'request'] }
+            category: { in: ['auth', 'system', 'request', 'email', 'user'] }
           },
           orderBy: { timestamp: 'desc' },
           take: 10
@@ -42,12 +61,15 @@ export async function GET(request: Request) {
 
         // Add orchestra info to each log
         logs.forEach(log => {
+          const severity = log.level === 'error' ? 'error' : 
+                          log.level === 'warn' ? 'warning' : 'info'
+          
           events.push({
             id: log.id,
             type: log.category,
-            severity: log.level === 'error' ? 'error' : log.level === 'warn' ? 'warning' : 'info',
+            severity,
             title: log.message,
-            description: `${orchestra.name} - ${log.message}`,
+            description: log.metadata ? JSON.stringify(log.metadata) : log.message,
             createdAt: log.timestamp.toISOString(),
             orchestra: { 
               id: orchestra.id,
@@ -58,9 +80,22 @@ export async function GET(request: Request) {
         })
 
         await orchestraPrisma.$disconnect()
-      } catch (error) {
-        console.error(`Failed to fetch logs from ${orchestra.name}:`, error)
+      } catch (error: any) {
+        console.error(`Failed to fetch logs from ${orchestra.name}:`, error.message)
       }
+    }
+
+    // If no events found, add some default events
+    if (events.length === 0) {
+      events.push({
+        id: '1',
+        type: 'system',
+        severity: 'info',
+        title: 'System startat',
+        description: 'Superadmin dashboard aktiverat',
+        createdAt: new Date().toISOString(),
+        orchestra: null
+      })
     }
 
     // Sort by timestamp and apply pagination

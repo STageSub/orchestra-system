@@ -275,7 +275,10 @@ export default function SuperAdminDashboard() {
                     >
                       Öppna
                     </button>
-                    <button className="text-gray-600 hover:text-gray-900">
+                    <button 
+                      onClick={() => setActiveTab('customers')}
+                      className="text-gray-600 hover:text-gray-900"
+                    >
                       Hantera
                     </button>
                   </td>
