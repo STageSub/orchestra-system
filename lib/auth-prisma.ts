@@ -10,6 +10,11 @@ import { prisma } from './prisma'
  */
 export async function getPrismaForUser(request: NextRequest | Request): Promise<any> {
   console.log('[getPrismaForUser] Starting...')
+  
+  // Log request headers for debugging
+  const userAgent = request.headers.get('user-agent') || 'unknown'
+  console.log('[getPrismaForUser] User-Agent:', userAgent)
+  
   try {
     // Get token from cookie
     const cookieStore = await cookies()
@@ -60,6 +65,28 @@ export async function getPrismaForUser(request: NextRequest | Request): Promise<
             return client
           } catch (clientError) {
             console.error(`[getPrismaForUser] Failed to create client for ${orchestra.name}:`, clientError)
+            
+            // Try fallback to environment variable
+            const fallbackEnvVar = `DATABASE_URL_POOL_${orchestra.orchestraId === 'cmcnbutg10001smyy8mzufrfp' ? '1' : '2'}`
+            const fallbackUrl = process.env[fallbackEnvVar]
+            
+            if (fallbackUrl) {
+              console.log(`[getPrismaForUser] Trying fallback with ${fallbackEnvVar}`)
+              try {
+                const fallbackClient = new PrismaClient({
+                  datasources: {
+                    db: {
+                      url: fallbackUrl
+                    }
+                  }
+                })
+                console.log(`[getPrismaForUser] Fallback successful`)
+                return fallbackClient
+              } catch (fallbackError) {
+                console.error(`[getPrismaForUser] Fallback failed:`, fallbackError)
+              }
+            }
+            
             return prisma
           }
         } else {
