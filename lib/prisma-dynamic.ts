@@ -1,16 +1,15 @@
 import { PrismaClient } from '@prisma/client'
-import { PrismaClient as CentralPrismaClient } from '../node_modules/.prisma/client-central'
 import { cookies } from 'next/headers'
 import { verifyToken } from './auth-db'
 import { getPrismaClient } from './database-config'
 
 // Global singleton for Neon (main database)
 const globalForNeonPrisma = globalThis as unknown as {
-  neonPrisma: CentralPrismaClient | undefined
+  neonPrisma: PrismaClient | undefined
 }
 
 // Neon prisma för auth och Orchestra/User tabeller
-const neonPrisma = globalForNeonPrisma.neonPrisma ?? new CentralPrismaClient({
+const neonPrisma = globalForNeonPrisma.neonPrisma ?? new PrismaClient({
   datasources: {
     db: {
       url: process.env.CENTRAL_DATABASE_URL || process.env.DATABASE_URL,

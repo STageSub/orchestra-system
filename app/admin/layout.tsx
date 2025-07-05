@@ -68,7 +68,10 @@ export default function AdminLayout({
         const response = await fetch('/api/auth/me')
         if (response.ok) {
           const data = await response.json()
+          console.log('User info fetched:', data)
           setUserInfo(data)
+        } else {
+          console.error('Failed to fetch user info, status:', response.status)
         }
       } catch (error) {
         console.error('Failed to fetch user info:', error)
