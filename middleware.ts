@@ -91,7 +91,10 @@ export async function middleware(request: NextRequest) {
     const payload = await verifyToken(token)
     
     if (!payload || !payload.authenticated) {
-      return NextResponse.redirect(new URL('/admin/login', request.url))
+      // Clear invalid cookie for Safari
+      const redirectResponse = NextResponse.redirect(new URL('/admin/login', request.url))
+      redirectResponse.cookies.delete(COOKIE_NAME)
+      return redirectResponse
     }
     
     // Add user info to headers

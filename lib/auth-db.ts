@@ -86,6 +86,18 @@ export async function getAuthCookie(): Promise<string | undefined> {
 
 export async function removeAuthCookie() {
   const cookieStore = await cookies()
+  
+  // Safari fix: Set cookie to empty value with past expiration
+  cookieStore.set(COOKIE_NAME, '', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 0, // Expire immediately
+    expires: new Date(0), // January 1, 1970
+    path: '/'
+  })
+  
+  // Also try to delete it
   cookieStore.delete(COOKIE_NAME)
 }
 

@@ -137,6 +137,27 @@ export default function AdminLayout({
     return <>{children}</>
   }
 
+  // Set cache headers for Safari
+  useEffect(() => {
+    // Prevent Safari from caching authenticated pages
+    if (typeof window !== 'undefined') {
+      const meta = document.createElement('meta')
+      meta.httpEquiv = 'Cache-Control'
+      meta.content = 'no-cache, no-store, must-revalidate'
+      document.head.appendChild(meta)
+      
+      const pragma = document.createElement('meta')
+      pragma.httpEquiv = 'Pragma'
+      pragma.content = 'no-cache'
+      document.head.appendChild(pragma)
+      
+      const expires = document.createElement('meta')
+      expires.httpEquiv = 'Expires'
+      expires.content = '0'
+      document.head.appendChild(expires)
+    }
+  }, [])
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}

@@ -19,7 +19,14 @@ export async function POST(request: NextRequest) {
     })
     
     await removeAuthCookie()
-    return NextResponse.json({ success: true })
+    
+    // Create response with cache-control headers for Safari
+    const response = NextResponse.json({ success: true })
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
+    
+    return response
   } catch (error) {
     console.error('Logout error:', error)
     
